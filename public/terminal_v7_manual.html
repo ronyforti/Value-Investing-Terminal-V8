@@ -1,0 +1,2035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Value Investing Terminal — Flight Crew Operating Manual (FCOM)</title>
+  <style>
+
+:root {
+  --bg-page: #f8fafc;
+  --bg-card: #ffffff;
+  --border-card: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --accent-emerald: #059669;
+  --accent-blue: #2563eb;
+  --accent-amber: #d97706;
+  --accent-rose: #e11d48;
+  --table-header-bg: #f8fafc;
+  --table-row-alt: #f1f5f9;
+  --code-bg: #f1f5f9;
+  --sidebar-w: 320px;
+}
+
+[data-theme="dark"] {
+  --bg-page: #0b0f17;
+  --bg-card: #111827;
+  --border-card: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --accent-emerald: #10b981;
+  --accent-blue: #3b82f6;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+  --table-header-bg: #1a2234;
+  --table-row-alt: #131b2c;
+  --code-bg: #0d131f;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  line-height: 1.6;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Header & HUD */
+.cockpit-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border-card);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(10px);
+}
+.cockpit-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.cockpit-title h1 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.hud-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--accent-emerald);
+  border: 1px solid var(--border-card);
+  font-weight: 600;
+}
+.cockpit-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border-card);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover {
+  border-color: var(--accent-emerald);
+  color: var(--accent-emerald);
+}
+.btn-primary {
+  background: var(--accent-emerald);
+  color: #fff !important;
+  border-color: var(--accent-emerald);
+}
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+/* Layout */
+.app-container {
+  display: flex;
+  min-height: calc(100vh - 58px);
+}
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  position: sticky;
+  top: 58px;
+  height: calc(100vh - 58px);
+  overflow-y: auto;
+  border-right: 1px solid var(--border-card);
+  background: var(--bg-card);
+  padding: 1.25rem 1rem;
+}
+.search-box {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid var(--border-card);
+  background: var(--code-bg);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  margin-bottom: 1rem;
+}
+.nav-group-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 1.2rem 0 0.4rem 0.5rem;
+}
+.nav-link {
+  display: block;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: 4px;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-link:hover {
+  color: var(--text-primary);
+  background: var(--code-bg);
+}
+.nav-link.active {
+  color: var(--accent-emerald);
+  font-weight: 600;
+  background: var(--code-bg);
+  border-left-color: var(--accent-emerald);
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  padding: 2.5rem 3.5rem;
+  max-width: 1100px;
+}
+section {
+  margin-bottom: 4rem;
+  scroll-margin-top: 80px;
+}
+h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-card);
+  padding-bottom: 0.5rem;
+}
+h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 1.75rem 0 0.75rem 0;
+  color: var(--text-primary);
+}
+p {
+  margin-bottom: 1rem;
+  color: var(--text-secondary);
+}
+
+/* Cards & Alerts */
+.callout {
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  border-left: 4px solid var(--accent-emerald);
+  background: var(--code-bg);
+  margin: 1.25rem 0;
+}
+.callout-warning {
+  border-left-color: var(--accent-amber);
+}
+.callout-critical {
+  border-left-color: var(--accent-rose);
+}
+.callout h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+/* Accordions for Prompts */
+details.prompt-accordion {
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  background: var(--bg-card);
+  overflow: hidden;
+}
+details.prompt-accordion summary {
+  padding: 0.9rem 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 0.95rem;
+  background: var(--bg-card);
+  user-select: none;
+}
+details.prompt-accordion summary:hover {
+  background: var(--code-bg);
+}
+.accordion-body {
+  padding: 1.25rem;
+  border-top: 1px solid var(--border-card);
+  background: var(--bg-card);
+}
+.voice-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.voice-strategic {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--accent-blue);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+.voice-forensic {
+  background: rgba(225, 29, 72, 0.12);
+  color: var(--accent-rose);
+  border: 1px solid rgba(225, 29, 72, 0.3);
+}
+
+/* Code Blocks & Raw Prompts */
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  position: relative;
+  margin: 1rem 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.copy-btn:hover {
+  color: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 0.875rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  overflow: hidden;
+}
+th {
+  background: var(--table-header-bg);
+  text-align: left;
+  padding: 0.65rem 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-card);
+}
+td {
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid var(--border-card);
+  color: var(--text-secondary);
+}
+tr:nth-child(even) td {
+  background: var(--table-row-alt);
+}
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--accent-emerald);
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  z-index: 200;
+}
+#toast.show { opacity: 1; }
+
+/* Architectural Pipeline Cards & Flow */
+.upgrade-pipeline {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.upgrade-pipeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-card);
+}
+.upgrade-pipeline-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.upgrade-flow-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.upgrade-card {
+  background: var(--code-bg);
+  border: 1px solid var(--border-card);
+  border-left: 4px solid var(--accent-emerald);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  transition: transform 0.15s, border-color 0.15s;
+}
+.upgrade-card:hover {
+  border-color: var(--accent-emerald);
+}
+.upgrade-card.card-blue {
+  border-left-color: var(--accent-blue);
+}
+.upgrade-card.card-amber {
+  border-left-color: var(--accent-amber);
+}
+.upgrade-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+.upgrade-card-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.upgrade-pill-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.flow-node {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.flow-arrow {
+  color: var(--accent-emerald);
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+.pipeline-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 14px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: -0.2rem 0;
+}
+
+@media (max-width: 900px) {
+  .app-container { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; position: relative; top: 0; }
+  .main-content { padding: 1.5rem 1rem; }
+}
+
+@media print {
+  .cockpit-header, .sidebar, .copy-btn, #toast { display: none !important; }
+  .main-content { max-width: 100%; padding: 0; }
+  body { background: #fff !important; color: #000 !important; }
+  details.prompt-accordion { border: 1px solid #ccc; break-inside: avoid; }
+  details.prompt-accordion[open] .accordion-body { display: block; }
+}
+
+  </style>
+</head>
+<body>
+
+  <!-- Cockpit Header / HUD (100% Automated from Config) -->
+  <header class="cockpit-header">
+    <div class="cockpit-title">
+      <span style="font-size:1.4rem;">✈️</span>
+      <div>
+        <h1>Value Investing Terminal</h1>
+        <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">FLIGHT CREW OPERATING MANUAL (FCOM) — REVISION 7.0.0</div>
+      </div>
+      <div style="display:flex; gap:0.4rem; margin-left:1rem; flex-wrap:wrap;">
+        <span class="hud-badge" id="hud-status">SYS: ONLINE</span>
+        <span class="hud-badge" id="hud-port">PORT: 3000 PROD</span>
+        <span class="hud-badge" id="hud-pipeline">PIPELINE: 11+1 FULL-AUTO</span>
+        <span class="hud-badge" id="hud-gates">GATES: 5 ACTIVE</span>
+        <span class="hud-badge" id="hud-voice">VOICE: BIMODAL</span>
+      </div>
+    </div>
+    <div class="cockpit-actions">
+      <button class="btn" id="expand-all-btn">Expand All</button>
+      <button class="btn" onclick="window.print()">🖨️ Print / PDF</button>
+      <button class="btn btn-primary" id="theme-toggle">🌙 Dark Mode</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Left Navigation / Radar Sidebar -->
+    <nav class="sidebar">
+      <input type="text" id="manual-search" class="search-box" placeholder="🔍 Search prompts, laws, gates...">
+      
+      <div class="nav-group-title">Cockpit Quick Ref</div>
+      <a href="#vol-0-cockpit" class="nav-link active">Vol 0: Pre-Flight Checklist</a>
+
+      <div class="nav-group-title">Systems Architecture</div>
+      <a href="#vol-1-architecture" class="nav-link">Vol 1: Systems &amp; Bimodal Voice</a>
+      <a href="#sec-1-1-micro-primacy" class="nav-link" style="padding-left:1.25rem;">1.1 Micro-Primacy Directive</a>
+      <a href="#sec-1-2-bimodal-voice" class="nav-link" style="padding-left:1.25rem;">1.2 Bimodal Voice Architecture</a>
+      <a href="#sec-1-3-v7-changes" class="nav-link" style="padding-left:1.25rem;">1.3 V6.2 → V7 Changelog</a>
+
+      <div class="nav-group-title">Operating Limitations</div>
+      <a href="#vol-2-limitations" class="nav-link">Vol 2: The 5 Formatting Laws</a>
+      <a href="#law-1" class="nav-link" style="padding-left:1.25rem;">Law 1: Zero Raw LaTeX Math</a>
+      <a href="#law-2" class="nav-link" style="padding-left:1.25rem;">Law 2: Strict Markdown Tables</a>
+      <a href="#law-3" class="nav-link" style="padding-left:1.25rem;">Law 3: Numbered Flywheels (Pt 4)</a>
+      <a href="#law-4" class="nav-link" style="padding-left:1.25rem;">Law 4: Dual-Format Delivery</a>
+      <a href="#law-5" class="nav-link" style="padding-left:1.25rem;">Law 5: Parser Invariance</a>
+
+      <div class="nav-group-title">Normal Procedures</div>
+      <a href="#vol-3-pipeline" class="nav-link">Vol 3: 11+1 FULL-AUTO Pipeline</a>
+      <a href="#prompt-part-1" class="nav-link" style="padding-left:1.25rem;">Part 1: Financial Forensics &amp; Ca...</a>
+      <a href="#prompt-part-2" class="nav-link" style="padding-left:1.25rem;">Part 2: Operational Engine &amp; Mar...</a>
+      <a href="#prompt-part-3" class="nav-link" style="padding-left:1.25rem;">Part 3: Normalized Owner Earning...</a>
+      <a href="#prompt-part-4" class="nav-link" style="padding-left:1.25rem;">Part 4: Structural Moat Architec...</a>
+      <a href="#prompt-part-5" class="nav-link" style="padding-left:1.25rem;">Part 5: Qualitative Filing Audit...</a>
+      <a href="#prompt-part-6" class="nav-link" style="padding-left:1.25rem;">Part 6: Valuation Floor: Zero-Gr...</a>
+      <a href="#prompt-part-7" class="nav-link" style="padding-left:1.25rem;">Part 7: Valuation Engine: Probab...</a>
+      <a href="#prompt-part-8" class="nav-link" style="padding-left:1.25rem;">Part 8: Valuation Synthesis &amp; Se...</a>
+      <a href="#prompt-part-9" class="nav-link" style="padding-left:1.25rem;">Part 9: Preliminary Investment T...</a>
+      <a href="#prompt-part-10" class="nav-link" style="padding-left:1.25rem;">Part 10: Stress Test: Red Team Fo...</a>
+      <a href="#prompt-part-11" class="nav-link" style="padding-left:1.25rem;">Part 11: Definitive Verdict, Reso...</a>
+      <a href="#prompt-part-12" class="nav-link" style="padding-left:1.25rem;">Part 12: Forensic Audit &amp; Fact-Ch...</a>
+
+      <div class="nav-group-title">Emergency Procedures</div>
+      <a href="#vol-4-gates" class="nav-link">Vol 4: The 5 Falsification Gates</a>
+      <a href="#gate-1" class="nav-link" style="padding-left:1.25rem;">Gate 1: Flywheel Falsification</a>
+      <a href="#gate-2" class="nav-link" style="padding-left:1.25rem;">Gate 2: Symmetrical Discovery</a>
+      <a href="#gate-3" class="nav-link" style="padding-left:1.25rem;">Gate 3: Red Queen Effect</a>
+      <a href="#gate-4" class="nav-link" style="padding-left:1.25rem;">Gate 4: Earned Franchise Weighting</a>
+      <a href="#gate-5" class="nav-link" style="padding-left:1.25rem;">Gate 5: Cyclical Disambiguation</a>
+      <a href="#circuit-breaker" class="nav-link" style="padding-left:1.25rem;">2-Strike Circuit Breaker</a>
+
+      <div class="nav-group-title">Codex &amp; Audit Evaluation</div>
+      <a href="#vol-5-codex" class="nav-link">Vol 5: Literature &amp; Audit</a>
+      <a href="#sec-27-matrix" class="nav-link" style="padding-left:1.25rem;">27-Source Literature Matrix</a>
+      <a href="#sec-audit-evaluation" class="nav-link" style="padding-left:1.25rem;">⚖️ Institutional Audit (92%)</a>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- Volume 0 -->
+      <section id="vol-0-cockpit">
+        <h2>Volume 0: Cockpit Quick Reference &amp; Pre-Flight Checklist</h2>
+        <p>Before launching an institutional valuation run in Terminal V7, verify all pre-flight flight-control checks:</p>
+        
+        <div class="callout">
+          <h4>Pre-Flight Ingestion Verification Checklist</h4>
+          <p>• <strong>Document Verification Roll Call:</strong> Confirm SEC 10-K, latest 10-Q, latest earnings transcript, and 10-period CSV are loaded.<br>
+          • <strong>Home Currency Preservation:</strong> For international ADRs (e.g. MXN, JPY, EUR), verify operations run in Home Currency.<br>
+          • <strong>CSV as Ground Truth:</strong> Extract all 5-to-10 year historical trajectories directly from the CSV; never extrapolate manually.<br>
+          • <strong>Zero Premature Flywheels:</strong> Flywheel synthesis is strictly forbidden in Part 1 or Part 2. Restricted exclusively to Part 4.</p>
+        </div>
+      </section>
+
+      <!-- Volume 1 -->
+      <section id="vol-1-architecture">
+        <h2>Volume 1: Systems Architecture &amp; Bimodal Voice</h2>
+        
+        <div id="sec-1-1-micro-primacy">
+          <h3>1.1 Micro-Primacy Directive</h3>
+          <p>Terminal V7 operates under strict <strong>Micro-Primacy</strong>. Macroeconomic speculation and top-down market guessing are permanently decommissioned. Under the Buffett-Munger-Lynch Cash-Flow Sovereign Model, intrinsic value is built bottom-up from normalized owner cash flows, probabilistic 10-year DCF models, the Zero-Growth EPV benchmark floor, and structural competitive moats (asset reproduction cost ARV permanently eliminated).</p>
+        </div>
+
+        <div id="sec-1-2-bimodal-voice">
+          <h3>1.2 Bimodal Voice Architecture</h3>
+          <p>The Terminal enforces two distinct linguistic modes depending on the analytical task:</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Voice Mode</th>
+                <th>Active Chapters</th>
+                <th>Stylistic Rules &amp; Philosophy</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong style="color:var(--accent-blue);">Strategic &amp; Moat Voice</strong></td>
+                <td>Parts 1, 2, 4, 7, 8, 9, 11</td>
+                <td>Deep, nuanced institutional economic reasoning emulating Warren Buffett, Charlie Munger, and Peter Lynch. Rich qualitative depth, customer captivity, scale economics, multi-stage compounding flywheels, and probabilistic margin of safety synthesis. Rich qualitative depth, customer captivity, scale economics, multi-stage compounding flywheels.</td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--accent-rose);">Forensic &amp; Defense Voice (ASD-STE100)</strong></td>
+                <td>Part 3 (Cash Flow Integrity), Part 5 (Qualitative &amp; Symmetrical Balance Sheet), Part 10 (Red Team Short Attack), Step 12 (Forensic Crosscheck), and Governance/Capital Allocation Audits</td>
+                <td>Simplified Technical English adapted for audit-grade clarity: Active voice only; max 20-25 words per sentence; zero corporate euphemisms; strict assertions: <code>[Metric] is [Value]. [Benchmark] was [Value]. [Finding: PASS/FLAG/BREACH]</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div id="sec-1-3-v7-changes">
+          <h3>1.3 Transition from V6.2 to V7 (Changelog)</h3>
+          <div class="callout callout-warning">
+            <h4>Decommissioned Features (Strictly Banned)</h4>
+            <p>1. <strong>No Phased Execution Mode:</strong> The legacy "Tier 1 vs. Tier 2" mode is dead. Execution is unified full-auto.<br>
+            2. <strong>No Generic Macro / Howard Marks Market Temperature:</strong> The 21-pair macro survey is eliminated.<br>
+            3. <strong>No Legacy 15/16-Part or 12+1 Numbering:</strong> Execution strictly follows the unified <strong>11+1 canonical pipeline</strong> (11 Master Prompts + Step 12 Forensic Crosscheck). Net Asset Reproduction Floor (ARV) has been permanently eliminated under the Cash-Flow Sovereign Model.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Volume 2 -->
+      <section id="vol-2-limitations">
+        <h2>Volume 2: Operating Limitations (The 5 Inviolable Formatting Laws)</h2>
+        <p>Enforced programmatically by <code>src/utils/dossierFormatGuard.ts</code> to guarantee native Obsidian and HTML rendering:</p>
+
+        <div id="law-1" class="callout callout-critical">
+          <h4>Law 1: Zero Raw LaTeX Math</h4>
+          <p>Strictly forbidden from outputting LaTeX/TeX syntax (<code>\begin{aligned}</code>, <code>$$...$$</code>, <code>\frac{...}{...}</code>). All valuation math and reconciliations must be clean plain-text markdown or bullet points.</p>
+        </div>
+
+        <div id="law-2" class="callout callout-critical">
+          <h4>Law 2: Strict Markdown Tables &amp; Aesthetic Alignment (Zero ASCII Art)</h4>
+          <p>Strictly forbidden from outputting ASCII typewriter borders (<code>====</code>, <code>----</code>), box characters (<code>+----+</code>), typewriter sliders, enclosing prose/tables in monospace code blocks, or outputting text progress bars (<code>[#####]</code>). All data arrays MUST be standard GitHub-Flavored Markdown (GFM) pipe tables.</p>
+          <p style="margin-top:0.5rem; font-size:0.85rem;">• <strong>Symmetrical Balance Sheet Synthesis (Part 5):</strong> Mandates 3-column table (<code>| Off-Balance-Sheet Vector | Valuation Spread ($M) | Balance Sheet Impact |</code>).<br>
+          • <strong>Chapter Preamble Summaries (Parts 2, 3, 7, 8):</strong> Mandates 4-column table (<code>| Strategic Parameter | Audited Economic Anchor | Strategic Parameter | Audited Economic Anchor |</code>).<br>
+          • <strong>Obsidian Code Block Elimination:</strong> Leading 4+ spaces on non-code lines are stripped to eliminate accidental dark monospace boxes in Obsidian.<br>
+          • <strong>2-Column Alignment Contract:</strong> 2-column key-value and verdict tables assign <code>.cell-verdict-val</code> (left-aligned with 1.5rem padding), preventing jagged zig-zag alignment.</p>
+        </div>
+
+        <div id="law-3" class="callout callout-critical">
+          <h4>Law 3: Numbered Compounding Flywheel Structure, Zero Premature Flywheels &amp; Mandatory Falsification</h4>
+          <p>Flywheels belong exclusively to Part 4, Section 1.7. Must be structured as clean numbered stages 1 to 5 with an explicit Stage 5 Loopback description for Mermaid/HTML parsers. Strictly forbidden in Part 1 or Part 2.</p>
+          <p style="margin-top:0.5rem; font-size:0.85rem;">• <strong>Mandatory Flywheel Falsification Audit:</strong> If a business operates as a cyclical commodity processor or linear value chain lacking an organic closed loop, the model MUST declare <code>#### 1.7 Compounding Architecture: LINEAR VALUE CHAIN / CYCLICAL COMMODITY (NO ORGANIC FLYWHEEL)</code> rather than inventing an artificial loop.<br>
+          • <strong>HTML Duplicate Walkthrough Suppression:</strong> Redundant stage text lists ("Flywheel Mechanics Walkthrough") are suppressed in HTML when interactive diagrams and conveyor cards render.</p>
+        </div>
+
+        <div id="law-4" class="callout callout-critical">
+          <h4>Law 4: Dual-Format Delivery Contract</h4>
+          <p>• <strong>Obsidian Markdown (<code>.md</code>):</strong> Line 1 MUST contain structured YAML frontmatter (11 canonical keys). Headings map to institutional chapter titles.<br>
+          • <strong>Standalone HTML (<code>.html</code>):</strong> Fully self-contained, zero external CDN scripts, high-contrast typography, sticky first table columns, and <code>.formula-card</code> containers.</p>
+        </div>
+
+        <div id="law-5" class="callout callout-critical">
+          <h4>Law 5: Parser &amp; Chart Invariance</h4>
+          <p>Numeric parsers must cleanly strip markdown bolding and correctly parse accounting negatives like <code>**($19.00)**</code> without collapsing to <code>NaN -> 0</code>. Cash flow visualizers must strictly filter out margin/percentage rows when plotting absolute dollar series.</p>
+        </div>
+      </section>
+
+      <!-- Volume 3 -->
+      <section id="vol-3-pipeline">
+        <h2>Volume 3: Normal Procedures — The 11+1 FULL-AUTO Pipeline</h2>
+        <p>The authoritative 12 Master Prompts driving the Terminal valuation engine. Click any prompt to expand and copy:</p>
+
+
+  <details class="prompt-accordion" id="prompt-part-1">
+    <summary>
+      <span>Part 1: Financial Forensics &amp; Capital Allocation Discipline</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-forensic">🛡️ FORENSIC &amp; DEFENSE (ASD-STE100)</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 1</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-1" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-1">VOICE &amp; REASONING ARCHITECTURE:
+- Strategic &amp; Moat Voice (Sections 2.1 - 2.5, 2.8): Deep, nuanced, institutional economic reasoning reflecting our firm&#039;s audited valuation framework.
+- Forensic &amp; Defense Voice (Sections 2.6 Forensic Accounting Audit, 2.7 Debt Equivalents, 2.9 Governance &amp; Capital Allocation): 80% ASD-STE100. Active voice only. One verb per sentence. Zero corporate euphemisms. Strict metric-to-finding assertions.
+
+1. The Document Verification Roll Call &amp; Ingestion Audit
+Before summarizing the business, you MUST read the ### Source Documents list generated at the top of this file. You are strictly forbidden from stating a document is missing if it appears in that list. Treat any non-SEC supplementary files provided by the user as objective external reality.
+Execute the following verification:
+* The Verification Roll Call: Explicitly list the exact filenames of the supplementary documents, filings (10-K, 10-Q), earnings call transcripts, and financial spreadsheets you are analyzing in this step. Confirm that all provided documents have been ingested and accounted for before proceeding.
+
+2. Financial and Operational Analysis: Use the company&#039;s provided 10-K, the most recent 10-Q, the latest Earnings Call Transcript, and the financial CSV file.
+CRITICAL DIRECTIVE: The 10-K only provides 3 years of data. You must use the provided financial CSV file as your absolute source of truth for all Trailing Twelve Month (TTM) figures and 5+ year historical data. Do not manually calculate TTM figures by adding/subtracting 10-Q and 10-K data; extract the exact TTM numbers directly from the CSV.
+CRITICAL CURRENCY &amp; ADR DIRECTIVE: For foreign private issuers, international companies, and American Depositary Receipts (ADRs):
+- Home Currency Preservation: The financial CSV is harmonized in the company&#039;s native Home Currency (e.g., MXN, JPY, EUR, GBP, CAD, CHF, BRL, etc.) across all 10 historical periods. You must perform all operational evaluations, margin trends, sales compounding, and the Return on Retained Capital (RORC) strictly in the native Home Currency to eliminate foreign exchange translation noise.
+- Balance Sheet Consistency: Ensure Cash and Gross Debt are evaluated in identical Home Currency units before calculating Net Cash, Enterprise Value, or Cash-Adjusted Margin of Safety.
+- Dual-Currency Valuation Bridge: In Parts 6, 7, and 8 (Valuation Floor, Engine, and Synthesis), calculate Intrinsic Value per share/unit in the native Home Currency, and then apply the disclosed Current Spot Exchange Rate to state the final Intrinsic Value in USD per ADS to compare directly against the US ADR Market Price. You are strictly forbidden from discarding verified trailing TTM cash flows solely because they are reported in Home Currency.
+CRITICAL FORMATTING DIRECTIVE: You are strictly forbidden from outputting LaTeX math notation (\begin{aligned}, \text{}, \mathbf{}, \hline, $$). Present all financial math, equations, and reconciliations in clean plain-text bullet points or equations. You are STRICTLY FORBIDDEN from outputting typewriter-style ASCII text boxes, equals-sign borders (====), dashed lines (----), plus-sign corners (+----+), wrapping tables/audits in monospace code blocks (triple backticks), or generating text-based progress bars / hash bars (e.g. [#####], [###]). ALL tables MUST use standard GitHub-Flavored Markdown pipe syntax (| Header 1 | Header 2 | followed by | :--- | :---: |), and all market shares, segment distributions, and historical trajectories must be clean GFM pipe tables or standard markdown bullet points.
+CRITICAL EPISTEMIC SEQUENCE DIRECTIVE: You are strictly forbidden from generating flywheels, circular flowcharts, loop diagrams, or declaring a compounding flywheel in this section. Do not anticipate or jump ahead to Part 4. The 5-stage compounding flywheel belongs exclusively in Part 4 Section 1.7, and ONLY after the balance sheet, cash flows, and moats have been forensically audited.
+CRITICAL NARRATIVE DIRECTIVE: You are strictly forbidden from committing timeline hallucinations or source misattributions.
+- Timeline Accuracy: You must properly attribute events and financial impacts to their exact quarter and year. Do not conflate events from previous periods as happening in the current period.
+- Source Attribution: You must explicitly and accurately state which document from the provided sources a quote or fact originates from. Do not misattribute a quote or fact from one document to another.
+Prioritize the 10-Q data if it is more recent than the 10-K for qualitative updates. If any documents are missing, state this clearly.
+
+* 2.1 Business Overview: Concise summary of the company&#039;s business model (pure prose only; no cycle diagrams or flowchart art).
+* 2.2 Risks: What are the primary structural risks hidden in the 10-K? (e.g., customer concentration, debt maturities, related-party transactions).
+* 2.3 From the 10-K file: Item 7 Management&#039;s Discussion and Analysis (MD&amp;A):
+   * 2.3.1 The most important information of the most important subtitles. Do not include standard disclaimers or boilerplate definitions.
+   * 2.3.2 Cash Flow and CAPEX: Detail historical Capex, Maintenance Capex, and Growth CAPEX disclosures.
+   * Confidence Level:
+* 2.4 Balance Sheet Strength (Net Cash Rebate Test):
+   * Objective: Assess the company&#039;s net cash position as a measure of financial strength and a potential margin of safety.
+   * Calculation: Calculate Net Cash = (Cash &amp; Cash Equivalents + Short-Term Marketable Securities - Restricted Customer Balances) - (Short-Term Debt + Long-Term Debt). Rebate Calculation: Calculate Net Cash as a percentage of current Market Capitalization.
+   * Industry-Specific Adjustment (Banks &amp; Financials): Skip the standard Net Cash calculation. Instead, assess the CET1 Ratio, Liquidity Coverage Ratio, and Tangible Common Equity (TCE) ratio to determine balance sheet strength.
+   * Industry-Specific Adjustment (Insurers): Skip the standard Net Cash calculation. Insurance companies hold massive fixed-income portfolios to back policyholder reserves. Assess Tangible Book Value per share, Risk-Based Capital (RBC) ratio or statutory capital surplus, and investment portfolio asset quality (split between investment-grade fixed income vs. equities/alternative investments).
+   * Industry-Specific Adjustment (REITs): Skip the standard Net Cash calculation. Real estate businesses operate with permanent property-level debt. Under Charlie Munger&#039;s Zero-EBITDA Doctrine, assess Net Debt / AFFO (or Net Operating Income [NOI]), Fixed Charge Coverage Ratio, and debt maturity distribution (weighted average maturity and % fixed vs. floating rate) rather than misleading EBITDA metrics.
+   * Analysis: If this percentage is 10% or greater, explicitly state that the company has a significant net cash position that provides a financial cushion. This cash could be considered a &quot;rebate&quot; to shareholders at the current price.
+   * Confidence Level:
+* 2.5 Accounting Policies: Summarize the company&#039;s significant accounting policies: revenue recognition, inventory valuation, depreciation methods, goodwill impairment tests. Highlight any aggressive or non-standard choices.
+   * Confidence Level:
+* 2.6 Forensic Accounting &amp; Earnings Quality Audit (Buy-Side Cash Integrity Protocol):
+   * Execute an objective quantitative audit of earnings quality and cash flow integrity. You MUST output a clean Markdown table with EXACTLY these four columns: | Forensic Test Vector | Calculated Metric / Trend | Trigger Threshold | Audit Finding (🟢 PASS / 🔴 FLAG) |.
+   * [ELIMINATION OF OUTDATED ACADEMIC RATIOS &amp; CHARLIE MUNGER ZERO-EBITDA DOCTRINE]: Under institutional buy-side principles, brittle academic ratios (DSO, AR Divergence, DPO, Sloan NOA Accruals, Beneish M-Score) are permanently eliminated. They mechanically generate false fraud alarms during commodity price drops, inventory cycles, or cash-funded M&amp;A. Furthermore, enforce Charlie Munger&#039;s Zero-EBITDA Doctrine: EBITDA and Adjusted EBITDA are strictly rejected as valid measures of cash flow, earnings, or leverage (depreciation is real wear-and-tear, taxes/interest are cash obligations, and SBC is real dilution).
+   * Quantitative Test Vectors to Calculate (Evaluated Over a 3-Year Rolling Window):
+     1. 3-Year Cumulative Cash Conversion Reality (Vector 1): Calculate 3-Year Cumulative Cash Conversion = (3-Year Cumulative Operating Cash Flow / 3-Year Cumulative GAAP Net Income). Benchmark: PASS if Cumulative OCF &gt;= 85% - 100% of Cumulative Net Income. Flag only if multi-year net income persistently fails to convert into real cash flow collections (or if OCF is negative over a multi-year span while GAAP Net Income is positive). Exclude single-quarter working capital timing swings (e.g., seasonal inventory builds, commodity price troughs, or IRS tax overpayment receivables).
+     2. Charlie Munger Zero-EBITDA &amp; Non-GAAP Add-Back Rejection (Vector 2): Audit management&#039;s non-GAAP adjustments. Strip out recurring add-backs for Stock-Based Compensation (SBC), restructuring charges, acquisition integration costs, and ongoing litigation. Flag if management relies on aggressive non-GAAP / &quot;Adjusted EBITDA&quot; add-backs to disguise underlying GAAP operating losses or if Stock-Based Compensation exceeds 10% of Operating Cash Flow (or &gt; 5% of Total Revenue) without being deducted from executive performance targets.
+     3. Aggressive Expense Capitalization &amp; Revenue Pull-Forward (Vector 3): Audit capitalized software, capitalized development costs, unbilled contract assets, and intangible asset reclassifications. Flag if capitalized operating costs grow at &gt; 2.0x revenue growth, if finite-life intangibles are reclassified to indefinite life to artificially lower quarterly amortization expense, or if unbilled contract assets/receivables chronically expand while deferred revenue declines over a multi-year period.
+     4. Balance Sheet Asset &amp; Working Capital Integrity (Vector 4): Audit balance sheet asset growth versus underlying cash generation, explicitly separating productive capital deployment from non-cash accounting inflation. Benchmark: Cash-funded acquisitions of physical plant, property, equipment (PP&amp;E), and proven operating businesses, as well as temporary income tax receivables/refunds from the IRS, represent productive cash conversion and MUST NOT be flagged as accounting accrual manipulation. Flag only if operating assets inflate via uncollectible customer receivables, inventory obsolescence, or unamortized deferred costs without corresponding cash collections.
+   * [CRITICAL INDUSTRY-SPECIFIC BYPASS ROUTING FOR FORENSIC ACCOUNTING AUDIT]:
+     - For Banks, Financial Institutions &amp; Embedded Fintech Lenders: Skip standard inventory and software capitalization tests. Instead, execute the Credit Quality Forensic Check: compare Provision for Credit Losses against historical through-the-cycle Net Charge-Offs (flag aggressive reserve releases used to artificially boost net interest income) and audit CET1 / Non-Performing Loan (NPL) formation rates. In growing fintech/lending operations under CECL (ASC 326), distinguish upfront Day-1 non-cash growth reserve builds from true credit deterioration; do not confuse upfront accounting reserves with permanent operational cash burns.
+     - For Insurers: Inspect the 10-K Loss Reserve Note for Prior-Year Reserve Development (flag favorable reserve releases masking underlying underwriting deterioration) and evaluate the Combined Ratio (&lt; 100%).
+     - For REITs: Audit tenant lease expirations, straight-line rent adjustments, same-store tenant creditworthiness, and Net Debt to AFFO (or NOI).
+   * Confidence Level:
+* 2.7 Long-Term Debt Analysis &amp; Footnote Debt Equivalents (Footnote Debt Equivalents Protocol):
+   * Debt Maturity Schedule: Table: Instrument Type, Amount Outstanding/Available, Maturity Date, Interest Rate/Terms. Assess the company&#039;s ability to service its debt.
+   * Footnote &amp; Off-Balance-Sheet Exposure (Footnote Debt Equivalents Protocol):
+     - Operating Lease Obligations: Verify whether Operating Lease Liabilities are already included inside on-balance-sheet Total Debt under ASC 842 / IFRS 16; only add incremental unrecorded off-balance-sheet commitments to avoid double-counting lease debt. (The pre-ASC 842 &quot;7.5x rental expense&quot; rule of thumb is permanently eliminated).
+     - Net Unfunded Pension &amp; Postretirement Deficits: Add (Projected Benefit Obligation [PBO] - Fair Value of Plan Assets) * (1 - Effective Tax Rate) to debt equivalents.
+     - Unconditional Purchase Obligations &amp; Commitments: Detail take-or-pay supply contracts or capital commitments that act as contractual claims against cash flows. [CRITICAL DEBT-EQUIVALENT BOUNDARY]: Operating contracts that generate future revenue (e.g. cloud compute hosting, dedicated freight/logistics service charters) and unvested executive retention compensation (LTRP) belong strictly inside operating margins and COGS; you are strictly forbidden from classifying them as balance-sheet debt equivalents.
+     - Recourse Debt, Guarantees &amp; Confirmed Legal Contingencies: Full recourse debt of customer financing subsidiaries. [CONFIRMED LEGAL CONTINGENCY BOUNDARY]: Deduct only confirmed court judgments, posted appeal bonds, signed settlement agreements, or GAAP-probable and reasonably estimable legal accruals (ASC 450) as debt equivalents. You are strictly forbidden from inventing arbitrary dollar debt deductions for early-stage, uncertified class-action lawsuits or open regulatory subpoenas; track unquantified litigation qualitatively in Part 5 and the Step 11 Monitoring Dashboard.
+     - [Industry-Specific Adjustment (Banks &amp; Insurers)]: Bypass standard lease/pension debt additions as regulatory capital ratios (CET1, RBC) already incorporate balance sheet obligations. For REITs, property-level debt is handled directly in Net Asset Value.
+   * Confidence Level:
+* 2.8 Segment Analysis (Trailing Twelve Month TTM Ground-Truth):
+   * Trailing Twelve Month (TTM) Ground-Truth Directive: Extract TTM Segment Revenue directly from the &#039;Revenue Product Segments (TTM)&#039; and &#039;Revenue Geographic Segments (TTM)&#039; sections appended to the provided Financials-TTM.csv file.
+   * SEC Filing Bridge for Segment Operating Profit &amp; Margin: For segment operating income/profit and margins, bridge interim reporting periods to true TTM using the canonical SEC formula: TTM = Full Prior Fiscal Year (10-K) + Current YTD Interim (10-Q) - Prior-Year YTD Interim (10-Q). If segment operating profits are only reported annually in the 10-K, use the latest audited 10-K segment results and explicitly state the reporting period.
+   * CRITICAL SEGMENTATION INTEGRITY RULE: You are strictly forbidden from combining product/operating segments and geographic territories into a single table. They represent distinct orthogonal dimensions. You MUST generate separate, dedicated clean GFM pipe tables:
+     - Table 1A: Trailing Twelve Month (TTM) Operating Business Segments:
+       | Operating Business Segment | TTM Revenue ($M) | % of Total Revenue | YoY Growth Rate (%) | Core Product Lines &amp; Customer Verticals |
+       (Rows must reflect pure business divisions and sum strictly to 100.0% of total revenue).
+     - Table 1B: Trailing Twelve Month (TTM) Geographic Territory Breakdown:
+       | Geographic Region / Territory | TTM Revenue ($M) | % of Total Revenue | YoY Growth Rate (%) | Regional Market Dynamics &amp; Headwinds |
+       (Rows must reflect pure geographic territories and sum strictly to 100.0% of total revenue).
+     - Table 2: Trailing Twelve Month (TTM) Segment Operating Profitability &amp; Margin Spread:
+       | Operating Business Segment | TTM Operating Profit ($M) | Operating Margin (%) | % Contribution to Total Operating Profit | Unit Economic Driver |
+   * Strategic Analysis: Identify the company&#039;s &quot;star&quot; compounding segments and margin drivers versus commoditized drag segments. Analyze their unit economics, operating leverage, and competitive defensibility.
+   * Confidence Level:
+* 2.9 Management Quality &amp; Capital Allocation Discipline:
+   * Track Record &amp; Integrity: Assess management&#039;s honesty, transparency, capital allocation discipline, and long-term orientation. Look for red flags (excessive optimism, related-party transactions, obfuscation).
+   * Test 1: Capital Allocation $1 Retained Earnings Test (5-Year Rolling Window &amp; Total Wealth Basis):
+      * Calculate Market Value Creation Ratio = (Change in Market Capitalization over 5-year rolling period + Cumulative Cash Dividends Distributed over 5-year rolling period) / (Sum of Retained Earnings over 5-year rolling period).
+      * Benchmark: Pass if Ratio &gt;= 1.0 (management creates at least $1 of total shareholder wealth for every $1 retained). Flag if Ratio &lt; 1.0 (management is destroying economic capital). (Supplement with 10-year context measured strictly mid-cycle to mid-cycle for cyclical companies).
+      * Guardrail (M&amp;A / One-Time Distributions): If the company executed material debt-funded M&amp;A, equity issuances, or transformative restructuring over the period, adjust Market Cap change to isolate organic retained capital creation. If cumulative retained earnings are zero or negative due to return of capital / special distributions, evaluate capital allocation via aggregate cumulative shareholder distributions plus net enterprise value creation.
+      * [Industry-Specific Adjustment (REITs)]: Bypass standard $1 Retained Earnings Test (REITs must distribute &gt;= 90% of taxable net income; assess Capital Allocation via ROIC on incremental property developments and AFFO per share growth).
+      * [Industry-Specific Adjustment (Cyclicals)]: Measure strictly from mid-cycle to mid-cycle to eliminate peak-to-trough market cap distortions.
+   * Test 2: Share Repurchase Capital Allocation Audit (Capital Discipline Protocol):
+      * Buyback Price Discipline: Did historical share buybacks occur at opportunistic valuation multiples (e.g., during cycle troughs or below historical median Price-to-Normalized-FCF / Owner Earnings multiples) rather than at peak speculative multiples? Buying back stock at peak multiples destroys continuing shareholder wealth (exact comparison against Probabilistic Expected DCF Intrinsic Value per share is cross-checked in Parts 8–12).
+      * Share Count Contraction vs. SBC Neutralization: Calculate the 5-year Diluted Share Count Index = (Diluted Shares in TTM / Diluted Shares 5 Years Ago). Explicitly state whether buybacks actively reduced outstanding share count (Index &lt; 1.0) or were merely used to neutralize executive Stock-Based Compensation dilution at elevated prices.
+   * Test 3: DEF 14A Proxy Compensation Incentive Alignment:
+      * Audit executive bonus and long-term incentive metrics from the DEF 14A proxy.
+      * Grade A / Aligned: Compensation packages that explicitly incorporate a capital charge (e.g., ROIC, Economic Value Added [EVA] with hurdle rates &gt; 10%, or per-share intrinsic value growth).
+      * Red Flag / Misaligned: Compensation tied to unadjusted gross revenue, volume growth, or raw EBITDA targets without a capital charge (under Charlie Munger&#039;s Zero-EBITDA Doctrine), which incentivizes reckless empire-building acquisitions and debt-fueled growth.
+   * Test 4: The Return on Retained Capital (RORC) Test (Recency-Weighted 50% 3-Yr / 30% 5-Yr / 20% 10-Yr):
+      * Calculate RORC across available historical periods in the financial CSV file, weighting recent performance to eliminate the 10-Year Scale Drag: 50% 3-Year Horizon, 30% 5-Year Horizon, 20% 10-Year Horizon.
+      * Calculate Denominator (Capital Retained): Sum of (Free Cash Flow - Dividends) over the period. [Banks: Sum of (Net Income - Dividends)]. [Homebuilders: Sum of (Adjusted FCF - Dividends)]. [Insurers: Sum of (Comprehensive Net Income - Dividends), or evaluate TBV/share + Dividends compounded growth vs. 10% hurdle]. [REITs: evaluate ROIC on incremental development relative to cost of capital].
+      * Calculate Numerator (Earnings Power Variance): Owner Earnings in final year MINUS Owner Earnings in first year. [Banks: Normalized Net Income]. [Homebuilders: Adjusted FCF]. [Insurers: Operating Underwriting Profit + Net Investment Income]. [REITs: AFFO final year MINUS AFFO first year].
+      * Calculate RORC = Numerator / Denominator. Explicitly state if this historical yield on retained cash is above or below the 10.00% Static Hurdle Rate.
+      * Guardrail (Endpoint &amp; Negative Base Calibration): Measure strictly between normalized mid-cycle operational periods, eliminating peak-to-trough or anomaly endpoints (e.g., pandemic disruptions or one-time asset sales). If the cumulative denominator (Capital Retained) is zero or negative (cumulative distributions exceeded cash flow), or if starting earnings power was negative/near-zero, standard RORC is mathematically undefined; evaluate incremental capital deployment via Return on Incremental Invested Capital (ROIIC) or return on capital employed across individual multi-year investment cycles.
+   * Confidence Level (Management Qualities):
+* 2.10 Consistency of Narrative: If prior years&#039; documents are available, briefly assess if management&#039;s stated strategy and capital allocation priorities have been consistent over the past 3-5 years. Note any significant changes in the story.</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-2">
+    <summary>
+      <span>Part 2: Operational Engine &amp; Market Analysis</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-strategic">🏛️ STRATEGIC &amp; MOAT VOICE</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 2</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-2" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-2">VOICE DIRECTIVE — STRATEGIC &amp; MOAT VOICE:
+Apply deep, nuanced, institutional economic reasoning reflecting our desk&#039;s audited valuation framework. Analyze structural competitive advantages, customer captivity, scale economics, unit-economic spreads from the Competitor Radar, and compounding dynamics with institutional depth.
+
+1. Operational Engine &amp; Market Analysis: Objective: Provide an exhaustive institutional analysis of the company&#039;s operating engine, competitive landscape, competitor intelligence, and addressable market. Use the uploaded filings, transcripts, financial files, and the pre-harvested Competitor Radar dossier ([TICKER]_Competitor_Radar.md) as your ground truth. Synthesize peer benchmarks directly from these verified sources.
+CRITICAL PREAMBLE DIRECTIVE: You are strictly forbidden from outputting unprompted preamble typewriter summary cards, space-padded headers, or indented ASCII boxes before Section 1.1. Begin directly with &#039;#### 1.1 Core Business &amp; Economic Engine&#039;.
+CRITICAL FORMATTING DIRECTIVE: You are strictly forbidden from outputting typewriter ASCII/Unicode tree structures (├─, ├──, └──, │), pseudo-divider lines (─────┤), typewriter flowcharts, box drawings, or text diagrams using characters like |, v, ^, ▼, ──&gt;, or +---+, or text progress bars / hash bars (e.g. [#####], [###]). Format all segment breakdowns, market share hierarchies, unit economic comparisons, supply chain logistics, and facility footprints as clean standard indented Markdown bullet lists or clean GFM Markdown pipe tables only.
+
+* 1.1 Core Business &amp; Economic Engine: What business is the company really in? What is its core economic engine? Define the precise transaction or value delivery mechanism. Does this engine actually generate high-margin cash flow, or is it a low-margin commodity cycle?
+   CRITICAL EPISTEMIC SEQUENCE DIRECTIVE: You are strictly forbidden from generating flywheels, circular flowcharts, loop diagrams, or declaring a compounding flywheel in this section. Focus strictly on describing empirical business mechanics. The compounding flywheel is reserved strictly for Part 4 Section 1.7 after forensic verification.
+   * Confidence Level:
+* 1.2 End Market Portfolio &amp; Revenue Breakdown:
+   * End Market Portfolio: Create a well-formatted Markdown table (ensure an empty line before the table) listing the company&#039;s end markets, customer verticals, and the percentage of total company revenue derived from each. Cite source filings.
+   * Confidence Level:
+* 1.3 Major Competitors &amp; Market Share:
+   * Major Competitors: List the company&#039;s top 3-5 major competitors. Estimate the company&#039;s overall market share (provide a documented range if known). Discuss the competitive landscape: Is the market fragmented (many small players) or consolidated (dominated by an oligopoly)? Format market concentration and competitor lists using clean standard indented Markdown bullet points or clean GFM pipe tables. Strictly avoid typewriter tree structures (├─, └──) or ASCII divider lines.
+   * Confidence Level:
+* 1.4 Competitor Radar Synthesis:
+   * Cross-reference the pre-computed &quot;Competitor Moat &amp; Valuation Radar&quot; provided in the staged reference documents (&#039;[TICKER]_Competitor_Radar.md&#039;), or derive directly from 10-K/Proxy peer disclosures if no pre-computed radar file is staged.
+   * Format the multi-factor comparative standings in a clean GFM pipe table:
+     | Competitor / Peer | Gross Margin | Operating Margin | ROIC | EV / True FCF | EV / Owner Earnings | Net Cash / Mkt Cap |
+     | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+     You are strictly forbidden from outputting bullet lists with pipe delimiters or typewriter ASCII art.
+   * Analyze and compare the target company&#039;s unit economics, margins (Gross &amp; Operating), ROIC / ROTCE, and valuation multiples against its direct public competitors. Format unit economic comparisons and margin profiles as clean standard indented Markdown bullets or GFM pipe tables (never ASCII tree structures).
+   * [SHARE-COUNT CANNIBAL &amp; NEGATIVE INVESTED CAPITAL GUARDRAIL]: When aggressive share repurchases (Treasury Stock contra-equity) or customer float (negative working capital / deferred revenue) compress GAAP Book Equity or Invested Capital near or below zero, textbook ROIC (NOPAT / Invested Capital) becomes mathematically negative or distorted. In these cases, evaluate capital efficiency via Return on Tangible Operating Assets (excluding Treasury Stock reductions) and Normalized Owner Earnings Margin, and never penalize a high-cash-conversion cannibal for having negative GAAP stockholders&#039; equity.
+   * Highlight both the company&#039;s structural advantages (e.g., gross margin dominance, operating leverage, ROIC spread, net cash fortress) and any areas where rivals demonstrate superior velocity or lower multiples.
+   * Provide dense, quantitative, and qualitative comparative analysis.
+   * Confidence Level:
+* 1.5 Structural Moat Verification (The Vulnerability Audit):
+   * Scale vs. Customer Captivity Architecture: Identify the company&#039;s *claimed* structural advantage. **CONDITIONAL FALSIFICATION GATE**: Now, attempt to break it. What specific competitor action, regulatory shift, or technological change destroys this advantage within 36 months? Distinguish defensible niche/local scale from a commoditized global scale trap.
+   * Platform Network Effects &amp; Moat Scorecard [STRICTLY FOR SOFTWARE, CLOUD, MARKETPLACES &amp; DIGITAL PLATFORMS ONLY]:
+     Evaluate the 5 core criteria in a concise GFM Markdown table: | Platform Moat Criterion | Standard Threshold | Company Metric | Audit Verdict (PASS / EXEMPT / BREACH) |. Do NOT output typewriter ASCII boxes, duplicate summaries, or redundant prose blocks:
+     1. Gross Margin Quality: GAAP Gross Margin &gt;= 75.0% - 80.0%.
+     2. Organic Demand (LTV / CAC): LTV/CAC &gt;= 4.0x with paid sales/marketing &lt;= 15.0% of revenue.
+     3. Customer Lock-In &amp; Churn: Net Revenue Retention (NRR) &gt;= 110.0% and Annual Gross Churn &lt;= 5.0%.
+     4. Network Effects: Direct or two-sided utility scaling with user count.
+     5. Customer Concentration: Largest single customer &lt; 10.0% of total revenue (for enterprise software/B2B services).
+   * [SECTOR &amp; DISTRIBUTION CHANNEL EXEMPTION]: You are STRICTLY FORBIDDEN from penalizing physical retail, industrial manufacturing, logistics, or capital-heavy businesses under the 75% software gross margin rule. For physical compounders (e.g. Costco, railroads, specialized distributors, food/staples producers), evaluate fixed-cost spreading, regional density, and supply-chain barriers. Furthermore, distinguish single-enterprise cancellation risk from major retail/OEM distribution channel aggregation (e.g., selling 15%–25% of volume through Walmart, Costco, or a sovereign defense/foundry channel): evaluate channel concentration via multi-year gross margin stability and end-consumer brand or regional supply captivity rather than issuing an automatic software breach.
+   * Confidence Level:
+* 1.6 Total Addressable Market (TAM):
+   * Detail the TAM for Key Products/Services. Cross-reference management claims against credible industry research.
+   * Confidence Level:
+* 1.7 External Forces &amp; Market Trends (The External Impact Assessment):
+   * Secular Demand Drivers &amp; Growth Catalysts: Identify secular shifts, regulatory mandates, technological developments, or structural demand drivers that expand TAM or bolster pricing power.
+   * Structural Industry Friction &amp; Downside Constraints: Identify cyclical contractions, cost inflation, regulatory burdens, geopolitical risks, or specific competitive threats (e.g., price wars, substitute products).
+   * Market Trends &amp; Growth Projections: Provide a quantitative overview of current market trends relevant to the company&#039;s industry, citing projected industry CAGR and velocity.
+   * Confidence Level:
+* 1.8 Geographic Market Segmentation:
+   * Provide the geographic revenue breakdown and market share by region in a clean Markdown table. If geographic segmentation data is not readily available, state &#039;Information Not Found - Detailed Geographic Data Not Readily Available&#039;.
+   * Confidence Level:</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-3">
+    <summary>
+      <span>Part 3: Normalized Owner Earnings &amp; Cash Flow Integrity</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-forensic">🛡️ FORENSIC &amp; DEFENSE (ASD-STE100)</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 3</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-3" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-3">VOICE DIRECTIVE — FORENSIC &amp; DEFENSE VOICE (80% ASD-STE100):
+Execute this analysis using strict Forensic &amp; Defense Voice (80% ASD-STE100):
+- Active voice only. Eliminate passive voice constructions.
+- One verb per sentence. Keep sentences short, concise, and direct (maximum 20-25 words).
+- Zero corporate euphemisms. Ban words like &#039;headwinds&#039;, &#039;tailwinds&#039;, &#039;softness&#039;, &#039;synergies&#039;, or &#039;streamlining&#039;. State exact dollar figures, percentages, and accounting entries.
+- Strict metric-to-finding assertions: Every adjustment, SBC deduction, and working capital normalization must state the metric, comparison threshold, and audit finding directly.
+
+1. Normalized Owner Earnings &amp; Cash Flow Integrity Engine: Use the provided financial CSV file as your ground truth.
+CRITICAL PREAMBLE DIRECTIVE: You are strictly forbidden from outputting unprompted preamble typewriter summary cards or space-padded pseudo-tables. Begin directly with &#039;#### 1.1 Authoritative Free Cash Flow &amp; Normalized Owner Earnings Calculation&#039;.
+
+* 1.1 Authoritative Free Cash Flow &amp; Normalized Owner Earnings Calculation:
+CRITICAL OWNER EARNINGS DIRECTIVE: You are strictly forbidden from calculating Owner Earnings using the basic &quot;Net Income + D&amp;A - Capex&quot; shorthand. You must calculate it using this exact institutional framework:
+1. Operating Cash Flow (OCF) Baseline: Start with Total Operating Cash Flow for the TTM period, extracted directly from the provided financial CSV file.
+2. Normalization Adjustments:
+   - Working Capital Normalization: Scan the cash flow statement and the CSV for massive, temporary working capital swings (abnormal inventory accumulation, payables stretching) or one-off charges. Adjust OCF to remove temporary distortions so it reflects structural cash-generating power.
+   - CRITICAL SBC ADJUSTMENT: Explicitly deduct 100% of Stock-Based Compensation (SBC) from Operating Cash Flow. Treat SBC as a hard cash expense, as it represents real economic dilution. You are strictly forbidden from ignoring SBC just because the company repurchases shares.
+   - Tax Normalizations: Audit the effective tax rate versus statutory rates. Normalize for non-recurring tax holidays, windfalls, or credits (e.g., R&amp;D tax credits, temporary statutory relief) to establish a sustainable after-tax cash baseline.
+3. Maintenance vs. Growth CapEx Estimation (Empirical Carve-Out Protocol):
+   - Step A: Discrete Growth CapEx Carve-Out — Inspect 10-K/10-Q Item 7 MD&amp;A disclosures for explicit growth investments (e.g., greenfield facilities, new manufacturing lines, retail unit expansions, strategic software/cloud infrastructure) and carve them out directly from Total CapEx. Never classify disclosed capacity expansion projects as Maintenance CapEx simply because revenue dipped in a single cyclical quarter.
+   - Step B: 3-Year Rolling D&amp;A &amp; PP&amp;E Replacement Baseline — Benchmark remaining Maintenance CapEx against the 3-Year Rolling Average of tangible Depreciation &amp; Amortization (typically 0.85x – 1.10x D&amp;A). If estimated Maintenance CapEx falls below 0.70x D&amp;A (deferral risk) or spikes above 1.30x D&amp;A without disclosed asset replacement programs, calibrate between 1.0x D&amp;A and the empirical carve-out. Err on the side of conservatism (overestimating Maintenance CapEx).
+4. Final Owner Earnings Reconciliation:
+   - State the starting OCF, each explicit adjustment (SBC deduction, working capital adjustment, tax normalization), Maintenance CapEx subtracted, and both the Levered and Unlevered Normalized Owner Earnings figures:
+     * Levered Normalized Owner Earnings (Equity cash flow): OCF - Maintenance CapEx - SBC
+     * Unlevered Normalized Owner Earnings (Firm cash flow): Levered Owner Earnings + After-Tax Net Interest Expense [Net Interest Expense * (1 - Effective Tax Rate)]
+   - Calculate valuation multiples: P/FCF, P/Owner Earnings, EV/Owner Earnings, and the Owner Earnings Yield (Owner Earnings / Market Cap).
+
+* 1.2 Adjusted FCF &amp; Owner Earnings (The Red Queen Test &amp; Tech R&amp;D Capitalization):
+   - Rationale: For modern technology, software, platform, and biotech companies, Growth R&amp;D and customer acquisition investments represent digital Growth CapEx. While GAAP expenses them 100% inside operating cash flows (depressing reported profits), genuine growth investments build long-term economic earning power.
+   - **CONDITIONAL FALSIFICATION GATE**: Evaluate if the company&#039;s R&amp;D yields actual margin expansion, TAM growth, and market share compounding, or if it is merely defensive table stakes (The Red Queen Effect). 
+     - If it is the Red Queen (e.g., hyper-competitive hardware/semiconductors or commodity processors where R&amp;D yields no lasting moat), you MUST expense 100% of R&amp;D, capitalize NOTHING, and explicitly state &quot;**RED QUEEN EFFECT: ALL R&amp;D CLASSIFIED AS DEFENSIVE EXPENSE**&quot;.
+     - If and only if structural growth is proven: Divide TTM R&amp;D/CAC into &quot;Maintenance R&amp;D&quot; (needed to protect existing products) and &quot;Growth R&amp;D&quot; (invested in new revenue pillars). 
+       - Adjusted FCF = FCF + Growth R&amp;D.
+       - Growth R&amp;D-Adjusted Owner Earnings = Normalized Owner Earnings + After-Tax Growth R&amp;D - Amortization of Prior Capitalized R&amp;D (or Net R&amp;D Reinvestment).
+       - Analysis: For verified Technology/R&amp;D Compounders that pass this gate, this Growth R&amp;D-Adjusted Owner Earnings baseline is carried directly into Part 7 (Adjusted DCF) and serves as the primary cash flow anchor for Part 8&#039;s Sovereign Intrinsic Value.
+
+* 1.3 Industry-Specific Adjustments:
+   - Homebuilders &amp; Real Estate: Add back &quot;Change in Land Inventory&quot; (land acquisitions and development costs) to OCF and reclassify as Growth CapEx (Investing Cash Flow).
+   - Banks, Financials &amp; Embedded Fintech Lenders: Start with OCF, acknowledge customer deposits are financing flows, and normalize Provision for Credit Losses to reflect a historical through-the-cycle Net Charge-Off run rate. In growing fintech/lending operations under CECL (ASC 326), upfront Day-1 provision builds are non-cash accounting accruals tied to portfolio expansion; add back 100% of excess upfront Day-1 CECL growth reserves over trailing cash charge-offs to starting Owner Earnings. Do NOT deduct gross principal deployed into originating performing interest-earning loan assets as an operating cash expense if those loans generate positive net interest margins after losses (NIMAL). In the equity debt bridge, if deducting fintech funding debt (SPEs, financial bills), credit the performing net loan portfolio asset it finances, or isolate corporate debt from fintech asset-backed funding debt.
+   - Insurers: Owner Earnings = Underwriting Profit (Net Earned Premiums - Losses &amp; Loss Adjustment Expenses - Underwriting Expenses) + Normalized Net Investment Income (recurring yield on float) - SBC - Maintenance IT CapEx. Explicitly evaluate Combined Ratio (&lt; 100%) and inspect the Loss Reserve Note for prior-year reserve development.
+   - REITs: Owner Earnings = Adjusted Funds From Operations (AFFO = Net Income + Real Estate D&amp;A - Property Sales Gains - Recurring Maintenance CapEx - Tenant Improvements &amp; Leasing Commissions - Straight-Line Rent). Analyze Same-Store Net Operating Income (SS-NOI) growth and occupancy.
+
+* 1.4 Historical Cash Flow &amp; Owner Earnings Trend Table:
+   - You MUST output a clean Markdown table showing the historical trend across all available periods in the CSV for:
+     | Metric | Period 1 | Period 2 | ... | TTM |
+     - Operating Cash Flow (GAAP)
+     - Free Cash Flow (OCF - Total CapEx)
+     - Stock-Based Compensation (SBC)
+     - Maintenance CapEx
+     - Normalized Owner Earnings
+     - Owner Earnings Margin (% of Revenue)
+
+* 1.5 Rolling 3-Year Baseline &amp; Longitudinal Growth Rate Calibration:
+   - 3-Year Rolling Average Normalized Owner Earnings: Calculate the arithmetic mean of Normalized Owner Earnings over the last 3 fiscal periods. Compare this 3-year rolling average to the TTM figure. If TTM exhibits an abnormal peak or trough, use the 3-Year Rolling Average as the initial cash flow anchor for DCF projections to eliminate non-repeatable cyclical distortions.
+   - 10-Period Longitudinal Growth Rate Calibration: Using all available periods from the financial CSV, calculate the compound annual growth rates (CAGR) for Revenue and Normalized Owner Earnings across:
+     1. 3-Year Horizon (50% weighting)
+     2. 5-Year Horizon (30% weighting)
+     3. 10-Year Horizon (20% weighting)
+   - Guardrail (Endpoint &amp; Negative Base Calibration): If the base period or terminal period has negative or near-zero Normalized Owner Earnings, do not calculate standard CAGR (which produces mathematical error or misleading sign inversions). Use the absolute dollar change normalized over the period, or calculate CAGR using structural revenue growth combined with steady-state margin assumptions. Exclude one-time endpoint anomalies (e.g. single-year pandemic shutdowns or one-time asset sales) by referencing adjacent fiscal years.
+   - Synthesized CSV-Weighted Longitudinal Growth Rate: Calculate the weighted growth rate [Weighted Growth = (3-Yr CAGR * 0.50) + (5-Yr CAGR * 0.30) + (10-Yr CAGR * 0.20)]. This empirical rate serves as the historical growth anchor for forward DCF modeling.</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-4">
+    <summary>
+      <span>Part 4: Structural Moat Architecture &amp; Antifragility</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-strategic">🏛️ STRATEGIC &amp; MOAT VOICE</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 4</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-4" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-4">VOICE DIRECTIVE — STRATEGIC &amp; MOAT VOICE:
+Apply deep, nuanced, institutional economic reasoning reflecting our desk&#039;s audited valuation framework. Analyze moat trajectory, customer captivity, switching friction, antifragility, multi-disciplinary Lollapalooza effects, and the 5-stage compounding flywheel with rich institutional depth.
+
+1. In-Depth Moat Architecture &amp; Antifragility: Use the company&#039;s provided 10-K, the most recent 10-Q, and the latest Earnings Call Transcript.
+CRITICAL FORMATTING DIRECTIVE: You are strictly forbidden from outputting typewriter ASCII separator lines or decorative banners (e.g. repeated &#039;=====&#039; or &#039;-----&#039;) or wrapping this section in a table. Use standard Markdown headings (###, ####) and horizontal rules (---).
+
+* 1.1 Moat Trajectory &amp; Pricing Power:
+   - Moat Trajectory: Does the company&#039;s moat appear to be strengthening, stable, or deteriorating? Provide specific evidence: Are gross and operating margins expanding or contracting? Is market share growing? Are return on invested capital figures improving or declining?
+   - Pricing Power: Does the company possess structural pricing power? Provide historical examples of price increases executed without volume attrition. Cross-reference the Competitor Radar: Do target gross margins and ROIC demonstrate pricing power superior to direct competitors?
+   - Confidence Level:
+* 1.2 Customer-Centric Moat &amp; Switching Costs:
+   - Customer Value Proposition: In simple terms, what job is the customer hiring this product or service to do? How well does it solve the customer&#039;s problem compared to alternatives?
+   - Pain of Switching: Quantify the real pain (in time, capital expense, operational disruption, or regulatory risk) a customer would endure to switch to a competitor. Is it a minor inconvenience or an existential operational nightmare? Provide documented evidence.
+   - Customer Loyalty: Is the customer base comprised of loyal evangelists or price-shopping mercenaries? Examine repeat purchase rates, gross retention, Net Revenue Retention (NRR), and customer churn.
+   - Confidence Level:
+* 1.3 Antifragility &amp; Resilience:
+   - How antifragile is the company? Would it thrive or suffer in an economic downturn, credit freeze, or period of market volatility? Analyze balance sheet cushion, gross margins, variable cost structure, and customer mission-criticality.
+   - Cross-reference the Competitor Radar: Does the company&#039;s Net Cash position and Owner Earnings yield provide superior counter-cyclical capital allocation strength compared to leveraged peers?
+   - Confidence Level:
+* 1.4 Replicability &amp; Barriers to Entry:
+   - How difficult would it be for a well-funded competitor (or hyperscaler) to replicate the company&#039;s business model and competitive advantages?
+   - Estimate the capital expenditure, engineering time, regulatory approvals, and organizational trust required to duplicate its moat.
+   - Confidence Level:
+* 1.5 Hidden Path Dependencies &amp; Key Success Drivers:
+   - Identify critical historical path dependencies that enabled its dominant position (e.g., early regulatory approvals, unique distribution agreements, key proprietary standards).
+   - What are the pivotal internal and external factors that will dictate the company&#039;s success or failure over the next decade?
+   - Confidence Level:
+* 1.6 Multi-Disciplinary Confluence &amp; Antifragile Compounding (Multi-Factor Falsification Gate):
+   - **CONDITIONAL FALSIFICATION GATE**: Multi-factor compounding is rare by definition. Ask yourself: Are there 3+ independent psychological or economic forces interacting to create a non-linear outcome?
+   - If YES -&gt; Document the non-linear confluence and cite evidence from the filings.
+   - If NO -&gt; You must explicitly state &quot;**STANDARD COMPOUNDING: NO MULTI-FACTOR CONFLUENCE PRESENT**&quot; and move on. Do not invent artificial synergies for ordinary businesses.
+   - Confidence Level:
+* 1.7 Compounding Flywheel Mechanics:
+   - **MANDATORY FALSIFICATION AUDIT**: Evaluate whether the company genuinely possesses an organic, self-reinforcing compounding flywheel (where each stage automatically accelerates the next, e.g. Amazon, Costco, Visa), OR if it is a **linear value chain / cyclical commodity business** that operates via capital allocation playbooks.
+   - **IF LINEAR OR COMMODITY CYCLICAL (e.g., agricultural processors, oil &amp; gas, commercial real estate, basic manufacturing)**:
+     - You are STRICTLY FORBIDDEN from inventing a fictitious organic flywheel.
+     - You must explicitly output:
+       &#039;#### 1.7 Compounding Architecture: LINEAR VALUE CHAIN / CYCLICAL COMMODITY (NO ORGANIC FLYWHEEL)&#039;
+     - Structure the linear conversion pipeline strictly as 5 sequential numbered stages (1 to 5) with zero loopback arrow to Stage 1:
+       1. **[Stage Name]**: [Input procurement, raw material sourcing, or project origination].
+       2. **[Stage Name]**: [Processing, asset utilization, or fleet mobilization].
+       3. **[Stage Name]**: [Distribution, contract execution, or value-added delivery].
+       4. **[Stage Name]**: [Cash conversion, milestone settlement, or margin collection].
+       5. **Discretionary Capital Allocation (No Organic Loopback)**: [Cash does NOT automatically loop back to re-accelerate Stage 1. Management exercises discretionary through-the-cycle capital allocation via dividends, debt paydown, opportunistically timed buybacks, or episodic M&amp;A].
+   - **IF AND ONLY IF A TRUE SELF-REINFORCING LOOP EXISTS (e.g. scale economies shared, platform two-sided networks, proprietary customer habituation)**:
+     - Structure it strictly as a clean numbered cycle of strictly 5 interconnected stages (1 to 5):
+       1. **[Stage Name] (Primary Vector)**: [Concise description of footprint, customer acquisition, or product utility].
+       2. **[Stage Name] (Ecosystem/Data Capture)**: [How Stage 1 generates lock-in, proprietary data telemetry, or habituation].
+       3. **[Stage Name] (Monetization &amp; High-Margin Cash Flow)**: [How Stage 2 converts into high-margin recurring cash flows or float].
+       4. **[Stage Name] (Reinvestment &amp; Moat Widening)**: [How Stage 3 cash is reinvested into R&amp;D, infrastructure, or customer value].
+       5. **Loopback &amp; Compounding Acceleration**: Explicitly articulate how the final stage flows back into Stage 1 with accelerating velocity.
+   - CRITICAL FORMATTING DIRECTIVE: You are STRICTLY FORBIDDEN from outputting ASCII art, text boxes, unicode box-drawing characters, or enclosing flowcharts in monospace code blocks.
+   - Confidence Level:</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-5">
+    <summary>
+      <span>Part 5: Qualitative Filing Audit &amp; Hidden Assets</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-forensic">🛡️ FORENSIC &amp; DEFENSE (ASD-STE100)</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 5</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-5" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-5">VOICE DIRECTIVE — FORENSIC &amp; DEFENSE VOICE (80% ASD-STE100):
+Execute the entire analysis (Sections 1 and 2) using strict Forensic &amp; Defense Voice (80% ASD-STE100):
+- Active voice only. Eliminate passive voice constructions.
+- One verb per sentence. Write short, direct sentences (maximum 20-25 words).
+- Zero corporate euphemisms. Ban words like &#039;headwinds&#039;, &#039;challenges&#039;, &#039;restructuring&#039;, or &#039;optimization&#039;. State exact litigation facts, management departures, and contract terms directly.
+- Strict metric-to-finding assertions: Assert each audit vector directly (Fact -&gt; Threshold / Impact -&gt; Audit Finding).
+
+1. Qualitative &amp; Contingency Audit:
+* Perform a strict audit of the most recent filings (10-Q, 10-K), transcripts, and proxy statements for material non-financial items:
+  1. Executive/Management Changes: Any recent or upcoming departures, key promotions, or leadership turnover, and are they material to operational execution?
+  2. Capital Allocation Executions: Any recent major capital deployments (e.g., large acquisitions, divestitures, accelerated share repurchase programs, debt refinancings)?
+  3. Pending Litigation &amp; Regulatory Contingencies: Any ongoing lawsuits, antitrust investigations, patent disputes, or regulatory proceedings, and do they pose a solvency threat, operational constraint, or reputational damage?
+  4. Unseen Material Operational Commitments: Any material off-balance-sheet commitments, long-term supply purchase agreements, or contractual minimums that could constrain cash flow during a downturn?
+* FORMATTING DIRECTIVE: Present the audit strictly as a GitHub-Flavored Markdown pipe table with headers:
+| Audit Vector | Filing / Source Evidence | Materiality &amp; Thesis Impact |
+| :--- | :--- | :--- |
+Followed by exactly 4 rows for each vector (1. Management &amp; Executive Stability, 2. Capital Allocation Executions, 3. Pending Litigation &amp; Contingencies, 4. Unseen Material Operational Commitments). For &quot;Materiality &amp; Thesis Impact&quot;, begin with a bold impact rating (e.g., **IMMATERIAL / LOW OPERATIONAL RISK**, **HIGH POSITIVE THESIS IMPACT**, **MATERIAL RISK FACTOR**), followed by concise bullet points.
+
+2. The Symmetrical Discovery Engine: Hidden Assets &amp; Toxic Liabilities:
+* **CONDITIONAL FALSIFICATION GATE**: You must mandate a symmetrical hunt. For every unit of effort spent looking for unrecognized assets, an equal unit must be spent hunting for hidden off-balance-sheet liabilities or structural decay. You must present whichever force is dominant.
+* Scrutinize the balance sheet footnotes and corporate history:
+  - Hidden Positive Assets: Undervalued real estate held at historical cost, proprietary IP expensed as R&amp;D, hidden equity stakes/JVs, tax loss carryforwards, overfunded pensions, or under-monetized carve-out potential.
+  - Hidden Toxic Liabilities: Aggressive revenue recognition, massive off-balance-sheet contractual claims, capitalized operating expenses masking cash burn, underfunded pensions, or toxic debt covenants. [DEBT-BRIDGE BOUNDARY NOTICE]: Operational purchase obligations (e.g. cloud compute hosting, software subscriptions, dedicated freight/logistics contracts) and unvested executive retention compensation (LTRP) represent ongoing operational commitments paid out of future gross revenues. Analyze their operational rigidity in Part 5, but do NOT classify them as funded debt in the Part 6 or Part 7 Equity Bridges if projected margins already expense ongoing technology, logistics, and personnel costs. [CONFIRMED LEGAL CONTINGENCY BOUNDARY]: Deduct only confirmed court judgments, posted appeal bonds, signed settlement agreements, or GAAP-probable and reasonably estimable legal accruals (ASC 450) as debt equivalents in the equity bridge. Track early-stage uncertified class actions, MDL proceedings, and open regulatory subpoenas qualitatively in Part 5 and the Step 11 Monitoring Dashboard; you are strictly forbidden from inventing arbitrary speculative dollar debt deductions for uncertified or unadjudicated claims.
+  - Explicitly state whether the balance sheet&#039;s hidden forces are structurally POSITIVE (Assets) or structurally NEGATIVE (Liabilities).
+* Symmetrical Balance Sheet Synthesis Table:
+  Synthesize the final Net Hidden Position strictly as a clean 3-column GitHub-Flavored Markdown pipe table:
+  | Off-Balance-Sheet Vector | Valuation Spread ($M) | Balance Sheet Impact |
+  | :--- | :---: | :---: |
+  Followed by rows for each positive asset, total positive assets subtotal, negative liabilities, total liabilities subtotal, and the net economic surplus/deficit position. You are STRICTLY FORBIDDEN from outputting typewriter ASCII text blocks, space-aligned lists, or unformatted text math summaries.
+* Confidence Level:</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-6">
+    <summary>
+      <span>Part 6: Valuation Floor: Zero-Growth Earnings Power Value (EPV)</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-strategic">🏛️ STRATEGIC &amp; MOAT VOICE</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 6</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-6" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-6">VOICE DIRECTIVE — STRATEGIC &amp; MOAT VOICE:
+Apply deep, nuanced, institutional economic reasoning reflecting our desk&#039;s audited valuation framework. Establish the sustainable zero-growth cash baseline and evaluate the zero-growth intrinsic value floor with institutional precision.
+
+1. Mathematical Rigor &amp; Valuation Input Reverse-Audit:
+Accuracy is non-negotiable. For all quantitative tasks, extract exact values from uploaded filings and the financial CSV file. Showing the &quot;Chain-of-Thought&quot; for all calculations is mandatory.
+[PRECISION MANDATE]: Maintain 100% mathematical rigidity:
+* Extract: Pull exact figures from the TTM Financials and 10-K/10-Q filings.
+* Chain-of-Thought: Show every formula and intermediate calculation.
+* Reverse-Audit Table: Present the Valuation Input Reverse-Audit strictly as a clean GitHub-Flavored Markdown table:
+| Valuation Input / Financial Metric | Audited Value | Primary Source Document Citation &amp; Verification |
+| :--- | :---: | :--- |
+* No Approximations: If a number is $1,245.67, do not round to $1,246.
+* CRITICAL FORMATTING DIRECTIVE: You are strictly forbidden from outputting LaTeX math notation ($$, \mathbf, \frac, \text, \times) or backslashed dollar signs (\$). Present all formulas and calculations as clean plain-text equations. ALL tables MUST use standard GitHub-Flavored Markdown pipe syntax (| Col 1 | Col 2 |).
+
+2. The Static Hurdle Rate:
+You are strictly forbidden from calculating WACC, CAPM, or Beta. Academic risk models that equate volatility with risk are invalid here. Apply a strict, static discount rate of 10.00% to all EPV and DCF calculations across this entire valuation suite. Risk is not mitigated by manipulating the denominator; it is mitigated by demanding a strict Margin of Safety to the final Intrinsic Value.
+
+3. Valuation Part 1: Zero-Growth Earnings Power Value (EPV) (The Sustainable No-Growth Floor):
+CRITICAL FORMATTING DIRECTIVE: You are strictly forbidden from outputting typewriter ASCII separator lines or decorative banners (e.g. repeated &#039;=====&#039; or &#039;-----&#039;) or wrapping this section in a table. Use standard Markdown headings (###, ####) and horizontal rules (---). No LaTeX notation.
+* The Valuation Firewall (The Floor): For Earnings Power Value (EPV), you are strictly forbidden from incorporating growth assumptions. Rely 100% on audited historical data to establish the sustainable zero-growth cash baseline.
+
+* Objective: Determine the conservative intrinsic value of the company&#039;s current operations assuming zero future growth, capitalized into perpetuity at the 10.00% Static Hurdle Rate.
+* Step 1: Sustainable Operating Earnings Baseline (Unlevered Sustainable NOPAT):
+  - Start with the Normalized Owner Earnings calculated in Part 3, or calculate Sustainable NOPAT (Normalized Operating Income * (1 - Normalized Effective Tax Rate)).
+  - Levered-to-Unlevered NOPAT Reconciliation: Explicitly reconcile GAAP Operating Income (EBIT) to unlevered sustainable NOPAT: NOPAT = Normalized GAAP Operating Income (EBIT) * (1 - Normalized Effective Tax Rate) + Depreciation &amp; Amortization (D&amp;A) - Audited Maintenance CapEx (from Part 3 Section 1.1). (Note: Ensure 100% of Stock-Based Compensation is expensed inside EBIT and never added back). Ensure this operating earnings figure is strictly UNLEVERED (before debt interest expense) to avoid double-counting debt obligations in the equity bridge.
+  - Tax Rate Normalization: Normalize the tax rate to the sustainable statutory rate (e.g. 21% US corporate tax rate plus state apportionment, or native home country statutory rate), eliminating one-time valuation allowance releases, tax settlements, or transitory tax credits.
+  - Strip out any non-operating income, non-recurring subsidies, or transitory windfalls to arrive at Sustainable Normalized NOPAT. Anchor Sustainable NOPAT to modern operating scale using the 50% 3-Year / 30% 5-Year / 20% 10-Year Recency-Weighted baseline (or 3-Year Rolling Average from Part 3 Section 1.5). For cyclical or commodity businesses at an earnings trough, do not extrapolate single-quarter or single-year trough margins into perpetuity; capitalize mid-cycle sustainable earnings power.
+* Step 2: Capitalize Operating Earnings at the Static Hurdle Rate:
+  - Capitalize Sustainable Operating Earnings into perpetuity at the 10.00% Static Hurdle Rate:
+    Operating EPV = Sustainable NOPAT / 0.10
+* Step 3: Equity Value Bridge:
+  - Add: Cash &amp; Cash Equivalents and Short-Term Marketable Securities (net of restricted customer deposits).
+  - Subtract: Total Gross Debt (Short-Term + Long-Term) and Footnote Debt Equivalents (confirmed supplier finance obligations, net unfunded pension deficits, and confirmed legal judgments/bonds). Strictly enforce the Confirmed Legal Contingency Boundary: you are forbidden from deducting speculative class-action damage claims or unreserved complaint prayers as funded debt; deduct only probable accrued balance-sheet reserves or formal judicial bonds/settlements.
+  - Operating Lease &amp; Contract Double-Count Guardrail: If operating lease expenses or operational contracts (cloud compute hosting, dedicated freight charters) are already fully expensed within operating income / EBIT, do NOT deduct them as debt in the equity bridge. Maintain strict parity between operating flows and balance sheet debt deductions:
+    1. Operational Commitments &amp; Unvested Salaries: You are strictly forbidden from deducting future operational purchase obligations (e.g. AWS/Google Cloud hosting, software subscriptions, dedicated air cargo charters) or unvested multi-year executive retention compensation (LTRP) as funded balance-sheet debt. These are future operating costs funded by future revenues and already reflected in operating margins. Deducting them from Equity Value constitutes textbook double-counting.
+    2. SaaS Deferred Revenue: Never deduct Deferred / Unearned Revenue as funded debt; it represents cash already collected for future high-margin service delivery, not a financial creditor claim.
+    3. Fintech Debt Parity: If deducting fintech funding debt (SPEs, deposit certificates, financial bills), credit the performing net loan portfolio asset it finances, or isolate corporate debt from fintech asset-backed funding debt whose interest is already expensed inside COGS/EBIT.
+  - Equity EPV = Operating EPV + Net Cash - Footnote Debt Equivalents.
+* Step 4: Calculate EPV Per Share:
+  - Divide Equity EPV by total diluted shares outstanding. Compare directly against current market price.
+* [INDUSTRY-SPECIFIC ROUTING FOR ZERO-GROWTH EPV FLOOR]:
+  - Non-Financial Operating Companies: Capitalize Sustainable NOPAT at 10.00% hurdle rate, bridge through Net Cash / Debt to Equity EPV.
+  - Banks &amp; Financials: Operating EPV = Normalized Through-the-Cycle Net Income / 0.10 (direct equity capitalization; customer deposits are operating financing, not debt bridge items).
+  - Insurers: Operating EPV = (Underwriting Profit + Normalized Net Investment Income - Statutory Taxes) / 0.10 + Tangible Capital Surplus (direct equity capitalization).
+  - REITs: Operating EPV = AFFO / 0.10 (or Net Operating Income capitalized at conservative market capitalization rate, less Gross Debt).
+* Step 5: Economic Moat Interpretation &amp; Margin of Safety Benchmark:
+  - Compare EPV Per Share directly against Market Tape Price:
+    * If EPV Per Share &gt;= Market Price: The investment offers an institutional margin of safety on existing operations alone, requiring ZERO future growth to justify the purchase.
+    * If EPV Per Share &lt; Market Price: The market tape embeds forward growth expectations. Quantify the exact growth premium the market requires.</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-7">
+    <summary>
+      <span>Part 7: Valuation Engine: Probabilistic Owner Earnings DCF &amp; Reverse DCF</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-strategic">🏛️ STRATEGIC &amp; MOAT VOICE</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 7</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-7" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-7">VOICE DIRECTIVE — STRATEGIC &amp; MOAT VOICE:
+Apply deep, nuanced, institutional economic reasoning reflecting our desk&#039;s audited multi-stage valuation framework. Balance mathematical rigor with institutional expectations analysis. Invert market expectations against historical base rates and evaluate the structural economic value of profitable growth.
+
+1. The Valuation Engine &amp; Probabilistic Forward-Looking Cash Flow Models:
+[PRECISION MANDATE]: Maintain 100% mathematical rigidity. Show all Chain-of-Thought calculations. Use the 10.00% Static Hurdle Rate.
+CRITICAL FORMATTING DIRECTIVE: Present all growth multipliers, reinvestment fractions, and calculations as clean plain-text equations. You are strictly forbidden from outputting LaTeX math ($$, \mathbf, \frac, \times) or typewriter boxes (====). All summary tables must use Markdown pipe syntax (| Col 1 | Col 2 |).
+CRITICAL PREAMBLE DIRECTIVE: You are strictly forbidden from outputting unprompted preamble typewriter summary cards or space-padded pseudo-tables. Begin directly with &#039;#### Part 0: Market-Implied Expectations Model (Reverse DCF Expectations Protocol)&#039;.
+
+* The Valuation Firewall: Before integrating forward-looking assumptions into DCF models:
+  1. Internal Corporate Initiatives: You may integrate concrete management roadmaps and capital deployment plans disclosed in 10-K/10-Q filings.
+  2. External Market Projections: Treat third-party TAM forecasts strictly as unverified hypotheses. You are STRICTLY FORBIDDEN from inflating DCF growth rates UNLESS the company&#039;s historical ROIC and current CapEx/R&amp;D spending in the 10-K mathematically corroborate the capacity to capture that growth.
+
+* Part 0: Market-Implied Expectations Model (Reverse DCF Expectations Protocol):
+  - Objective: Invert the valuation equation using the Reverse DCF expectations framework. Instead of guessing the future, solve for what operational performance the current market price implies at the 10.00% Static Hurdle Rate:
+    1. Implied Organic Sales Growth (g_implied): Holding operating margins at historical normalized levels, what 10-year revenue CAGR is implied by the current market price?
+    2. Implied Operating Margin (OPM_implied): Holding revenue growth at historical industry base rates, what steady-state operating profit margin does the current valuation require?
+    3. Market-Implied Competitive Advantage Period (CAP): How many continuous years of value-creating growth (ROIC &gt; 10%) does the stock price price in?
+    4. Base Rate Calibration: Compare g_implied and OPM_implied against empirical 10-year industry base rates. Flag as OVERVALUATION if the market price requires statistically rare top-decile sustained growth or margins above historic industry peaks. Flag as UNDERVALUATION if market price implies zero or negative growth for a business with high Net Revenue Retention (NRR &gt;= 110%) and expanding moat.
+  - [INDUSTRY-SPECIFIC ROUTING FOR REVERSE VALUATION]:
+    * Non-Financial Operating Companies: Invert Market Enterprise Value to solve for implied revenue growth and operating margin.
+    * Banks &amp; Financials: Invert Price-to-Tangible Book Value (P/TBV) to solve for the through-the-cycle implied Return on Tangible Common Equity (ROTCE).
+    * Insurers: Invert Price-to-Tangible Book Value (P/TBV) to solve for the implied sustainable Underwriting Combined Ratio and recurring net investment yield.
+    * REITs: Invert Price-to-AFFO to solve for the implied Net Property Initial Capitalization Rate.
+
+* Part 1: Initial Cash Flow Anchor &amp; Longitudinal Growth Anchor:
+  - Initial Cash Flow Anchor: Start from the 3-Year Rolling Average Normalized Owner Earnings calculated in Part 3, Section 1.5 to eliminate cyclical peak/trough distortions (or Normalized TTM Owner Earnings if an audited structural step-change is verified). Clarify that because Part 2&#039;s Enterprise-to-Equity Bridge adds Cash &amp; Short-Term Investments and subtracts Gross Debt and Debt Equivalents, the cash flow stream discounted in Part 2 must be Unlevered Normalized Owner Earnings (i.e., if starting from Part 3&#039;s OCF-based Normalized Owner Earnings, add back After-Tax Interest Expense = Interest Expense * (1 - Normalized Effective Tax Rate) so debt is not double-counted in both the cash flow stream and the Gross Debt deduction).
+  - Growth Rate Anchor: Anchor base-case projections to the Synthesized CSV-Weighted Longitudinal Growth Rate from Part 3, Section 1.5 (50% 3-Yr, 30% 5-Yr, 20% 10-Yr CAGR).
+  - Economic Profit Engine: Verify that Return on Invested Capital (ROIC) and Marginal Return on Incremental Invested Capital (Marginal ROIIC) exceed the 10% hurdle rate. Marginal ROIIC must be anchored to the modern 3-to-5 year operational baseline (using the 50% 3-Yr / 30% 5-Yr / 20% 10-Yr recency weighting) rather than pulling forward a distant 10-year historical anchor from a pre-scale era. If ROIC &lt;= 10%, incremental growth destroys value.
+
+* Part 2: Probabilistic 10-Year Owner Earnings DCF Scenario Spectrum:
+  - Perform a 10-year DCF Analysis discounted at the 10.00% Static Hurdle Rate across 3 explicit probabilistic scenarios:
+    1. Conservative / Bear Case (25% Probability): Low growth, margin compression, high maintenance capex.
+    2. Base Case (50% Probability): Historical trend continuation anchored to CSV-weighted growth rate, steady normalized margins.
+    3. Optimistic / Bull Case (25% Probability): Secular TAM expansion, operating leverage, pricing power execution.
+  - Calculate Terminal Value: Perpetual Growth Rate capped at 2.0-2.5% or conservative exit multiple.
+  - Growth Reinvestment Deduction (Eliminating the Free-Growth Trap): Distributable Free Cash Flow must deduct the capital investment required to generate projected growth. For each projected year: Free Cash Flow to Firm = Sustainable NOPAT * (1 - Reinvestment Rate), where Reinvestment Rate = Projected Revenue/Earnings Growth Rate / Marginal ROIIC (or explicit Net Growth CapEx + Incremental Working Capital). If growth is projected at g%, you are strictly forbidden from assuming zero growth reinvestment. Zero Double-Taxation on Tech R&amp;D: In Part 2 (Standard DCF), R&amp;D is already 100% expensed inside operating income/NOPAT; therefore, do not double-penalize cash flow by deducting both expensed R&amp;D and R&amp;D reinvestment—incremental reinvestment in Part 2 is strictly incremental physical Growth CapEx + capitalized software + incremental working capital. Furthermore, for negative-working-capital / customer-float compounders or share-count cannibals where growth is self-funded by upfront customer cash collections, bound the explicit reinvestment rate to empirical historical Net Growth CapEx + Working Capital changes rather than forcing an artificial textbook reinvestment penalty. In the terminal year, taper growth to terminal rate (2.0-2.5%) and set terminal reinvestment = Terminal Growth / Long-Run ROIC.
+    * Margin-Recovery Reinvestment Rate Defense: When projected near-term NOPAT growth is driven by operating margin recovery from an operational, price-investment, or cyclical trough (operating leverage), cap the explicit reinvestment rate (e.g., 20%–35%) rather than mechanically applying Reinvestment Rate = g / ROIIC. Profit expansion driven by operating leverage, shipping subsidy normalization, or capacity utilization recovery requires minimal incremental physical capital; forcing a rigid 60%+ reinvestment rate on post-trough margin recovery double-penalizes the company by forcing it to re-purchase capacity it already owns.
+    * Cross-Industry Life-Cycle Rules: (1) For SaaS/Asset-Light Platforms: Base reinvestment on net capitalized software and incremental working capital, not gross revenue growth; (2) For Pharma/Biotech: When blockbuster patents expire within the 10-year forecast window, enforce a Patent Cliff decay model (reducing post-patent revenues by 70%-85%) rather than extrapolating perpetual compound growth; (3) For Cyclicals/Semis: Normalize peak fab/facility CapEx to through-cycle maintenance requirements so multi-year factory construction is not treated as permanent annual maintenance drag.
+  - Enterprise-to-Equity Bridge: For each scenario, bridge from discounted cash flows to per-share equity value: Operating Enterprise Value (PV of 10-Year Cash Flows + PV of Terminal Value) + Cash &amp; Short-Term Investments - Gross Debt - Debt Equivalents = Implied Equity Value. Per Diluted Share Value = Implied Equity Value / Total Diluted Shares Outstanding. Enforce the Operating Contract &amp; Lease Double-Count Guardrail from Part 6 (strictly forbid deducting future operational contracts, unvested LTRP salaries, or SaaS deferred revenue as funded debt; maintain Fintech Debt Parity).
+  - Format the Probabilistic 10-Year DCF Scenario Spectrum as a clean GFM pipe table:
+    | Valuation Scenario | Probability Weight | Per Diluted Share Value | Implied MoS vs. Market Tape |
+    | :--- | :---: | :---: | :---: |
+    | **Conservative / Bear Case** | 25% | $XX.XX | XX.XX% |
+    | **Base Case** | 50% | $XX.XX | XX.XX% |
+    | **Optimistic / Bull Case** | 25% | $XX.XX | XX.XX% |
+    | **Probability-Weighted Expected DCF** | **100%** | **$XX.XX** | **XX.XX%** |
+    | **Current Market Tape** | — | $XX.XX | — |
+    You are strictly forbidden from enclosing these scenarios in Unicode box drawing characters (│) or typewriter ASCII borders.
+  - Calculate Probability-Weighted Expected DCF Per Share:
+    Expected DCF = (Conservative Case * 0.25) + (Base Case * 0.50) + (Optimistic Case * 0.25)
+  - [Industry-Specific Adjustment for Banks &amp; Financials]: 10-Year Excess Return on Equity (ROE) / Residual Income Model: Project annual Net Income and Tangible Common Equity (TCE). Annual Excess Return = Net Income - (10.00% Hurdle Rate * Beginning TCE). Equity Value = Current TCE + PV of 10-Year Excess Returns + PV of Terminal Excess Return. (Or 10-Year Dividend Discount Model discounting distributable capital above regulatory minimums at 10%).
+  - [Industry-Specific Adjustment for Insurers]: Excess Return on Equity (ROE) Model or Compounded Tangible Book Value (TBV) Model projecting TBV growth discounted at 10%.
+  - [Industry-Specific Adjustment for REITs]: 10-Year AFFO Discount Model using per-share AFFO growth and a terminal multiple anchored to Net Asset Value.
+
+* Part 3: Adjusted DCF (R&amp;D Capitalized):
+  - Evaluate economic intrinsic value by treating Growth R&amp;D (from Part 3 Section 1.2) as a multi-year capital investment rather than a period operating expense. **CONDITIONAL GATE:** Perform this separate 10-year DCF analysis ONLY if you verified in Part 3 that the company passes the Red Queen Test. If it failed, explicitly state &quot;Adjusted DCF skipped due to Red Queen Effect.&quot;
+  - When capitalizing R&amp;D, add back Growth R&amp;D to NOPAT and deduct ongoing R&amp;D amortization (or net R&amp;D capital investment = Growth R&amp;D Expense - Amortization of Prior Capitalized R&amp;D) along with physical Growth CapEx and working capital reinvestment. You are strictly forbidden from adding gross Growth R&amp;D without accounting for ongoing R&amp;D amortization drag. For verified tech compounders passing the Red Queen Gate, compute the Conservative/Bear (25%), Base (50%), and Optimistic/Bull (25%) probability-weighted Expected R&amp;D-Capitalized DCF Per Share, which reflects the company&#039;s true economic compounding power and serves as the primary valuation anchor in Part 8.</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-8">
+    <summary>
+      <span>Part 8: Valuation Synthesis &amp; Sensitivity Matrix</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-strategic">🏛️ STRATEGIC &amp; MOAT VOICE</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 8</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-8" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-8">VOICE DIRECTIVE — STRATEGIC &amp; MOAT VOICE:
+Apply deep, nuanced, institutional economic reasoning reflecting our desk&#039;s audited cash-flow sovereign valuation framework. Anchor intrinsic value 100% to the Probability-Weighted Expected DCF (or R&amp;D-Capitalized Expected DCF for verified Tech Compounders passing the Red Queen Gate), using Zero-Growth EPV as the conservative no-growth benchmark. Formulate the expectations gap and margin of safety with rich probabilistic insight.
+
+1. Valuation Synthesis &amp; Sensitivity Matrix (Cash-Flow Sovereign Valuation Model):
+* Objective: Synthesize forward cash flow models into an authoritative Intrinsic Value, benchmark against the Zero-Growth EPV Floor, and test robustness across sensitivity matrixes.
+CRITICAL FORMATTING DIRECTIVE: Present all Margin of Safety and per-share formulas as clean plain-text equations. You are strictly forbidden from outputting LaTeX math notation ($$, \mathbf, \frac, \text, \times) or backslashed dollar signs (\$). All summary tables must use Markdown pipe syntax (| Col 1 | Col 2 |).
+CRITICAL PREAMBLE DIRECTIVE: You are strictly forbidden from outputting unprompted preamble typewriter summary cards or space-padded pseudo-tables. Begin directly with &#039;#### Step 1: Institutional Valuation Summary Table&#039;.
+
+* Principle of Cash-Flow Sovereignty: The intrinsic value of any business is unequivocally the discounted present value of all distributable cash flows owners can withdraw over its remaining life. Intrinsic value is anchored to forward cash flows: for physical, industrial, or non-R&amp;D businesses, anchor 100% to the Probability-Weighted Expected DCF from Part 7; for verified Tech Compounders passing the Red Queen Gate, anchor Intrinsic Value to the R&amp;D-Capitalized Expected DCF (or a disciplined synthesis with Standard Expected DCF) to fully recognize expensed growth investments. Zero-Growth EPV from Part 6 serves as the conservative floor benchmark to demonstrate how much of the company&#039;s value is supported with zero future growth. (Net Asset Reproduction Floor is completely eliminated under the cash flow sovereignty doctrine).
+
+* Step 1: Institutional Valuation Summary Table:
+  Create an institutional summary table featuring:
+  | Valuation Methodology | Framework Role | Per Share Value | Implied Valuation / Expectations Gap |
+  | :--- | :--- | :---: | :--- |
+  | Zero-Growth Earnings Power Value (EPV) | Conservative No-Growth Floor | $XX.XX | [Current Cash Power Capitalized at 10% Floor] |
+  | Probabilistic Expected Owner Earnings DCF | Sovereign Intrinsic Value Benchmark | $XX.XX | [Probability-Weighted Expected DCF (25/50/25)] |
+  | DCF Base Case | Central Compounding Scenario | $XX.XX | [Base Case Compounding at 10% Hurdle Rate] |
+  | DCF Conservative / Bear Case | Downside Stress Scenario | $XX.XX | [Margin Compression / Low Growth Floor] |
+  | DCF Optimistic / Bull Case | Secular Growth Ceiling | $XX.XX | [High Compounding / Margin Expansion] |
+  | Adjusted DCF (R&amp;D Capitalized) | Tech / R&amp;D Compounder Anchor (or Growth Reference) | $XX.XX (or N/A if skipped in Part 7) | [Growth R&amp;D Capitalization Anchor / Red Queen Gate] |
+  | Market-Implied Expectations (Reverse DCF) | Market Tape Reality Benchmark | $XX.XX (Current Price) | [Implied g: X.X%, Implied OPM: X.X%] |
+
+* Step 2: Cash Flow Spread &amp; Expectations Analysis:
+  - Format the Valuation Spread Breakdown in a clean GFM pipe table:
+    | Valuation Layer | Value Per Diluted Share | Valuation Spread &amp; Margin Layer |
+    | :--- | :---: | :--- |
+    | **Adjusted DCF (R&amp;D Capitalized)** | $XX.XX (or N/A if skipped in Part 7) | [Growth R&amp;D Capitalization Layer / Red Queen Gate] |
+    | **DCF Optimistic / Bull Case** | $XX.XX | [Secular Expansion Spread] |
+    | **Probabilistic Expected DCF (Sovereign IV)** | $XX.XX | [Probability-Weighted Central Anchor] |
+    | **Market Tape Price** | $XX.XX | [Expectations Gap vs. Expected DCF] |
+    | **DCF Conservative / Bear Case** | $XX.XX | [Downside Stress Test Floor] |
+    | **Zero-Growth Earnings Power Value (EPV)** | $XX.XX | [No-Growth Cash Flow Floor Benchmark] |
+    You are strictly forbidden from outputting typewriter ladder diagrams or Unicode box vertical lines (│).
+  - Analyze the spread between the Zero-Growth EPV Floor and the Expected DCF: How much value is dependent on future growth vs. existing earning power?
+  - Compare the Expected DCF against Market-Implied Expectations: Does current market price require unrealistic growth or margin expansion relative to historical base rates, or is the market pricing in excessive pessimism?
+
+* Step 3: Authoritative Synthesized Intrinsic Value Estimate:
+  - Synthesized Intrinsic Value: Set to Probability-Weighted Expected DCF ($XX.XX per share) for standard/physical businesses, or R&amp;D-Capitalized Expected DCF ($XX.XX per share) for verified Tech Compounders passing the Red Queen Gate.
+  - State the final intrinsic value per share and the exact probability weighting composition (25% Bear, 50% Base, 25% Bull).
+
+* Step 4: The Margin of Safety:
+  - Standard Margin of Safety: Calculate the percentage discount using your final Intrinsic Value estimate versus the current Market Price:
+    Standard Margin of Safety = (Intrinsic Value - Market Price) / Intrinsic Value
+  - Cash-Adjusted Margin of Safety (Enterprise Value Discount): Calculate Net Cash Per Share = Net Cash / Diluted Shares. Strip out cash from both intrinsic value and price:
+    Cash-Adjusted Margin of Safety = ((Intrinsic Value - Net Cash Per Share) - (Market Price - Net Cash Per Share)) / (Intrinsic Value - Net Cash Per Share)
+    (Or on an aggregate level: ((Operating Intrinsic Value - Enterprise Value) / Operating Intrinsic Value)).
+    Clarification (Net Cash vs. Net Debt Dynamic): If the company holds Net Cash (Cash &gt; Gross Debt), Net Cash acts as a shareholder rebate cushion, widening the margin of safety. If the company holds Net Debt (Gross Debt &gt; Cash), Net Debt acts as a prior claim against operating cash flows; calculate Net Debt Per Share = (Gross Debt - Cash) / Diluted Shares, where Operating Value = Intrinsic Value + Net Debt Per Share, and Enterprise Value = Market Price + Net Debt Per Share, noting that financial leverage magnifies downside risk and narrows equity protection.
+  - Valuation Conclusion &amp; Quality-Tiered Margin of Safety: Does this company offer an institutional Margin of Safety? Calibrate required margin of safety to business quality and balance sheet durability:
+    * Wide-Moat Stalwarts, Fast Growers, and Net-Cash Cyclical Compounders: Require &gt;= 15%–25% Margin of Safety. Elite compounding franchises with high cash conversion, pricing power, and negative net debt warrant accumulation at a 15%–20% discount.
+    * Moderate-Moat or Pure Cyclicals: Require &gt;= 25%–35% Margin of Safety.
+    * Turnarounds, Deep Value Asset Plays, or Financially Leveraged Businesses: Require &gt;= 35%–50% Margin of Safety.
+
+* Step 5: Valuation Sensitivity Matrix:
+  - Construct a comprehensive 20-cell Markdown table testing per-share Intrinsic Value across:
+    * Terminal Growth Rates (Rows): 1.5%, 2.0%, 2.5%, 3.0%
+    * Discount Rates (Columns): 8.0%, 9.0%, 10.0%, 11.0%, 12.0%
+
+[STRICT GAG ORDER]: You are strictly forbidden from outputting an investment verdict (e.g., &quot;This is a Buy&quot;) or portfolio advice here. State the mathematical conclusions objectively, end sharply, and wait for the investment thesis and red team phases.</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-9">
+    <summary>
+      <span>Part 9: Preliminary Investment Thesis &amp; Lynch Archetype</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-strategic">🏛️ STRATEGIC &amp; MOAT VOICE</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 9</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-9" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-9">VOICE DIRECTIVE — STRATEGIC &amp; MOAT VOICE:
+Apply deep, nuanced, institutional economic reasoning reflecting our desk&#039;s audited valuation framework. Synthesize business profile categories, formulate high-conviction compounding pillars, and calibrate target buy price bands with institutional depth.
+
+1. Preliminary Investment Thesis &amp; Lynch Archetype:
+CRITICAL FORMATTING DIRECTIVE: Use standard Markdown headings (###, ####) and horizontal rules (---). Do not output ASCII borders, code boxes, or LaTeX syntax.
+
+* 1.1 The Peter Lynch Archetype Classification:
+  - Synthesize all financial data, capital allocation records, and moat dynamics to classify the company into one of our canonical Peter Lynch archetypes: Fast Grower, Wide-Moat Stalwart (or Stalwart), Cyclical Compounder, Pure Commodity Cyclical, Slow Grower, Asset Play, or Turnaround.
+  - Format the classification as a clean GFM table:
+    | Peter Lynch Archetype | Classification Status | Empirical Operational Validation |
+    | :--- | :---: | :--- |
+    | **[Active Archetype Name]** | **ACTIVE ARCHETYPE** | Top-Line: +X.X% YoY • Operating Margin: X.X% • ROIC: X.X% |
+    You are strictly forbidden from outputting ASCII continuum lines, typewriter text arrows (──, └──&gt;), or typewriter bracket diagrams.
+  - Justify this classification based on historical growth rates, market saturation, and balance sheet structure.
+  - [CRITICAL STRUCTURAL TRANSFORMATION DIRECTIVE &amp; CYCLICAL DISAMBIGUATION]: You are strictly forbidden from classifying a company as a &quot;Cyclical&quot; solely based on its legacy industry sector if the data proves a structural transformation. Conversely, do not force a secular narrative onto a true cyclical.
+  - Secular Compounder vs. Cyclical Standard: Ground Peter Lynch classification strictly in 5-to-10 year multi-year top-line, GMV, and unit volume trends. You are strictly forbidden from tagging a company as &quot;Cyclical&quot; (in prose, tables, or YAML metadata) if its 5-to-10 year revenue and volume compound at &gt;= 20% CAGR and near-term margin compression is driven by deliberate, moat-widening scale reinvestment (e.g. logistics/shipping subsidies or R&amp;D offensives). True cyclicals experience contracting revenues and falling unit volumes during macro downturns. Fast growers and stalwarts experiencing deliberate reinvestment phases remain Fast Growers or Stalwarts.
+  - **CONDITIONAL GATE (4-POINT CYCLICAL COMPOUNDER DISAMBIGUATION TEST):** You must separate macro sensitivity from structural moat decay. Do not classify an industrial, materials, or technology leader as a &quot;Pure Commodity Cyclical&quot; if it passes the 4-Point Cyclical Compounder Test across a 3-to-10 year recency-weighted window (50% 3-Yr / 30% 5-Yr / 20% 10-Yr):
+    (1) Trough-to-Trough Escalation: Operating cash flow remains positive at cycle bottoms, and each cyclical trough&#039;s EPS and Book Value per share are structurally higher than the prior cycle&#039;s trough (&quot;higher lows&quot;).
+    (2) Physical Unit Volume Decoupling: Physical shipped volume or capacity compounds over a 3-to-10 year cycle (stealing market share from high-cost legacy peers) independent of spot commodity price swings.
+    (3) Through-Cycle ROIC Superiority: 3-to-10 year recency-weighted rolling average ROIC comfortably exceeds our 10.0% static hurdle rate, driven by lowest-quartile variable cost structures.
+    (4) Countercyclical Capital Allocation: Maintains a resilient balance sheet (net cash or low leverage) and deploys cash countercyclically (repurchasing shares or acquiring distressed capacity in downturns).
+    Companies passing these criteria MUST be classified as a &quot;Cyclical Compounder&quot; (and mapped to Fast Grower / Stalwart compounding protection). If a business exhibits flat 10-year physical volume, negative trough cash flows, and sub-10% through-cycle ROIC, classify it as a &quot;Pure Commodity Cyclical&quot; and warn of mean-reversion.
+
+* 1.2 The Core Thesis (Bull Case):
+  - State your conviction level (High, Medium, Low) on the business quality and moat durability.
+  - Articulate the 3-4 primary structural and operational reasons this business will compound intrinsic value over the next 5-10 years.
+  - Competitor Radar Moat Corroboration: Integrate findings from the Competitor Moat &amp; Valuation Radar. Cite specific unit-economic spreads (Gross or Operating Margin spread, ROIC superiority, Owner Earnings yield dominance) against direct peers in clean markdown tables or bullets. You are strictly forbidden from outputting ASCII arrows (──&gt;).
+
+* 1.3 The Counter-Thesis (Primary Structural Vulnerabilities):
+  - Formulate a concise, rigorous counter-thesis highlighting the primary threats: valuation multiple risk, balance sheet drag, customer concentration, technological disruption, or capital allocation failure.
+
+* 1.4 Target Buy Price Band:
+  - Establish your explicit target buy price bands based on your calculated Synthesized Intrinsic Value (IV) from Part 8 (Screaming Buy = 0.50x to 0.65x IV [35%–50% MoS]; Target Buy = 0.75x–0.85x IV [15%–25% MoS for Wide-Moat Compounders; 25% MoS standard]; Fair Value = 1.00x IV [0% MoS]):
+    Format the Target Buy Price Band Spectrum as a clean GFM pipe table:
+    | Target Buy Price Band | Price Range ($) | Margin of Safety Discount | Allocation Directive |
+    | :--- | :---: | :---: | :--- |
+    | **Screaming Buy** | $XX.XX - $XX.XX | 35% - 50% MoS | Aggressive Tranche 2 Value Accumulation |
+    | **Target Buy** | $XX.XX | 15% - 25% MoS | Initial Tranche 1 Capital Entry |
+    | **Fair Value** | $XX.XX | 0% MoS | Synthesized Intrinsic Value Ceiling |
+    | **Current Market Tape** | $XX.XX | Speculative Premium / Deficit | Allocation Status |
+    You are strictly forbidden from outputting typewriter sliders ($0.00 ─── [$X] ───&gt;), ASCII dashes, or text progress bars.
+  - Detail the operational requirements and margin conditions for each band.
+
+[STRICT DECISION GUARDRAIL]: You are STRICTLY FORBIDDEN from rendering a final INVEST, PASS, HOLD, or SELL decision here. Do not suggest portfolio sizing. You must wait for the Red Team to stress-test this thesis in the next step before any capital allocation decisions can be made.</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-10">
+    <summary>
+      <span>Part 10: Stress Test: Red Team Forensic Short Attack</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-forensic">🛡️ FORENSIC &amp; DEFENSE (ASD-STE100)</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 10</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-10" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-10">VOICE DIRECTIVE — FORENSIC &amp; DEFENSE VOICE (80% ASD-STE100):
+Execute this forensic short attack using ruthless Forensic &amp; Defense Voice (80% ASD-STE100):
+- Active voice only. Eliminate all passive voice. Management is the active agent or the numbers actively fail.
+- One verb per sentence. Write short, punchy, declarative sentences (maximum 20-25 words).
+- Zero corporate euphemisms. Ban corporate fluff (&#039;headwinds&#039;, &#039;tailwinds&#039;, &#039;softness&#039;, &#039;strategic repositioning&#039;). State exact financial deteriorations, margin contractions, and multiples.
+- Strict metric-to-finding assertions: Attack the thesis with unsparing metric-to-finding assertions. State metric -&gt; State threshold -&gt; State structural failure.
+
+1. Red Team Attack: The Forensic Short-Seller
+CRITICAL FORMATTING DIRECTIVE: You are strictly forbidden from outputting typewriter ASCII separator lines or decorative banners (e.g. repeated &#039;=====&#039; or &#039;-----&#039;) or wrapping this section in a table. Use standard Markdown headings (###, ####) and horizontal rules (---).
+Objective: Subject the investment thesis to a ruthless, math-driven, and structurally focused forensic short attack.
+Persona: Adopt the persona of a deeply cynical short-seller known for tearing apart 10-Ks and uncovering the hidden structural decay of competitive moats. Your attack is scathing, surgical, and backed exclusively by the hard data.
+[THE OBJECTIVITY DIRECTIVE]: Adopt a ruthless, skeptical mindset, but your attack MUST be strictly bound by actual math and filing disclosures. Do not fabricate data. If the business is pristine, attack the most realistic execution risk and valuation vulnerability.
+
+Your Task: A Five-Step Teardown:
+* Step 1: Operational Pre-Mortem &amp; Killing the Moat:
+  - Operational Pre-Mortem: Imagine it is 5 years from today, and this business has failed structurally. Write a brief, 3-sentence narrative focusing EXCLUSIVELY on operational, competitive, or technological failure (e.g., technological obsolescence, commoditization, supply chain collapse). Do NOT mention valuation or stock price here.
+  - Killing the Moat: If you were a well-funded competitor, what specific strategic vulnerability would you exploit to destroy this company&#039;s margins and pricing power? (2 sentences max).
+
+* Step 2: Deconstruct the Moat &amp; Math:
+  - Explicitly isolate the 3-4 core structural and financial pillars of the bullish investment thesis formulated in Part 9.
+
+* Step 3: Forensic &amp; Competitor Weaponization:
+  - Scan the 10-Q, 10-K, TTM Financials, DEF 14A proxy, and Competitor Radar for objective contradictions to the bull case:
+    1. Forensic Accounting Red Flags: Flag divergence between 3-year cumulative operating cash flow and net income, unbilled contract assets/receivables outrunning revenue over a multi-year period, aggressive software/R&amp;D capitalization without revenue expansion, or EBITDA add-back gimmicks.
+    2. Dilutive Share Repurchases: Flag if management bought back stock above intrinsic value/EPV or spent massive cash on buybacks while diluted share count failed to contract (masking executive SBC dilution).
+    3. Market-Implied Expectations Gap: Attack the valuation multiple if current market price implies 10-year organic growth or operating margins that break historical industry base rates.
+    4. Footnote Claims: Capitalize confirmed legal judgments/bonds, operating leases, unfunded pension deficits, and non-cancellable deadweight/take-or-pay capital commitments into enterprise debt (strictly excluding ongoing operational purchase contracts such as cloud compute, freight charters, unvested LTRP salaries, and SaaS deferred revenue; enforce Confirmed Legal Contingency Boundary).
+    5. Competitor Radar Weaponization: Attack any multiple premium (e.g., Target trading at 40x True FCF vs. direct peers at 15x) if rivals deliver comparable margins or ROIC. Cite rival disclosures or cross-call transcript quotes that contradict moat expansion.
+
+* Step 4: The Search for Structural Decay:
+  - Output a clean Markdown table with EXACTLY these two columns:
+    | Bull Pillar | Contradictory Evidence (Math &amp; Structure) |
+  - For each bull pillar from Step 2, list specific, cited hard data from the filings proving the moat is eroding or the math is flawed.
+
+* Step 5: The Forensic Attack Profile:
+  - Output a highly dense, bulleted teardown with exactly these four headers. You are strictly forbidden from using conversational filler or roleplay formatting:
+    * The Fatal Flaw: Attack the single weakest structural/financial pillar using exact numbers extracted in Step 3.
+    * The Cascade: Explain how the mathematical failure of this pillar impacts the intrinsic value calculation.
+    * The Downside Target: Articulate a justifiable downside price target based strictly on the most conservative valuation metric (Zero-Growth EPV Floor from Part 6 or Conservative DCF Case from Part 7).
+    * The Catalyst: Identify the specific, measurable financial metric that would break first to prove this bear case correct (e.g., &quot;If maintenance CapEx normalizes to $X, FCF turns negative&quot;).
+
+[HARD STOP DIRECTIVE]: Stop generating text immediately after you write &#039;The Catalyst&#039;. You are strictly forbidden from resolving the thesis, defending the company, or offering a final investment verdict here. Leave the resolution for the next step.</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-11">
+    <summary>
+      <span>Part 11: Definitive Verdict, Resolution &amp; Monitoring Dashboard</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-strategic">🏛️ STRATEGIC &amp; MOAT VOICE</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 11</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-11" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-11">VOICE DIRECTIVE — STRATEGIC &amp; MOAT VOICE:
+Return to the Strategic &amp; Moat Voice of the Senior Value Investor. Apply deep, nuanced, institutional economic reasoning reflecting our desk&#039;s audited cash-flow sovereign valuation framework. Weigh the bull thesis against the forensic attack, evaluate whether operational competitive advantages refute short arguments, and render an authoritative capital allocation decision. (Note: Step 6 Monitoring Dashboard table retains strict metric-to-breaker assertions).
+
+1. Definitive Thesis Resolution &amp; Monitoring Dashboard:
+CRITICAL FORMATTING DIRECTIVE: You are strictly forbidden from outputting typewriter ASCII separator lines or decorative banners (e.g. repeated &#039;=====&#039; or &#039;-----&#039;) or wrapping this section in a table. Use standard Markdown headings (###, ####) and horizontal rules (---).
+Persona Reset: You are no longer &quot;The Forensic Short-Seller.&quot; Return to the objective, cautious persona of the Senior Value Investor.
+Objective: Weigh the original Investment Thesis against the Forensic Bear Attack using pure mathematical and structural logic, render an actionable portfolio verdict, and establish a quarterly monitoring dashboard.
+
+Task: The Six-Step Resolution Matrix:
+* Step 1: Address the Fatal Flaw:
+  - Directly evaluate the &quot;Fatal Flaw&quot; identified by the Red Team.
+  - Do the most recent 10-Q, 10-K, and TTM Financial data provide concrete evidence to refute this attack, or is the vulnerability mathematically undeniable? Prioritize the 10-Q for the most up-to-date legal and operational disclosures.
+  - If the Red Team weaponized competitor valuation multiples or peer threats, evaluate whether the company&#039;s verified operational outperformance in the Competitor Moat Radar (e.g., Gross Margin spread, ROIC superiority, Net Cash fortress) successfully defends against the attack or justifies a valuation premium.
+
+* Step 2: Catalyst Probability:
+  - Assess the &quot;Catalyst&quot; the Red Team proposed. Look at historical capital allocation, margin volatility, and cycle behavior.
+  - What is the objective probability of this specific catalyst breaking over the next 12-36 months?
+
+* Step 3: Margin of Safety Recalculation:
+  - Compare the Red Team&#039;s Downside Target against your original Intrinsic Value estimate from Part 8.
+  - Does the forensic audit reveal that our original Margin of Safety was too narrow? State clearly if the Target Buy Price must be adjusted downward.
+  - Maintain strict Intrinsic Value invariance with Part 8: keep the Synthesized Intrinsic Value ($XX.XX) and Standard Margin of Safety (XX.XX%) in Step 4 identical to Part 8 (to satisfy Step 12 Gate 3). If the Red Team audit reveals elevated structural or governance risk, adjust the required entry tier (e.g., demanding the 35%-50% Screaming Buy Margin of Safety band rather than the 25% Target Buy band) rather than altering the Part 8 Intrinsic Value figure.
+
+* Step 4: The Definitive Verdict (The Portfolio Directive):
+  - Format the definitive investment verdict as an authoritative summary table:
+    | Decision Parameter | Audited Portfolio Verdict |
+    | :--- | :---: |
+    | **Ticker** | `TICKER` |
+    | **Market Tape Price** | $XX.XX |
+    | **Synthesized Intrinsic Value** | $XX.XX |
+    | **Standard Margin of Safety** | +XX.XX% (Discount) / -XX.XX% (Deficit) |
+    | **Final Portfolio Action Directive** | **INVEST / PASS / HOLD / ACCUMULATE / LIQUIDATE** |
+    You are strictly forbidden from outputting raw key-value lines without a table. In the Final Portfolio Action Directive cell, output strictly the single chosen uppercase action keyword (e.g. **INVEST**, **PASS**, **HOLD**, **ACCUMULATE**, or **LIQUIDATE**), never the unselected slash alternatives. Require an explicit &#039;+&#039; sign for a discount or &#039;-&#039; sign for a premium/deficit.
+  - Provide a final, definitive, actionable decision. The user operates a tax-exempt international account (no capital gains penalties):
+    * If a NEW Position: INVEST or PASS.
+    * If an EXISTING Position: HOLD, ACCUMULATE, or LIQUIDATE. (TRIM is strictly and permanently eliminated).
+  - Core Portfolio Decision Contract (The Never-Trim Compounding Doctrine &amp; 4-Gate Isolation Matrix):
+    Rule 1 (Archetype Eligibility Gate): The Never-Trim Compounding Doctrine applies strictly to verified Fast Growers, Wide-Moat Stalwarts, and Cyclical Compounders maintaining a normalized through-cycle ROIC &gt; 10.0% static hurdle rate. For these compounding franchises, we NEVER sell or trim merely due to multiple expansion, unrealized gains, or portfolio weighting (even past 10%, 20%, or 30%+ of portfolio equity). However, if the holding is classified in Part 9 as a Pure Commodity Cyclical, Turnaround, Slow Grower, or Asset Play, enforce category-specific exit discipline: recommend LIQUIDATE when a turnaround/asset play converges on intrinsic value or when a pure commodity cyclical exhibits peak-cycle harbingers (bloated inventories, spot prices falling below futures, or peak-cycle CapEx surges).
+    Rule 2 (Mandatory 4-Gate Isolation Diagnostic — Cyclical Compression vs. Permanent Moat Decay): Whenever an existing holding experiences revenue deceleration, margin compression, or a &gt;20% price drawdown, you are strictly forbidden from accepting management&#039;s MD&amp;A excuses at face value. You MUST evaluate the holding across four quantitative gates before selecting HOLD, ACCUMULATE, or LIQUIDATE:
+      * Gate 1 (Peer-Relative Captivity &amp; Share — Part 2 Radar): Is the contraction industry-wide (company market share stable or rising over a 3-year window, customer captivity intact), or is the company suffering idiosyncratic share loss and customer defections to direct peers or substitutes?
+      * Gate 2 (Gross Margin Pricing Power vs. Fixed-Cost Deleverage): Is Gross Margin structurally stable over a 3-year rolling window (proving intact pricing power while Operating Margin temporarily deleverages on lower cyclical volume), or is Gross Margin compressing structurally due to forced discounting and loss of pricing power?
+      * Gate 3 (Capital Allocation &amp; Forensic Integrity — Parts 1 &amp; 3): Has management maintained through-cycle incremental ROIC &gt;= 10.0% and passed the 5-Year Capital Allocation $1 Retained Earnings Test (&gt;= $1.00 market value created per $1.00 retained)? Flag an immediate breach if management engages in value-destructive out-of-moat M&amp;A (&quot;diworseification&quot;), recurring cost-restructuring charges, or severe cash conversion deficits (3-year CFO &lt; 80% Net Income). You are strictly forbidden from triggering a forensic breach on mechanical single-quarter working capital timing swings or cash-funded M&amp;A acquisition accounting.
+      * Gate 4 (Zero-Base Thesis &amp; Fade Recalibration — Parts 6, 7 &amp; 8): Re-underwrite the core story from a zero base. Verify whether the operational trajectory still supports the Part 6 Zero-Growth EPV Floor and Part 7 Expected DCF without thesis creep.
+        - STRICT PROHIBITION OF SUNK-COST BIAS: Gate 4 evaluates forward intrinsic value ($XX.XX) EXCLUSIVELY against the CURRENT MARKET PRICE ($XX.XX). You are STRICTLY FORBIDDEN from comparing forward intrinsic value against the user&#039;s historical purchase price (cost basis / `user_cost_basis`) to justify a LIQUIDATE verdict. Historical purchase price is an unrecoverable sunk cost; a drawdown below cost basis NEVER constitutes thesis invalidation if current market price trades at or below intrinsic value.
+    Rule 3 (Deterministic Execution Routing for Existing Holdings):
+      * LIQUIDATE: Mandatory if ANY of the following fire: (a) Structural Moat Decay (fails Gate 1 or Gate 2 via sustained multi-year share loss, broken customer captivity, structural gross margin erosion, or operating in a secularly shrinking TAM with heavy fixed scale costs); (b) Capital Destruction or Forensic Breach (fails Gate 3 via value-destructive M&amp;A diworseification, chronic sub-hurdle reinvestment, fraudulent accounting manipulation, or acute governance failure); (c) Thesis Invalidation or Category Drift (fails Gate 4, a Fast Grower permanently decelerates into a single-digit Slow Grower while priced for high growth, or a Pure Cyclical/Turnaround reaches its cycle peak/fair-value exit).
+        - FORTRESS BALANCE SHEET &amp; TROUGH PROTECTION: If an existing holding holds Net Cash (or zero funded debt), passes Gates 1 and 2 over a 3-year cycle, and trades at or below its Zero-Growth EPV Floor or within its Target Buy Band, the Senior Value Investor has full institutional authority to issue HOLD (or ACCUMULATE), recognizing cyclical trough earnings. You are strictly forbidden from liquidating a net-cash cyclical compounder at the trough of its commodity cycle.
+      * ACCUMULATE: Permitted ONLY if Gates 1, 2, 3, and 4 PASS (proving temporary cyclical compression or macro pessimism with an intact moat) AND the current market price trades at a &gt;= 15%–20% Margin of Safety discount (Target Buy or Screaming Buy band) to Intrinsic Value for Wide-Moat Compounders (&gt;= 20%–25% for Cyclicals).
+      * HOLD: Default directive when Gates 1, 2, 3, and 4 PASS and the stock trades above our accumulation buy bands (or when holding a net-cash compounder through a cyclical trough). Maintain the full position uninterrupted without trimming.
+  - State exactly why the Red Team&#039;s forensic attack either broke the thesis or was refuted by the filing data.
+
+* Step 5: Portfolio Construction &amp; Sizing:
+  - Given a concentrated portfolio (maximum 13 companies, 5% to 13% target weighting):
+    * If INVEST (New): State your proposed initial position size linked to business quality and margin of safety. Detail a 2-Tranche execution plan (Tranche 1 immediate allocation at current prices, Tranche 2 limit order at the Screaming Buy / Deep Value band).
+    * If HOLD or ACCUMULATE (Existing): Maintain the full position without trimming. If price pulls back to or below our margin of safety / Screaming Buy band, recommend ACCUMULATE. Never trim solely due to position size or multiple expansion.
+    * If PASS or LIQUIDATE: State &quot;No capital allocated.&quot;
+
+* Step 6: The 5-Metric Quarterly Monitoring Dashboard:
+  - Construct an institutional &#039;Monitoring Dashboard&#039; to track this investment thesis over time.
+  - Identify 3-5 Key Thesis Metrics to track every quarter, the specific &#039;Thesis-Breaker&#039; trigger event for each (incorporating the Red Team&#039;s catalyst), and the &#039;Current Status&#039;.
+  - You MUST output this strictly as a clean Markdown table with EXACTLY these three columns:
+    | Key Thesis Metric | Thesis-Breaker Event | Current Status |
+
+CRITICAL FORMATTING DIRECTIVE: You are strictly forbidden from outputting ASCII art boxes (+----+), typewriter-style bordered headers, equals-sign borders (====), dashed lines (----), or wrapping tables/verdicts in monospace code blocks (```). Present the Executive Verdict Summary, Valuation Benchmark Comparison, and Monitoring Dashboard strictly as standard GitHub-Flavored Markdown tables (| Header 1 | Header 2 |) with matching columns, standard delimiters (| :--- | :---: |), and no enclosing code fences.</pre>
+    </div>
+  </details>
+  
+
+  <details class="prompt-accordion" id="prompt-part-12">
+    <summary>
+      <span>Part 12: Forensic Audit &amp; Fact-Check Crosscheck</span>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <span class="voice-tag voice-forensic">🛡️ FORENSIC &amp; DEFENSE (ASD-STE100)</span>
+        <span style="font-size:0.75rem; color:var(--text-muted);">Step 12</span>
+      </div>
+    </summary>
+    <div class="accordion-body">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+        <span style="font-size:0.8rem; font-weight:700; text-transform:uppercase; color:var(--text-muted);">Active Canonical Master Prompt Text</span>
+        <button class="btn copy-btn" data-target="prompt-code-12" style="position:static;">📋 Copy Master Prompt</button>
+      </div>
+      <pre id="prompt-code-12">VOICE DIRECTIVE — FORENSIC &amp; DEFENSE VOICE (80% ASD-STE100):
+Execute this independent forensic audit strictly adhering to Forensic &amp; Defense Voice (80% ASD-STE100):
+- Active voice only. Eliminate passive constructions (e.g. Write &quot;Report miscalculated Net Debt&quot;, &quot;Filings prove $45M Capex&quot;, not &quot;Net debt was miscalculated&quot;).
+- One verb per sentence. Write short, direct, audit-ready sentences (maximum 20-25 words).
+- Zero corporate euphemisms. Ban all corporate and advisory euphemisms (&#039;headwinds&#039;, &#039;synergies&#039;, &#039;softness&#039;, &#039;challenges&#039;). State exact numerical discrepancies and filing facts.
+- Strict metric-to-finding assertions: Format every verification directly: Reported metric -&gt; Audited recalculation -&gt; Material variance -&gt; Binary audit finding (PASS / FLAG / BREACH).
+
+**Role:** Act as a forensic financial auditor and fact-checker aligned with a strict value investing framework. I am providing you with a financial analysis document (the compiled output of Steps 1-11 above) and several raw source files (SEC filings, financial tables, and earnings transcripts). Your job is to verify the structural and financial accuracy of the analysis document.
+
+### MANDATORY PRE-FLIGHT AUDIT TRIPWIRES (EXECUTE BEFORE DETAILED RECALCULATION):
+
+**Gate 0: Structural Pipeline Completeness &amp; Chapter Roll Call Audit**
+- **Action:** Inspect the compiled document and verify that all 11 prior chapters (Parts 1 through 11) are present, sequential, and fully populated.
+- **Fail Condition:** If any chapter is missing, skipped, or truncated (e.g., jumping from Part 2 to Part 6, missing Part 3 Owner Earnings, Part 4 Moats, Part 5 Qualitative, Part 6 Zero-Growth EPV, or Part 7 DCF), you MUST immediately issue an audit breach:
+  `🔴 CRITICAL THESIS-BREAKER: STRUCTURAL PIPELINE DEFICIT — Parts [List Missing] are missing from the analysis.`
+
+**Gate 1: Entity &amp; Ticker Integrity Audit (Zero Alien Contamination)**
+- **Action:** Verify that every table, company name, ticker symbol, and market price tape across all 11 parts strictly belongs to the target company.
+- **Fail Condition:** If ANY table or metric contains a foreign ticker symbol (e.g., PLTR, AAPL, etc., in a different company&#039;s dossier), or if any table quotes an alien tape price that contradicts the target company&#039;s market price tape by &gt;10%, you MUST immediately issue an audit breach:
+  `🔴 CRITICAL THESIS-BREAKER: ALIEN ENTITY CONTAMINATION — Foreign company data detected in Part [X].`
+- **Legitimate Peer Benchmarking Exception:** Foreign peer tickers and comparative metrics are fully permitted and expected in the Competitor Moat &amp; Valuation Radar (Part 2 Section 1.4), Peer Moat Comparisons (Part 4), Thesis Radar Integration (Part 9), and Red Team Competitor Weaponization (Part 10), provided they are explicitly designated as competitor/peer benchmarks and not substituted as the target company&#039;s primary identity or market price tape.
+
+**Gate 2: Portfolio Mandate &amp; Definitive Verdict Alignment Audit**
+- **Action:** Cross-check the Step 11 Definitive Verdict table against the provided User Portfolio Context:
+  - **Existing Holding (`holdsPosition: true`):** The final portfolio action directive in Step 11 MUST strictly be **HOLD**, **ACCUMULATE**, or **LIQUIDATE**. Under the Never-Trim Compounding Doctrine, `TRIM` is strictly eliminated. If Step 11 outputs `PASS`, `INVEST`, or `TRIM`, you MUST issue an audit breach:
+    `🔴 CRITICAL THESIS-BREAKER: PORTFOLIO ACTION DIRECTIVE MISALIGNMENT — Evaluated existing holding with invalid action directive (PASS/INVEST/TRIM). Valid directives: HOLD, ACCUMULATE, LIQUIDATE.`
+    Furthermore, verify that Step 11 enforced the **Archetype Eligibility Gate** (distinguishing Fast Growers, Wide-Moat Stalwarts, and verified Cyclical Compounders from Pure Commodity Cyclicals and Turnarounds) and evaluated the **4-Gate Isolation Diagnostic** (Peer-Relative Share, Gross Margin Pricing Power vs. Fixed-Cost Deleverage, Capital Allocation $1 Test / Zero Diworseification, and Zero-Base Thesis Recalibration with strict prohibition of sunk-cost bias) before issuing `HOLD`, `ACCUMULATE`, or `LIQUIDATE`.
+  - **New Position (`holdsPosition: false`):** The final portfolio action directive in Step 11 MUST strictly be **INVEST** or **PASS**. If Step 11 outputs `HOLD`, `ACCUMULATE`, `TRIM`, or `LIQUIDATE`, you MUST issue an audit breach:
+    `🔴 CRITICAL THESIS-BREAKER: PORTFOLIO ACTION DIRECTIVE MISALIGNMENT — Evaluated new prospective buyer with existing holding directive.`
+
+**Gate 3: Cash-Flow Valuation Consistency Crosscheck**
+- **Action:** Verify that the Intrinsic Value and Target Price Bands in Part 11 match the audited values synthesized in Part 6 (Zero-Growth EPV Floor), Part 7 (Probabilistic DCF Scenarios &amp; Expected DCF), and Part 8 (Valuation Synthesis &amp; Sensitivity Matrix).
+- **Fail Condition:** Flag any internal mathematical contradiction where Part 11 uses prices or multiples that contradict Parts 6 through 8.
+
+**Gate 4: Mandatory Arithmetic Proof &amp; Formula Recalculation Scratchpad**
+- **Action:** Execute an independent, scratchpad arithmetic proof of the primary valuation formulas and table summations to eliminate token-level language model hallucinations:
+  1. **Scenario Weighting Summation (Part 7, Sec 2 or Sec 3):** Calculate `(0.25 * Bear Value) + (0.50 * Base Value) + (0.25 * Bull Value)` from Part 7 Sec 2 (or Part 7 Sec 3 R&amp;D-Capitalized DCF for verified Tech Compounders passing the Red Queen Gate). Compare against the reported &quot;Synthesized Intrinsic Value&quot;. Flag any delta &gt; 1.0% (or &gt; $0.25 per share).
+  2. **Diluted Share Count Division (Parts 6, 7, 8):** Verify `Verified Per-Share IV = (Audited Equity Value in $M * 1,000,000) / Diluted Shares Outstanding`. Verify that Common Diluted Shares from Form 10-Q/10-K (including options/RSUs) were used rather than basic shares. Flag any delta &gt; 1.0% (or &gt; $0.25 per share).
+  3. **Target Buy Price Band Math (Part 9, Sec 1.4 &amp; Part 11):** Calculate:
+     - Quality-Tiered Target Buy Band (15%–25% MoS): `Reported Intrinsic Value * 0.75` to `Reported Intrinsic Value * 0.85` (verifying exact consistency with the stated MoS % in Part 9 and Part 11: `0.75x–0.85x IV` for Wide-Moat Compounders; `0.75x IV` / 25% MoS standard)
+     - 35%–50% Screaming Buy / Deep Value Band: `Reported Intrinsic Value * 0.50` to `Reported Intrinsic Value * 0.65`
+     Compare against the price bands reported in Part 9 and Part 11. Flag any unaligned drift &gt; 1.0%.
+  4. **Signed Margin of Safety Contract (Part 11, Step 4 &amp; YAML):** Calculate `Verified MoS % = ((Reported Intrinsic Value - Market Tape Price) / Reported Intrinsic Value) * 100%`. Verify that the signed contract is strictly enforced: `+XX.XX% (Discount)` when Market Tape &lt; Intrinsic Value, and `-XX.XX% (Deficit)` when Market Tape &gt; Intrinsic Value. Flag inverted signs or reversed denominators (0.0% zero tolerance on sign inversions).
+  5. **Equity Bridge Summation &amp; Operational Boundary Audit (Parts 5, 6, 7):** Sum all positive and negative bridge items: `Verified Equity Value = Enterprise Value + Cash - Funded Debt - Audited Off-Balance-Sheet Liabilities` (for Banks, Insurers, and REITs evaluated via Direct Equity / Excess Return / AFFO models in Parts 6 &amp; 7, verify that customer deposits, insurance float/reserves, and operating funding liabilities are NOT deducted as enterprise debt). Verify that line items sum to the reported Equity Value within 1.0% rounding tolerance. Furthermore, enforce the **Confirmed Legal Contingency &amp; Operating Contract Boundary**: deduct only confirmed legal judgments/bonds or probable accrued balance-sheet reserves (strictly forbid deducting speculative class-action complaint prayers); flag any deduction of ongoing executory contracts (AWS/Google cloud compute, dedicated air/cargo freight, unvested multi-year executive cash compensation) or SaaS unearned revenue as an immediate double-count breach.
+  6. **Multi-Year Distributable FCF Reinvestment Consistency (Part 7):** Verify `Distributable FCFF = Sustainable NOPAT * (1 - Reinvestment Rate)`. Verify that cash flows projected in the DCF table adhere strictly to the stated reinvestment rate within 1.0% rounding tolerance.
+- **Fail Condition:** If any calculation exhibits a material arithmetic variance &gt; 1.0% (or &gt; $0.25 per share beyond normal intermediate table rounding), inverts Margin of Safety signs, or double-counts executory operating contracts / speculative litigation, you MUST issue an audit breach:
+  `🔴 CRITICAL THESIS-BREAKER: ARITHMETIC RECALCULATION VARIANCE — [Metric] was reported as [Claimed Value] but verified recalculation equals [Calculated Value] (Delta: [+/-Delta]).`
+
+---
+
+### CORE FACT-CHECK &amp; FORENSIC AUDIT PROTOCOL:
+To ensure a focused, high-signal fact-check that avoids immaterial &quot;false alarms,&quot; you must execute the following four steps based strictly on materiality:
+
+**1. Independent Mathematical Verification (The Anti-Anchoring Check)**
+- **Action:** Recalculate all core financial metrics mentioned (Net Debt including off-balance sheet lease/pension equivalents and confirmed legal reserves, Net Cash, Free Cash Flow, Owner Earnings, Margins, Return on Retained Capital (RORC), Capital Allocation $1 Total Shareholder Value Test, Forensic Accounting &amp; Earnings Quality vectors (Buy-Side Cash Integrity Protocol: 3-Year Cumulative Cash Conversion, Charlie Munger Zero-EBITDA &amp; Non-GAAP Add-Back Rejection, Aggressive Expense Capitalization &amp; Revenue Pull-Forward, and Balance Sheet Asset &amp; Working Capital Integrity), and Market-Implied Reverse DCF expectations) using the raw balance sheet, income statement, and cash flow CSV tables.
+- **Focus:** Ensure liabilities, capitalized costs, and cash equivalents are accurately accounted for. Flag mathematical discrepancies _only if_ they materially misstate the company&#039;s valuation ceiling, downside floor, or earnings quality status.
+
+**2. The Material Omission Audit (The Solvency &amp; Trajectory Check)**
+- **Action:** Scan the 10-Q/10-K filings and Earnings Transcripts for massive strategic events.
+- **Focus:** Identify any major capital allocations (acquisitions, massive stock buybacks), executive/management departures, or pending litigation/contingencies. You must flag an omission _only if_ it poses a solvency threat, an operational risk, or significantly alters the company&#039;s risk profile and growth trajectory. Explicitly ignore routine business updates, minor IT implementations, or standard administrative boilerplate.
+
+**3. Explicit Claim Verification (The Commission Check)**
+- **Action:** Cross-check operational claims, market share percentages, combined ratios, and competitor metrics.
+- **Focus:** Ensure the document is not structurally exaggerating the company&#039;s competitive moat or downplaying cycle headwinds.
+
+**4. Causality &amp; Hallucination Check (The Narrative Check)**
+- **Action:** Verify the _reasons_ given for strategic moves against management&#039;s explicit statements in the earnings transcripts.
+- **Focus:** Flag instances where the text assigns a false narrative to a business decision. You must ignore minor chronological misattributions or quote-sourcing errors _unless_ they actively distort the investment thesis or misrepresent the company&#039;s economic reality.
+
+**CRITICAL FORMATTING &amp; AUDIT REPORT STRUCTURE:**
+You are strictly forbidden from outputting LaTeX math syntax. You are strictly forbidden from outputting ASCII art box tables with +----+ borders or wrapping tables in code blocks. Use clean standard markdown pipe tables (| Header 1 | Header 2 |) and plain text bullet points.
+
+Provide your findings structured under the following exact sections:
+
+### 1. Executive Audit Summary &amp; Verification Triage
+State your high-level audit verdict:
+- Overall Audit Status: [🟢 Clean &amp; Corroborated / 🟡 Material Non-Fatal Variances / 🔴 Critical Thesis-Breakers Detected]
+- Pipeline Completeness: [PASS — All 11 Chapters Present / BREACH — Missing Parts]
+- Entity &amp; Ticker Integrity: [PASS — 100% Target Company Isolated / BREACH — Alien Data Detected]
+- Portfolio Mandate Alignment: [PASS — Action Directive Matches Holding Status / BREACH — Misaligned Action]
+- Valuation Arithmetic &amp; Bridge Integrity: [PASS — 100% Formulas &amp; Summations Verified / BREACH — Recalculation Variance Detected]
+- Summary of high-level audit findings in 2-3 sentences.
+
+### 2. Structural &amp; Pipeline Audit (Pre-Flight Roll Call)
+Report the results of Gate 0 (Chapter Roll Call), Gate 1 (Zero Alien Contamination), Gate 2 (Portfolio Mandate Alignment), Gate 3 (Cash-Flow Valuation Consistency), and Gate 4 (Arithmetic Proof &amp; Formula Recalculation Scratchpad).
+
+You MUST output the Gate 4 Arithmetic Proof Scratchpad as an explicit 6-row GitHub-flavored markdown table:
+| Mathematical Vector | Report Claimed Value | Independent Recalculation | Delta / Variance | Audit Verdict (PASS / BREACH) |
+| :--- | :---: | :---: | :---: | :---: |
+| **1. DCF Scenario Weighting Sum** | $XX.XX | $XX.XX | $0.00 | PASS / BREACH |
+| **2. Diluted Share Count Division** | $XX.XX | $XX.XX | $0.00 | PASS / BREACH |
+| **3. Target Buy Band Math (15%–25% MoS)** | $XX.XX | $XX.XX | $0.00 | PASS / BREACH |
+| **4. Signed Margin of Safety Contract** | +/-XX.XX% | +/-XX.XX% | 0.00% | PASS / BREACH |
+| **5. Equity Bridge Line-Item Sum** | $XX.XXM | $XX.XXM | $0.00M | PASS / BREACH |
+| **6. DCF Distributable FCF Consistency** | $XX.XXM | $XX.XXM | $0.00M | PASS / BREACH |
+
+Explicitly detail any missing chapters, foreign ticker tables, portfolio directive violations, or arithmetic calculation breaches.
+
+### 3. What is Accurate (Corroborated Pillars)
+Briefly list the primary metrics, balance sheet positions, and strategic assumptions from the analysis that were verified as mathematically sound and factually accurate against the filings.
+
+### 4. Mathematical &amp; Metric Discrepancies
+If discrepancies exist, format them in this exact GitHub-flavored markdown table:
+| Claimed Value in Report | Filing Citation &amp; Table | Verified Recalculation | Material Variance &amp; Valuation Impact | Severity (🔴/🟡) |
+| --- | --- | --- | --- | --- |
+*(If no material math errors exist, explicitly state: &quot;No material mathematical discrepancies found.&quot;)*
+
+### 5. Material Omission Audit (Solvency &amp; Trajectory)
+Detail any overlooked strategic events, major capital allocations, management turnover, or pending legal/contingent liabilities that alter the company&#039;s risk profile or trajectory.
+
+### 6. Explicit Claims &amp; Moat Verification
+Review market share percentages, unit economics, or competitive claims. Note whether claims are substantiated or if the analysis structurally exaggerated the moat.
+
+### 7. Causality &amp; Narrative Check
+Highlight any narrative misattributions or false justifications assigned to management decisions that distort the economic reality of the business.
+
+[STRICT MATERIALITY DIRECTIVE]: Do not report immaterial discrepancies or minor rounding variations (&lt;1-2%). Focus ruthlessly on factors that shift intrinsic value or margin of safety.</pre>
+    </div>
+  </details>
+  
+      </section>
+
+      <!-- Volume 4 -->
+      <section id="vol-4-gates">
+        <h2>Volume 4: Emergency Procedures &amp; Circuit Breakers</h2>
+        <p>The Lab Sandbox implements 5 dynamic conditional falsification gates that intercept flawed assumptions in real time:</p>
+
+        <div id="gate-1" class="callout callout-warning">
+          <h4>Gate 1: Flywheel Falsification Gate</h4>
+          <p><strong>Trigger Condition:</strong> ROIC &lt; 10.0% static hurdle rate for 3+ consecutive years, or enterprise operates as a cyclical commodity processor / linear manufacturer.<br>
+          <strong>Procedural Action:</strong> Aborts compounding flywheel generation completely. Declares <code>LINEAR VALUE CHAIN / CYCLICAL COMMODITY (NO ORGANIC FLYWHEEL)</code> and details linear operating constraints.</p>
+        </div>
+
+        <div id="gate-2" class="callout">
+          <h4>Gate 2: Symmetrical Discovery Engine</h4>
+          <p><strong>Trigger Condition:</strong> Detection of unquantified latent balance sheet claims or pricing power.<br>
+          <strong>Procedural Action:</strong> Dynamically injects off-balance-sheet debt equivalents (leases, pensions) and hidden pricing power into the valuation bridge.</p>
+        </div>
+
+        <div id="gate-3" class="callout callout-warning">
+          <h4>Gate 3: Red Queen Effect Gate</h4>
+          <p><strong>Trigger Condition:</strong> High recurring SG&amp;A/R&amp;D spend required merely to defend existing market share.<br>
+          <strong>Procedural Action:</strong> Upwardly revises maintenance capex assumptions and penalizes competitive advantage period (CAP) in DCF modeling.</p>
+        </div>
+
+        <div id="gate-4" class="callout callout-warning">
+          <h4>Gate 4: Earned Franchise Weighting Gate</h4>
+          <p><strong>Trigger Condition:</strong> EPS growth &gt; 15% driven primarily by share buybacks or multiple expansion rather than organic operational growth.<br>
+          <strong>Procedural Action:</strong> Penalizes quality of earnings score and isolates underlying organic cash compounding power.</p>
+        </div>
+
+        <div id="gate-5" class="callout">
+          <h4>Gate 5: 4-Point Cyclical Compounder Disambiguation &amp; 4-Gate Isolation Matrix</h4>
+          <p><strong>Trigger Condition:</strong> Industrial, materials, or technology companies in cyclical sectors (Part 9) or existing holdings experiencing margin compression / drawdowns (Part 11).<br>
+          <strong>Procedural Action:</strong> Separates disguised <strong>Cyclical Compounders</strong> (passing Trough-to-Trough EPS escalation, 3-to-10 Yr recency-weighted physical volume decoupling, 3-to-10 Yr recency-weighted ROIC &gt; 10.0%, and countercyclical buybacks — protected by Never-Trim) from <strong>Pure Commodity Cyclicals</strong> (routed to peak-cycle exits). Enforces the 4-Gate Peer-Relative Moat Isolation Matrix before issuing <code>HOLD</code>, <code>ACCUMULATE</code>, or <code>LIQUIDATE</code>.</p>
+        </div>
+
+        <div id="circuit-breaker" class="callout callout-critical">
+          <h4>Terminal Regression Guard: 2-Strike Anti-Thrashing Circuit Breaker</h4>
+          <p>Governed by <code>.agents/skills/terminal-regression-guard</code>. If an automated fix introduces a secondary break or fails verification tests twice in a row, the execution circuit breaker trips immediately. Halts execution, forces <code>git diff</code> inspection, and preserves golden baselines.</p>
+        </div>
+      </section>
+
+      <!-- Volume 5 -->
+      <section id="vol-5-codex">
+        <h2>Volume 5: Ground-Truth Reference Codex &amp; Institutional Audit Evaluation</h2>
+
+        <div id="sec-27-matrix">
+          <h3>The 27-Source Literature Codex Matrix</h3>
+          <p>All quantitative calculations and thresholds are hardwired to classical value investing literature:</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Core Philosophy</th>
+                <th>Valuation &amp; Forensics</th>
+                <th>Moats &amp; Strategy</th>
+                <th>Capital Allocation</th>
+                <th>Mental Models</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><em>Security Analysis</em> (Graham &amp; Dodd)</td>
+                <td><em>Value Investing</em> (Greenwald)</td>
+                <td><em>Competition Demystified</em> (Greenwald)</td>
+                <td><em>The Outsiders</em> (Thorndike)</td>
+                <td><em>Poor Charlie's Almanack</em> (Munger)</td>
+              </tr>
+              <tr>
+                <td><em>The Intelligent Investor</em> (Graham)</td>
+                <td><em>Financial Shenanigans</em> (Schilit)</td>
+                <td><em>Understanding Michael Porter</em> (Magretta)</td>
+                <td><em>Dear Shareholder</em> (Cunningham)</td>
+                <td><em>Thinking, Fast and Slow</em> (Kahneman)</td>
+              </tr>
+              <tr>
+                <td><em>Margin of Safety</em> (Klarman)</td>
+                <td><em>Expectations Investing</em> (Mauboussin)</td>
+                <td><em>7 Powers</em> (Helmer)</td>
+                <td><em>Capital Allocation</em> (Giroux)</td>
+                <td><em>The Most Important Thing</em> (Marks)</td>
+              </tr>
+              <tr>
+                <td><em>Common Stocks</em> (Fisher)</td>
+                <td><em>Creative Cash Flow</em> (Mulford)</td>
+                <td><em>Quality Investing</em> (Cunningham)</td>
+                <td><em>Buffett Annual Letters</em></td>
+                <td><em>Fooled by Randomness</em> (Taleb)</td>
+              </tr>
+              <tr>
+                <td><em>Little Book of Value</em> (Browne)</td>
+                <td><em>Valuation</em> (McKinsey)</td>
+                <td><em>Economic Moats</em> (Morningstar)</td>
+                <td><em>Return on Capital</em> (Mauboussin)</td>
+                <td><em>Superforecasting</em> (Tetlock)</td>
+              </tr>
+              <tr>
+                <td><em>Essays of Buffett</em> (Cunningham)</td>
+                <td><em>Quality of Earnings</em> (O'glove)</td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+
+        <details class="prompt-accordion" id="sec-audit-evaluation" style="margin-top:2rem;" open>
+          <summary>
+            <span>⚖️ Institutional Audit Evaluation: Value Investing Terminal Framework</span>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span class="voice-tag voice-strategic" style="background:rgba(5,150,105,0.15); color:var(--accent-emerald); border-color:var(--accent-emerald);">SCORE: 94% WORLD-CLASS</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Expand / Collapse</span>
+            </div>
+          </summary>
+          <div class="accordion-body">
+
+            <div class="callout" style="border-left-color: var(--accent-emerald); margin-bottom: 1.5rem;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1rem;">
+                <div>
+                  <h4 style="font-size:1.05rem; margin-bottom:0.4rem; color:var(--text-primary);">Audit Committee Metadata &amp; Specification</h4>
+                  <p style="margin-bottom:0.25rem;"><strong>Audit Committee:</strong> Benjamin Graham, Warren Buffett, Charlie Munger, Seth Klarman, Bruce Greenwald, Howard Schilit, Michael Mauboussin, William Thorndike, Tim Koller</p>
+                  <p style="margin-bottom:0.25rem;"><strong>Target Document:</strong> <code>terminal_methodology_snapshot.md</code> (Canonical Methodology &amp; Literature Benchmark Snapshot)</p>
+                  <p style="margin-bottom:0;"><strong>Literature Baseline:</strong> 27-Source Value Investing Library &amp; Audited Financial Datasets</p>
+                </div>
+                <div style="text-align:center; padding:0.75rem 1.25rem; background:var(--bg-card); border:1px solid var(--border-card); border-radius:8px;">
+                  <div style="font-size:0.75rem; text-transform:uppercase; font-weight:700; color:var(--text-muted);">Overall Alignment</div>
+                  <div style="font-size:2.2rem; font-weight:900; color:var(--accent-emerald); line-height:1.1;">94%</div>
+                  <div style="font-size:0.7rem; font-weight:600; color:var(--accent-emerald);">VERIFIED INSTITUTIONAL</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Part 1 -->
+            <h3 style="margin-top:1.5rem; border-bottom:1px solid var(--border-card); padding-bottom:0.4rem; color:var(--text-primary);">
+              Part 1: Compliant Core (What Is Already World-Class)
+            </h3>
+            <p style="margin-top:0.5rem;">The Value Investing Terminal’s engine demonstrates strict alignment with foundational value investing literature across seven core pillars:</p>
+
+            <ol style="padding-left:1.25rem; margin-bottom:1.5rem; color:var(--text-secondary);">
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">The Cash-Flow Sovereign Valuation Architecture (<code>EPV Floor &le; Probabilistic Expected DCF</code>):</strong><br>
+                • <strong>Literature Alignment:</strong> Warren Buffett (<em>Berkshire Hathaway Shareholder Letters</em>), Charlie Munger (<em>Poor Charlie's Almanack</em>), and Bruce Greenwald (<em>Value Investing</em>, Ch. 3–5; <em>Competition Demystified</em>, Ch. 3–5, 16).<br>
+                • <strong>Audit Finding:</strong> The terminal operates under strict Cash-Flow Sovereignty (asset reproduction cost ARV is permanently eliminated). It enforces <strong>Zero-Growth Earnings Power Value (<code>EPV</code>)</strong> as the conservative no-growth cash floor and <strong>Probabilistic Expected Owner Earnings DCF</strong> (or R&amp;D-Capitalized Expected DCF for verified Tech Compounders passing the Red Queen Gate) as the authoritative Intrinsic Value anchor. Step 6 and Step 7 enforce the <strong>Value Creation Rule</strong>: growth creates economic value <strong>only if</strong> Return on Invested Capital (<code>ROIC</code>) exceeds the 10.00% static hurdle rate.
+              </li>
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">The 10.00% Static Opportunity Cost Hurdle Rate:</strong><br>
+                • <strong>Literature Alignment:</strong> Warren Buffett (<em>Berkshire Hathaway Shareholder Letters</em>), Seth Klarman (<em>Margin of Safety</em>, Ch. 8), Tim Koller et al. (<em>Valuation: McKinsey &amp; Co.</em>, Ch. 10, 15), and Bruce Greenwald (<em>Value Investing</em>, Ch. 3, 5).<br>
+                • <strong>Audit Finding:</strong> The system enforces an absolute prohibition on academic CAPM, Beta calculations, and dynamic WACC manipulation. Risk is managed strictly through the <strong>Margin of Safety</strong> applied to intrinsic value rather than by artificially manipulating the discount rate denominator.
+              </li>
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">Buffett Owner Earnings &amp; SBC 100% Cash Outflow Enforcement:</strong><br>
+                • <strong>Literature Alignment:</strong> Warren Buffett (<em>Berkshire Hathaway Annual Report 1986</em>, Appendix; <em>The Essays of Warren Buffett</em>, Section V.D), Charlie Munger (<em>Poor Charlie's Almanack</em>, Talk Eight), and Bruce Greenwald (<em>Value Investing</em>, Ch. 5).<br>
+                • <strong>Audit Finding:</strong> In Part 3 (Step 3), the terminal normalizes Operating Cash Flow by treating <strong>Stock-Based Compensation (SBC) as a mandatory 100% hard cash expense</strong>. It also mandates the separation of <strong>Maintenance CapEx</strong> (deducted to preserve productive capacity) from <strong>Growth CapEx</strong> (capitalized).
+              </li>
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">Munger’s Inversion &amp; Red Team Forensic Pre-Mortem Attack:</strong><br>
+                • <strong>Literature Alignment:</strong> Charlie Munger (<em>Poor Charlie's Almanack</em>, Talk Eight) and Nassim Nicholas Taleb (<em>Antifragile</em>, Ch. 1–4).<br>
+                • <strong>Audit Finding:</strong> Step 10 operationalizes Munger's "Invert, always invert" principle. The <strong>Red Team Forensic Short Attack</strong> forces an adversarial deconstruction of the bull case, identifying fatal flaws and testing thesis resilience before an investment decision is rendered.
+              </li>
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">Peter Lynch Balance Sheet Net Cash Cushion &amp; Archetype Categorization:</strong><br>
+                • <strong>Literature Alignment:</strong> Peter Lynch (<em>One Up On Wall Street</em>, Ch. 9–10).<br>
+                • <strong>Audit Finding:</strong> Step 9 implements the <strong>Lynch Net Cash Test</strong> (<code>(Cash &minus; Long-Term Debt) / Market Cap &ge; 10%</code>), treating net cash as a tangible balance sheet rebate and downside cushion. It also categorizes businesses into Lynch’s six operational archetypes (<em>Fast Grower, Stalwart, Slow Grower, Cyclical, Asset Play, Turnaround</em>) with the Structural Transformation Rule.
+              </li>
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">CurrencyGuard &amp; Native Home Currency Preservation:</strong><br>
+                • <strong>Literature Alignment:</strong> Tim Koller et al. (<em>Valuation: McKinsey &amp; Co.</em>, Ch. 27).<br>
+                • <strong>Audit Finding:</strong> Section 1.1 executes all historical operational evaluations, margin compounding, and return calculations strictly in the issuer's native Home Currency, eliminating foreign exchange translation noise before converting to USD per ADS intrinsic value at spot rates.
+              </li>
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">Recency-Weighted Return on Retained Capital (RORC) &amp; 3-Year Cash Flow Anchor:</strong><br>
+                • <strong>Literature Alignment:</strong> Warren Buffett (<em>Berkshire Letters</em>), Benjamin Graham (<em>Security Analysis</em>, Ch. 31), and Bruce Greenwald (<em>Value Investing</em>, Ch. 8).<br>
+                • <strong>Audit Finding:</strong> Step 1 evaluates management capital allocation discipline using a <strong>50% 3-Yr / 30% 5-Yr / 20% 10-Yr Recency-Weighted RORC</strong> (<code>&Delta;Owner Earnings / &sum;Capital Retained &ge; 10.00%</code>) to weight modern business scale while preserving through-the-cycle memory. Step 3 uses a 2-Step Empirical Maintenance CapEx Carve-Out and a 3-year rolling average Normalized Owner Earnings anchor to smooth cyclical peak/trough distortions.
+              </li>
+            </ol>
+
+            <!-- Part 2 -->
+            <h3 style="margin-top:1.5rem; border-bottom:1px solid var(--border-card); padding-bottom:0.4rem; color:var(--text-primary);">
+              Part 2: Superficial Implementations (Where Production Logic Outpaces Summary Text)
+            </h3>
+            <p style="margin-top:0.5rem;">While generic valuation software implements qualitative checks superficially, the terminal’s production prompts enforce explicit quantitative triggers:</p>
+
+            <div style="display:flex; flex-direction:column; gap:1rem; margin:1rem 0;">
+              <div class="callout" style="border-left-color:var(--accent-amber); margin:0;">
+                <h4 style="color:var(--text-primary);">1. 4-Vector Buy-Side Cash Integrity Protocol (3-Year Rolling Window)</h4>
+                <p>• <strong>Literature Alignment:</strong> Howard Schilit (<em>Financial Shenanigans</em>, 4th Ed.) &amp; Charlie Munger (<em>Poor Charlie's Almanack</em>).<br>
+                • <strong>Production Rule Enforced in Step 1:</strong> Eliminates brittle single-period academic ratios (DSO, DPO, Sloan NOA Accruals, Beneish M-Score) and enforces four buy-side cash conversion tests over a 3-year rolling window:<br>
+                &nbsp;&nbsp;– <em>Vector 1 (3-Year Cumulative Cash Conversion Reality):</em> <code>3-Yr Cumulative OCF / 3-Yr Cumulative GAAP Net Income &ge; 0.80x</code>.<br>
+                &nbsp;&nbsp;– <em>Vector 2 (Charlie Munger Zero-EBITDA &amp; Non-GAAP Add-Back Rejection):</em> Rejects EBITDA/Adjusted EBITDA across all leverage and cash flow audits; flags if SBC exceeds <code>10%</code> of OCF or <code>5%</code> of revenue.<br>
+                &nbsp;&nbsp;– <em>Vector 3 (Aggressive Expense Capitalization &amp; Revenue Pull-Forward):</em> Flags if Capitalized Software exceeds <code>15%</code> of R&amp;D spend or Unbilled Receivables outpace revenue by <code>&gt; 1.50x</code> over a 3-year window.<br>
+                &nbsp;&nbsp;– <em>Vector 4 (Balance Sheet Asset &amp; Working Capital Integrity):</em> Exempts productive cash-funded PP&amp;E/M&amp;A and tax refunds while flagging uncollectible asset bloat.</p>
+              </div>
+
+              <div class="callout" style="border-left-color:var(--accent-amber); margin:0;">
+                <h4 style="color:var(--text-primary);">2. Capital Allocation &amp; Share Repurchase Discipline (Countercyclical Timing &amp; SBC Masking Tests)</h4>
+                <p>• <strong>Literature Alignment:</strong> William Thorndike (<em>The Outsiders</em>, Ch. 2, 9), Michael Mauboussin (<em>Expectations Investing</em>, Ch. 11), and Warren Buffett (<em>Berkshire Letters</em>, 1984, 2011, 2019).<br>
+                • <strong>Production Rule Enforced in Step 1:</strong><br>
+                &nbsp;&nbsp;– <em>Countercyclical Buyback Timing Audit:</em> Verify whether historical repurchases occurred at depressed historical multiples (below 5-to-10 year median P/FCF or P/E) rather than peak-cycle highs.<br>
+                &nbsp;&nbsp;– <em>SBC Dilution Masking Test:</em> If diluted share count expands (<code>&Delta;Share Count Index &ge; 1.0</code>) despite cash buyback outlays, penalize the outlay as a hidden employee compensation transfer rather than real capital deployment.</p>
+              </div>
+
+              <div class="callout" style="border-left-color:var(--accent-amber); margin:0;">
+                <h4 style="color:var(--text-primary);">3. Market-Implied Expectations Reverse DCF (Price-Implied Expectations vs. Base Rates)</h4>
+                <p>• <strong>Literature Alignment:</strong> Michael Mauboussin and Alfred Rappaport (<em>Expectations Investing</em>, Ch. 1–4, 6, 12).<br>
+                • <strong>Production Rule Enforced in Step 7:</strong><br>
+                &nbsp;&nbsp;– Invert Market Enterprise Value to solve for implied sales growth (<code>g_implied</code>), implied operating profit margin (<code>OPM_implied</code>), and Competitive Advantage Period (CAP).<br>
+                &nbsp;&nbsp;– Automatically flag an "Expectations Trap" if <code>g_implied</code> requires top-decile sustained growth (<code>&gt; 15&ndash;20%</code> CAGR) or record operating margins in an industry without verifiable entry barriers.</p>
+              </div>
+
+              <div class="callout" style="border-left-color:var(--accent-amber); margin:0;">
+                <h4 style="color:var(--text-primary);">4. Charlie Munger Zero-EBITDA Doctrine</h4>
+                <p>• <strong>Literature Alignment:</strong> Charlie Munger (<em>Berkshire Hathaway Annual Meetings</em>), Martin Fridson (<em>Financial Statement Analysis</em>), and Seth Klarman (<em>Margin of Safety</em>, Ch. 3).<br>
+                • <strong>Production Rule Enforced Across All Steps:</strong><br>
+                &nbsp;&nbsp;– Permanently eliminates EBITDA and Adjusted EBITDA across cash flow, REIT leverage (evaluated via Net Debt / AFFO or NOI), and executive compensation audits, stripping out recurring add-backs for restructuring, litigation, and SBC.</p>
+              </div>
+            </div>
+
+            <!-- Part 3 -->
+            <h3 style="margin-top:1.5rem; border-bottom:1px solid var(--border-card); padding-bottom:0.4rem; color:var(--text-primary);">
+              Part 3: Critical Structural Protections &amp; Capital Allocation Tests
+            </h3>
+            <p style="margin-top:0.5rem;">The terminal integrates five essential capital allocation tests and competitive dynamics from our 27 sources into its master workflow:</p>
+
+            <ol style="padding-left:1.25rem; margin-bottom:1.5rem; color:var(--text-secondary);">
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">Buffett’s $1 Retained Earnings &amp; Total Shareholder Value Test (5-Year Rolling Window):</strong><br>
+                • <strong>Source Citation:</strong> Warren Buffett (<em>Berkshire Hathaway Shareholder Letters</em>, 1984, 2012) &amp; Lawrence Cunningham (<em>The Essays of Warren Buffett</em>, Section III.C).<br>
+                • <strong>Quantitative Test Enforced in Step 1:</strong> Verifies whether every $1 of retained earnings generated over a 5-year rolling window (supplemented by 10-year context) created at least $1 of total shareholder value (incremental market capitalization plus cumulative cash dividends returned):
+                <div class="callout" style="font-family:ui-monospace, monospace; margin:0.5rem 0; font-weight:600;">
+                  Total Shareholder Value Creation Ratio = (&Delta;Market Capitalization + &sum; Cash Dividends Paid) / &sum; Retained Earnings &ge; 1.00x
+                </div>
+              </li>
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">Greenwald’s Scale vs. Captivity Moat Architecture:</strong><br>
+                • <strong>Source Citation:</strong> Bruce Greenwald (<em>Competition Demystified</em>, Ch. 3–5; <em>Value Investing</em>, Ch. 7).<br>
+                • <strong>Quantitative Test Enforced in Step 2 &amp; Step 4:</strong> Distinguishes defensible local/niche scale moats (regional route density, specialized consumables) from commoditized global scale traps (commercial airlines, global automotive).
+              </li>
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">Gurley’s Platform &amp; Tech Moat Criteria ("10X Revenue Club"):</strong><br>
+                • <strong>Source Citation:</strong> Bill Gurley (<em>All Revenue is Not Created Equal: The Keys to the 10X Revenue Club</em>).<br>
+                • <strong>Quantitative Test Enforced in Step 2:</strong> For software and platform businesses, applies Gurley's quantitative scorecard:<br>
+                &nbsp;&nbsp;– GAAP Gross Margin <code>&ge; 75.0% &minus; 80.0%</code>.<br>
+                &nbsp;&nbsp;– Organic Customer Acquisition (<code>LTV/CAC &ge; 4.0x</code> with paid marketing <code>&le; 15%</code> of sales).<br>
+                &nbsp;&nbsp;– Net Revenue Retention (NRR) <code>&ge; 110.0% &minus; 120.0%</code> and Annual Gross Churn <code>&le; 5.0%</code>.<br>
+                &nbsp;&nbsp;– Customer Concentration: Top customer <code>&lt; 10.0%</code> of total revenue. (Physical retailers and industrial compounders strictly exempted).
+              </li>
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">Footnote &amp; Off-Balance-Sheet Exposure (Confirmed Legal &amp; Operating Contract Boundaries):</strong><br>
+                • <strong>Source Citation:</strong> Tim Koller et al. (<em>Valuation: McKinsey &amp; Co.</em>, Ch. 11, 21) &amp; Martin Fridson (<em>Financial Statement Analysis</em>, Ch. 4).<br>
+                • <strong>Quantitative Test Enforced in Step 1 &amp; Step 6:</strong> Audits true financial creditor claims while prohibiting double-counting:<br>
+                &nbsp;&nbsp;– Present Value of Operating Lease Commitments (only if not already expensed in EBIT).<br>
+                &nbsp;&nbsp;– Net Unfunded Defined-Benefit Pension &amp; Postretirement Deficits (<code>(PBO &minus; Plan Assets) &times; (1 &minus; T)</code>).<br>
+                &nbsp;&nbsp;– Confirmed Legal Judgments, Appeal Bonds &amp; Probable Reserves (ASC 450) — strictly forbidding speculative deductions for uncertified class-action lawsuits.<br>
+                &nbsp;&nbsp;– Operating Contract Boundary: Strictly prohibits deducting ongoing cloud compute/freight purchase obligations, unvested executive compensation, or SaaS deferred revenue as funded debt.
+              </li>
+              <li style="margin-bottom:1rem;">
+                <strong style="color:var(--text-primary);">DEF 14A Proxy Compensation Incentive Alignment Audit:</strong><br>
+                • <strong>Source Citation:</strong> Warren Buffett (<em>Berkshire Letters</em>, 1985) &amp; William Thorndike (<em>The Outsiders</em>, Ch. 9).<br>
+                • <strong>Quantitative Test Enforced in Step 1:</strong> Audits executive compensation metrics, penalizing packages tied to gross revenue, volume, or unadjusted EBITDA while rewarding per-share compounding metrics (ROIC with a capital charge: <code>Bonus &prop; NOPAT &minus; [Capital &times; Hurdle Rate]</code>, EVA, or relative TSR hurdles).
+              </li>
+            </ol>
+
+            <!-- Part 4 -->
+            <h3 style="margin-top:1.5rem; border-bottom:1px solid var(--border-card); padding-bottom:0.4rem; color:var(--text-primary);">
+              Part 4: Top 3 High-Impact Upgrades
+            </h3>
+            <p style="margin-top:0.5rem;">To maintain the terminal's execution at the level of a senior value fund partner, the following three high-leverage upgrades are embedded in the pipeline:</p>
+
+            <div class="upgrade-pipeline">
+              <div class="upgrade-pipeline-header">
+                <div class="upgrade-pipeline-title">
+                  <span>🏛️ ARCHITECTURAL UPGRADE PIPELINE</span>
+                </div>
+                <span class="hud-badge" style="color:var(--accent-emerald);">3 CORE DIRECTIVES</span>
+              </div>
+
+              <div class="upgrade-flow-container">
+                <!-- Upgrade 1 -->
+                <div class="upgrade-card">
+                  <div class="upgrade-card-header">
+                    <span class="upgrade-card-title">Upgrade 1: Embed Mauboussin's Reverse DCF Expectations Engine</span>
+                    <span class="hud-badge">STEP 7</span>
+                  </div>
+                  <div class="upgrade-pill-row">
+                    <span class="flow-node">📊 Invert Market EV</span>
+                    <span class="flow-arrow">➔</span>
+                    <span class="flow-node">⚙️ Solve for (g_implied, OPM_implied, CAP)</span>
+                    <span class="flow-arrow">➔</span>
+                    <span class="flow-node">🎯 Benchmark Base Rates</span>
+                  </div>
+                </div>
+
+                <div class="pipeline-connector">▼</div>
+
+                <!-- Upgrade 2 -->
+                <div class="upgrade-card card-blue">
+                  <div class="upgrade-card-header">
+                    <span class="upgrade-card-title">Upgrade 2: 4-Vector Buy-Side Cash Integrity Protocol (3-Yr Rolling)</span>
+                    <span class="hud-badge" style="color:var(--accent-blue); border-color:rgba(37,99,235,0.3);">STEP 1 &amp; STEP 10</span>
+                  </div>
+                  <div class="upgrade-pill-row">
+                    <span class="flow-node">⚡ 3-Yr OCF / NI &ge; 0.80x</span>
+                    <span class="flow-arrow" style="color:var(--accent-blue);">•</span>
+                    <span class="flow-node">⚡ Zero-EBITDA Doctrine</span>
+                    <span class="flow-arrow" style="color:var(--accent-blue);">•</span>
+                    <span class="flow-node">⚡ Productive CapEx Exempt</span>
+                  </div>
+                </div>
+
+                <div class="pipeline-connector">▼</div>
+
+                <!-- Upgrade 3 -->
+                <div class="upgrade-card card-amber">
+                  <div class="upgrade-card-header">
+                    <span class="upgrade-card-title">Upgrade 3: 50/30/20 Recency-Weighted RORC &amp; 5-Yr Rolling $1 Value Test</span>
+                    <span class="hud-badge" style="color:var(--accent-amber); border-color:rgba(217,119,6,0.3);">STEP 1</span>
+                  </div>
+                  <div class="upgrade-pill-row">
+                    <span class="flow-node">🛡️ 5-Yr $1 Test (Incl. Divs)</span>
+                    <span class="flow-arrow" style="color:var(--accent-amber);">•</span>
+                    <span class="flow-node">🛡️ Countercyclical Buybacks</span>
+                    <span class="flow-arrow" style="color:var(--accent-amber);">•</span>
+                    <span class="flow-node">🛡️ ROIC/EVA Incentive Audit</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin:1rem 0;">
+              <h4 style="color:var(--text-primary); font-size:1rem; margin-bottom:0.3rem;">Upgrade 1: Integrate Market-Implied Reverse DCF Expectations Engine into Step 7</h4>
+              <p>• <strong>Implementation Directive:</strong> In Step 7, prior to generating forward DCF models, execute an automated inversion of current Market Enterprise Value (<code>EV_Market</code>). Solve for implied sales growth (<code>g_implied</code>), implied operating margin (<code>OPM_implied</code>), and Competitive Advantage Period (CAP). Automatically benchmark these parameters against 10-year historical industry base rate distributions, flagging stocks where market expectations require statistically rare performance.</p>
+
+              <h4 style="color:var(--text-primary); font-size:1rem; margin:1rem 0 0.3rem 0;">Upgrade 2: Enforce the 4-Vector Buy-Side Cash Integrity Protocol &amp; Charlie Munger Zero-EBITDA Doctrine</h4>
+              <p>• <strong>Implementation Directive:</strong> In Step 1 and Step 10 (Red Team Audit), replace brittle single-period academic ratios with 3-year rolling buy-side cash conversion vectors:<br>
+              &nbsp;&nbsp;– Flag if 3-Year Cumulative OCF / GAAP Net Income falls below <code>0.80x</code> without audited growth working-capital investments.<br>
+              &nbsp;&nbsp;– Enforce Charlie Munger's Zero-EBITDA Doctrine across all cash flow, REIT leverage, and compensation audits.<br>
+              &nbsp;&nbsp;– Flag if Capitalized Software exceeds <code>15%</code> of R&amp;D spend or Unbilled Receivables outgrow revenue by <code>&gt; 1.50x</code> over 3 years.<br>
+              &nbsp;&nbsp;– Exempt productive cash-funded PP&amp;E/M&amp;A and tax receivables from accounting manipulation flags.</p>
+
+              <h4 style="color:var(--text-primary); font-size:1rem; margin:1rem 0 0.3rem 0;">Upgrade 3: Institutionalize 50/30/20 Recency-Weighted RORC &amp; 5-Year Rolling $1 Value Test in Step 1</h4>
+              <p>• <strong>Implementation Directive:</strong> In Step 1, evaluate management capital allocation across three buy-side pillars:<br>
+              &nbsp;&nbsp;1. <em>5-Year Rolling $1 Total Shareholder Value Test:</em> Verify <code>(&Delta;Market Cap + &sum;Dividends) / &sum;Retained Earnings &ge; 1.00x</code>.<br>
+              &nbsp;&nbsp;2. <em>Countercyclical Share Buyback Audit:</em> Check if historical repurchases occurred at depressed historical multiples and whether total diluted share count contracted (<code>&Delta;Shares &lt; 0</code>).<br>
+              &nbsp;&nbsp;3. <em>DEF 14A Proxy Incentive Alignment Audit:</em> Verify that executive bonuses deduct a capital charge (e.g., <code>Bonus &prop; NOPAT &minus; [Capital &times; Hurdle Rate]</code>) and reject raw EBITDA or unadjusted volume targets.</p>
+            </div>
+
+            <div class="callout" style="border-left-color: var(--accent-emerald); margin-top:1.5rem;">
+              <h4 style="color:var(--text-primary);">Audit Summary Verdict</h4>
+              <p style="margin-bottom:0;">The Value Investing Terminal (<code>terminal_methodology_snapshot.md</code>) presents an institutional-grade buy-side architecture. Its core principles—the Cash-Flow Sovereign Valuation Model, Charlie Munger Zero-EBITDA Doctrine, Buffett Owner Earnings SBC 100% cash deduction, 2-Step Empirical Maintenance CapEx, 10.00% static hurdle rate, Lynch Net Cash test, CurrencyGuard home-currency preservation, and Munger Inversion Red Team attack—are grounded in our 27-source literature base.</p>
+            </div>
+
+          </div>
+        </details>
+
+      </section>
+
+    </main>
+  </div>
+
+  <div id="toast">Copied to clipboard!</div>
+
+  <script>
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Theme Manager
+  const themeToggle = document.getElementById('theme-toggle');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const savedTheme = localStorage.getItem('terminal_v7_theme') || (prefersDark ? 'dark' : 'light');
+  
+  function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('terminal_v7_theme', theme);
+    if (themeToggle) {
+      themeToggle.innerHTML = theme === 'dark' 
+        ? '<span style="font-size:1rem;">☀️</span> Light Mode' 
+        : '<span style="font-size:1rem;">🌙</span> Dark Mode';
+    }
+  }
+  applyTheme(savedTheme);
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+  }
+
+  // Toast Functionality
+  const toast = document.getElementById('toast');
+  window.showToast = function(msg) {
+    if (!toast) return;
+    toast.innerText = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2200);
+  };
+
+  // Copy-to-Clipboard
+  document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const targetId = btn.getAttribute('data-target');
+      const textToCopy = targetId 
+        ? document.getElementById(targetId)?.innerText 
+        : btn.parentElement.innerText.replace('Copy Prompt', '').replace('Copied!', '').trim();
+      
+      if (textToCopy) {
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          const original = btn.innerText;
+          btn.innerText = '✓ Copied!';
+          window.showToast('Copied to clipboard!');
+          setTimeout(() => btn.innerText = original, 1800);
+        });
+      }
+    });
+  });
+
+  // Accordion Expand / Collapse All
+  const expandAllBtn = document.getElementById('expand-all-btn');
+  let allExpanded = false;
+  if (expandAllBtn) {
+    expandAllBtn.addEventListener('click', () => {
+      allExpanded = !allExpanded;
+      document.querySelectorAll('details.prompt-accordion').forEach(d => {
+        d.open = allExpanded;
+      });
+      expandAllBtn.innerText = allExpanded ? 'Collapse All' : 'Expand All';
+    });
+  }
+
+  // Search Filter
+  const searchInput = document.getElementById('manual-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      document.querySelectorAll('.nav-link').forEach(link => {
+        const text = link.innerText.toLowerCase();
+        link.style.display = text.includes(q) ? 'block' : 'none';
+      });
+      document.querySelectorAll('details.prompt-accordion').forEach(acc => {
+        const title = acc.querySelector('summary')?.innerText.toLowerCase() || '';
+        acc.style.display = title.includes(q) ? 'block' : 'none';
+      });
+    });
+  }
+
+  // Scrollspy via IntersectionObserver
+  const sections = document.querySelectorAll('section[id], details.prompt-accordion[id]');
+  const navLinks = document.querySelectorAll('.nav-link');
+  
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(link => {
+          if (link.getAttribute('href') === '#' + id) {
+            link.classList.add('active');
+          } else {
+            link.classList.remove('active');
+          }
+        });
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+});
+
+  </script>
+</body>
+</html>

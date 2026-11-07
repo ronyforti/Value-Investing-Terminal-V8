@@ -1,0 +1,48 @@
+{
+  "name": "react-example",
+  "private": true,
+  "version": "7.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "build:manual": "node scripts/build_manual.cjs",
+    "build": "node scripts/build_manual.cjs && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "start": "node dist/server.cjs",
+    "clean": "rm -rf dist server.js",
+    "lint": "tsc --noEmit",
+    "test:engine": "tsx scripts/test_engine_prompts.ts",
+    "test:format": "tsx scripts/test_format_regression.ts",
+    "test": "tsx scripts/test_engine_prompts.ts && tsx scripts/test_format_regression.ts",
+    "backup": "node scripts/backup.cjs",
+    "package:cloud": "node scripts/packageCloud.cjs",
+    "check:gemini-docs": "tsx scripts/check_gemini_docs.ts",
+    "test:diagnostics": "tsx scripts/test_terminal_diagnostics.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^2.4.0",
+    "@tailwindcss/vite": "^4.1.14",
+    "@types/nodemailer": "^8.0.1",
+    "@vitejs/plugin-react": "^5.0.4",
+    "adm-zip": "^0.5.17",
+    "amazon-cognito-identity-js": "^6.3.22",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "nodemailer": "^10.0.9",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "vite": "^6.2.3"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^4.1.14",
+    "tsx": "^4.21.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.3"
+  }
+}

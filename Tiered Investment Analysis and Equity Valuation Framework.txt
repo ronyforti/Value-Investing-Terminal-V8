@@ -1,0 +1,98 @@
+Tiered Investment Analysis and Equity Valuation Framework
+
+================================================================================
+id: 1
+Title: Tier 1: Categorization, Financials & Operations
+--------------------------------------------------------------------------------
+Tier 1: Essential Analysis (Every Investment)
+1. The Document Verification Roll Call & Ingestion Audit
+Before summarizing the business, you MUST read the ### Source Documents list generated at the top of this file. You are strictly forbidden from stating a document is missing if it appears in that list. Treat any non-SEC supplementary files provided by the user as objective external reality.
+Execute the following verification:
+* The Verification Roll Call: Explicitly list the exact filenames of the supplementary documents, filings (10-K, 10-Q), earnings call transcripts, and financial spreadsheets you are analyzing in this step. Confirm that all provided documents have been ingested and accounted for before proceeding.
+
+2. Financial and Operational Analysis: Use the company's provided 10-K, the most recent 10-Q, the latest Earnings Call Transcript, and the financial CSV file.
+CRITICAL DIRECTIVE: The 10-K only provides 3 years of data. You must use the provided financial CSV file as your absolute source of truth for all Trailing Twelve Month (TTM) figures and 5+ year historical data. Do not manually calculate TTM figures by adding/subtracting 10-Q and 10-K data; extract the exact TTM numbers directly from the CSV.
+Prioritize the 10-Q data if it is more recent than the 10-K for qualitative updates. If any documents are missing, state this clearly.
+
+* 2.1 Business Overview: Concise summary of the company's business model.
+* 2.2 Risks: What are the primary structural risks hidden in the 10-K? (e.g., customer concentration, debt maturities, related-party transactions).
+* 2.3 From the 10-K file: Item 7 Management's Discussion and Analysis (MD&A):
+   * 2.3.1 The most important information of the most important subtitles. Do not include standard disclaimers, word definitions.
+   * 2.3.2 Cash Flow and CAPEX: Capex, Maintenance Capex and Growth CAPEX.
+   * Confidence Level:
+* 2.4 Long-Term Debt Analysis: Table: Instrument Type, Amount Outstanding/Available, Maturity Date. Assess the company's ability to service its debt.
+   * Confidence Level:
+* 2.5 Balance Sheet Strength (Lynch Test):
+   * Objective: To quickly assess the company's net cash position as a measure of financial strength and a potential margin of safety.
+   * Calculation: Calculate Net Cash = (Cash & Cash Equivalents - Long-Term Debt). Rebate Calculation: Calculate Net Cash as a percentage of the current Market Capitalization.
+   * Industry-Specific Adjustment (Banks & Financials): Skip the standard Net Cash calculation. Instead, assess the CET1 Ratio, Liquidity Coverage Ratio, and Tangible Common Equity (TCE) ratio to determine balance sheet strength.
+   * Analysis: If this percentage is 10% or greater, explicitly state that the company has a significant net cash position that provides a financial cushion. This cash could be considered a "rebate" to shareholders at the current price.
+   * Confidence Level:
+* 2.6 Accounting Policies: Summarize the company's significant accounting policies: revenue recognition, inventory valuation, depreciation, goodwill. Only post if you note any unusual or aggressive accounting choices.
+   * Confidence Level:
+* 2.7 Earnings Quality:
+   * Accruals vs. Cash Flow: Are the company's reported earnings supported by actual cash flows? Large discrepancies can be a warning sign.
+   * One-Time Items: Identify and analyze any significant one-time gains or losses. Are these distorting the true earnings picture?
+   * Revenue Recognition Practices: Scrutinize the company's revenue recognition practices. Are they aggressive or conservative?
+   * Confidence Level:
+* 2.8 Adjusted FCF & Owner Earnings (Capitalizing Growth Investments):
+   * Rationale: For companies where R&D or Customer Acquisition Costs (CAC) are significant drivers of future growth, expensing them all can understate true cash-generating power.
+   * The Split: Divide the TTM R&D (or CAC for software) into "Maintenance" (the cost to maintain the current competitive position) and "Growth" (investment in new products/capabilities). Justify your split based on industry velocity.
+   * Adjusted FCF Calculation: Adjusted FCF = FCF + Growth R&D.
+   * Adjusted Owner Earnings Calculation: Adjusted Owner Earnings = Owner Earnings + Growth R&D.
+   * Analysis: Briefly discuss how this adjusted view of cash flow changes the perception of the company's profitability and valuation.
+   * Confidence Level:
+* 2.9 Segment Analysis:
+   * Table: Revenue, operating profit, and operating margin for each of the company's operating segments.
+   * Calculate the percentage contribution of each segment to total revenue and operating profit.
+   * Identify the "star" segment(s) and analyze their competitive position.
+   * Confidence Level:
+* 3.0 Management Quality:
+   * Track Record: Analyze management's past performance, capital allocation decisions, and overall success in creating shareholder value.
+   * Integrity and Transparency: Assess management's honesty, openness, and forthrightness in communication. Look for red flags (e.g., excessive optimism, obfuscation, related-party transactions).
+   * Long-Term Orientation: Determine if management is focused on long-term value creation or short-term gains. Are they making investments for the future?
+   * Capital Allocation Skills (The Greenwald Test): You are strictly forbidden from relying on management's narrative to assess capital allocation. You must calculate the Return on Retained Capital (RORC) over the absolute longest continuous timeline available in the provided financial CSV file. You are strictly forbidden from arbitrarily truncating the analysis to a shorter period (e.g., 5 years) if an extended timeline (e.g., 9 or 10 years) is available in the data.
+      * Calculate the Denominator (Capital Retained): Sum of (Free Cash Flow - Dividends) over the period. [Industry-Specific Adjustment for Banks: Use (Net Income - Dividends)].
+      * Calculate the Numerator (Earnings Power Variance): Owner Earnings in the final year MINUS Owner Earnings in the first year. [Industry-Specific Adjustment for Banks: Use Normalized Net Income].
+      * Calculate RORC = Numerator / Denominator. Explicitly state if this historical yield on retained cash is above or below the company's Static Hurdle Rate of 10%.
+   * Confidence Level (Management Qualities):
+* 3.1 Consistency of Narrative: If prior years' documents are available, briefly assess if management's stated strategy and capital allocation priorities have been consistent over the past 3-5 years. Note any significant changes in the story.
+
+================================================================================
+id: 3
+Title: Tier 1: Initial FCF & Owner Earnings Valuation
+--------------------------------------------------------------------------------
+6. Valuation (Tier 1): Use the Financials file:
+* 6.1 Free Cash Flow (FCF) and Owner Earnings:
+CRITICAL OWNER EARNINGS DIRECTIVE: You are strictly forbidden from calculating Owner Earnings using the basic "Net Income + D&A - Capex" shorthand. You must calculate it using this exact framework:
+1. Start with Total Operating Cash Flow (OCF) for the TTM period, extracted directly from the provided financial CSV file.
+2. Normalize the OCF: Scan the cash flow statement and the CSV for massive, temporary working capital swings (e.g., abnormal inventory build or payable spikes) or one-off charges. Adjust the OCF to remove these temporary distortions so it reflects the true, structural cash-generating power of the business. CRITICAL SBC ADJUSTMENT: You must explicitly deduct the entire Stock-Based Compensation (SBC) figure from the Operating Cash Flow. Treat SBC as a hard cash expense, as it represents real economic dilution. You are strictly forbidden from ignoring SBC just because the company buys back stock.
+3. Subtract Maintenance Capital Expenditures (extracted from the CSV or 10-K). Explicitly list your starting OCF, list your normalization adjustments, and state the final Owner Earnings figure.
+Industry-Specific Adjustment (Homebuilders & Real Estate): If the target company is a homebuilder or land developer, you MUST adjust Operating Cash Flow (OCF). Homebuilders classify land purchases and lot development as "Inventory" (a working capital deduction that artificially depresses OCF). The Adjustment: Add back the "Change in Inventory" (specifically land acquisitions and development costs) to the Operating Cash Flow. Reclassify this specific cash outflow as "Growth Capital Expenditure" (Investing Cash Flow).
+Industry-Specific Adjustment (Banks & Financials): You MUST use Operating Cash Flow (OCF) as your starting point. However, you must explicitly acknowledge that for a bank under US GAAP, OCF is NOT inflated by customer deposits (deposits are Financing Activities). Instead, a bank's OCF is heavily distorted by the "Provision for Credit Losses" (a massive non-cash add-back). To calculate true Owner Earnings for a bank, you must normalize the OCF by adjusting the Provision for Credit Losses to reflect a historical, through-the-cycle "Net Charge-Off" run-rate, removing temporary reserve builds or releases.
+Maintenance Capex Estimation: Explain your reasoning for estimating maintenance capex. Consider management comments, historical trends, and industry norms. Err on the side of overestimating maintenance capex. Analyze the 10-K for CAPEX that might include an investment charge that should not be inside the CAPEX. Example, like a new plant investment. Calculate P/FCF and P/Owner Earnings ratios. Confidence Level:
+
+================================================================================
+id: 14
+Title: Stress Test: Red Team Forensic Short Attack
+--------------------------------------------------------------------------------
+15. Red Team Attack: The Forensic Short-Seller's Memo
+Objective: To subject the final investment thesis to a ruthless, math-driven, and structurally focused forensic attack.
+Persona: Only for this prompt, you will adopt the persona of "The Forensic Liquidator," a legendary, deeply cynical short-seller known for tearing apart 10-Ks, identifying aggressive accounting, and spotting the hidden structural decay of competitive moats. You ignore media narratives, analyst opinions, and market sentiment entirely. Your analysis is always scathing, surgical, and backed exclusively by the hard data presented in the SEC filings. If the bull thesis relies on management's claims of an 'expanding competitive advantage' or future catalysts found in the [Optional] Supplementary Files, you must aggressively attack those claims. Prove that the market has already "priced in" perfection, highlight the severe execution risks and capital expenditures required to capture that new TAM, or show how historical ROIC contradicts the optimism.
+Your Task: A Four-Step Process
+Step 1: Deconstruct the Moat & Math: Explicitly identify and list the 3-4 core structural and financial pillars of the "Why Invest" thesis generated in the previous prompts.
+Step 2: The Forensic Audit (The "Red Flags"): Scan the most recent 10-Q, 10-K, TTM Financials, and Proxy for objective anomalies that contradict the bull thesis. You are NOT confined to a standard checklist. Your mandate is to find the idiosyncratic, structural blind spot that will destroy this specific business. Hunt for anything that breaks the math or the moat. This could include (but is not limited to): customer concentration risk, spiraling customer acquisition costs, toxic M&A integration, technological obsolescence, hidden off-balance-sheet liabilities, or aggressive accounting (e.g., underestimating maintenance CapEx). Your attack must be rooted exclusively in the hard data and footnotes of the latest available filings.
+[CRITICAL ACCOUNTING GUARDRAIL]: You must apply correct GAAP accounting principles for the specific industry. For example, if analyzing a Bank/Financial Institution, you are STRICTLY FORBIDDEN from claiming that Operating Cash Flow (OCF) is inflated by customer deposits (deposits are Financing Activities). A bank's OCF divergence is primarily driven by the "Provision for Credit Losses" non-cash add-back. Do not attack the mechanics of standard accounting; attack the underlying business physics.
+
+================================================================================
+id: 15
+Title: Resolution: Thesis Verification & Monitoring Dashboard
+--------------------------------------------------------------------------------
+16. Thesis Resolution & Monitoring Dashboard
+Persona Reset: You are no longer "The Forensic Liquidator." Return to the objective, cautious persona of the Senior Value Investor.
+Objective: To weigh the original Investment Decision (from Prompt 10) against the Forensic Bear Attack (from Prompt 11) using pure mathematical and structural logic.
+Task: The Resolution Matrix Execute the following four-step evaluation:
+Step 1: Address the Fatal Flaw: Directly evaluate the "Fatal Flaw" identified by the Red Team. Do the most recent 10-Q, 10-K, and TTM Financial data provide concrete evidence to refute this attack, or is the vulnerability mathematically undeniable? Always prioritize the 10-Q for the most up-to-date legal and qualitative disclosures.
+Step 2: Catalyst Probability: Assess the "Catalyst" the Red Team proposed. Look at the company's historical capital allocation and operating margins over the last cycle. What is the objective probability of this specific metric breaking?
+Step 3: Margin of Safety Recalculation: Compare the Red Team's "Downside Target" against your original Intrinsic Value estimate. Does this forensic audit reveal that our original Margin of Safety was too narrow? State clearly if the Target Buy Price must be adjusted downward.
+Step 4: The Ultimate Verdict: Provide a final, definitive decision.
