@@ -2542,7 +2542,7 @@ export default function App() {
                   Value Investing Terminal
                 </h1>
                 <span className="text-[9px] sm:text-[10px] bg-[#10B981]/10 text-[#10B981] px-2 py-0.5 rounded-full font-mono border border-[#10B981]/30 uppercase tracking-widest">
-                  Prompt V7
+                  Version 8.0
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">

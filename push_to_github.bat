@@ -7,6 +7,8 @@ echo Repository: https://github.com/ronyforti/Value-Investing-Terminal-V8.git
 echo ========================================================
 echo.
 echo If this is your first time, a browser tab will pop open to authorize GitHub.
+git add .
+git commit -m "chore: sync local terminal updates" 2>nul
 echo.
 git push -u origin main
 echo.
