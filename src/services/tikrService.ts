@@ -96,6 +96,7 @@ export interface TikrCompanyResolution {
   tickerSymbol: string;
   exchange: string;
   primaryflag: number;
+  alternateTids?: Array<{ tid: number; exchange: string }>;
 }
 
 /**
@@ -157,27 +158,39 @@ export async function resolveTikrCompany(
 
   if (matchingHits.length === 0) return null;
 
-  // Prioritize primary security listing (primaryflag === 3)
-  matchingHits.sort((a, b) => (b.primaryflag || 0) - (a.primaryflag || 0));
+  const MAJOR_US_EXCHANGES = ["NYSE", "NASDAQ", "AMEX", "BATS", "ARCA"];
+
+  // Prioritize entity name similarity, then major US exchanges, then primaryflag
+  matchingHits.sort((a, b) => {
+    if (expectedName) {
+      const simA = calculateNameSimilarity(a.companyname || "", expectedName);
+      const simB = calculateNameSimilarity(b.companyname || "", expectedName);
+      if (Math.abs(simA - simB) > 0.25) return simB - simA;
+    }
+    const exA = (a.exchangesymbol || a.exchange || "").toUpperCase();
+    const exB = (b.exchangesymbol || b.exchange || "").toUpperCase();
+    const isUsA = MAJOR_US_EXCHANGES.includes(exA) ? 100 : 0;
+    const isUsB = MAJOR_US_EXCHANGES.includes(exB) ? 100 : 0;
+    const scoreA = isUsA + (a.primaryflag || 0);
+    const scoreB = isUsB + (b.primaryflag || 0);
+    return scoreB - scoreA;
+  });
 
   let chosenHit = matchingHits[0];
 
   // Safety Crosscheck: If canonical name is available, verify entity similarity
   if (expectedName) {
-    const scoredHits = matchingHits.map(h => ({
-      hit: h,
-      similarity: calculateNameSimilarity(h.companyname || "", expectedName)
-    }));
-
-    scoredHits.sort((a, b) => b.similarity - a.similarity);
-
-    if (scoredHits[0].similarity >= 0.4) {
-      chosenHit = scoredHits[0].hit;
-    } else {
-      console.warn(`[TIKR Safety Gate] Candidate "${scoredHits[0].hit.companyname}" similarity was only ${Math.round(scoredHits[0].similarity * 100)}% vs canonical name "${expectedName}". Candidate rejected to prevent cross-listing confusion.`);
+    const similarity = calculateNameSimilarity(chosenHit.companyname || "", expectedName);
+    if (similarity < 0.4) {
+      console.warn(`[TIKR Safety Gate] Candidate "${chosenHit.companyname}" similarity was only ${Math.round(similarity * 100)}% vs canonical name "${expectedName}". Candidate rejected to prevent cross-listing confusion.`);
       return null;
     }
   }
+
+  const alternateTids = matchingHits.slice(1).map(h => ({
+    tid: h.tradingitemid as number,
+    exchange: (h.exchangesymbol || h.exchange || "") as string
+  }));
 
   return {
     cid: chosenHit.companyid,
@@ -185,7 +198,8 @@ export async function resolveTikrCompany(
     companyName: chosenHit.companyname,
     tickerSymbol: chosenHit.tickersymbol,
     exchange: chosenHit.exchangesymbol || chosenHit.exchange || "",
-    primaryflag: chosenHit.primaryflag
+    primaryflag: chosenHit.primaryflag,
+    alternateTids
   };
 }
 
@@ -286,35 +300,49 @@ export async function fetchTikrTranscript(
 
   console.log(`[TIKR Scraper] Fetching transcript dialogue for ${symbol} (${matchedPeriodStr}): "${selected.headline}" (keydevid: ${selected.keydevid}, transcriptid: ${selected.transcriptid})`);
 
-  // 5. Fetch Transcript Content
+  // 5. Fetch Transcript Content (with alternate tid fallback if unauth)
   const contentUrl = `${TIKR_API_BASE}/transcript_v2`;
-  const contentRes = await fetch(contentUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      auth: idToken,
-      eid: String(selected.keydevid),
-      tid: String(selected.transcriptid),
-      v: "v1",
-      id: String(company.tid),
-      cid: String(company.cid)
-    })
-  });
+  const tidsToTry = [
+    { tid: company.tid, exchange: company.exchange },
+    ...(company.alternateTids || [])
+  ];
 
-  if (!contentRes.ok) {
-    console.warn(`[TIKR Scraper] Transcript dialogue fetch failed with status ${contentRes.status}`);
-    return null;
+  let rows: any[] = [];
+
+  for (const item of tidsToTry) {
+    try {
+      const contentRes = await fetch(contentUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          auth: idToken,
+          eid: String(selected.keydevid),
+          tid: String(selected.transcriptid),
+          v: "v1",
+          id: String(item.tid),
+          cid: String(company.cid)
+        })
+      });
+
+      if (!contentRes.ok) continue;
+
+      const contentData = await contentRes.json();
+      if (contentData.unauth) {
+        console.warn(`[TIKR Scraper] TIKR returned unauth for ${symbol} transcript ${selected.transcriptid} on exchange ${item.exchange || 'regional'} (tid: ${item.tid}). Checking next candidate listing...`);
+        continue;
+      }
+
+      if (Array.isArray(contentData.data) && contentData.data.length > 0) {
+        rows = contentData.data;
+        break;
+      }
+    } catch (fetchErr) {
+      console.warn(`[TIKR Scraper] Fetch error for tid ${item.tid}:`, fetchErr);
+    }
   }
 
-  const contentData = await contentRes.json();
-  if (contentData.unauth) {
-    console.warn(`[TIKR Scraper] TIKR returned unauth for ${symbol} transcript ${selected.transcriptid}.`);
-    return null;
-  }
-
-  const rows: any[] = contentData.data || [];
   if (rows.length === 0) {
-    console.warn(`[TIKR Scraper] TIKR transcript returned 0 dialogue rows.`);
+    console.warn(`[TIKR Scraper] TIKR transcript returned 0 dialogue rows or remained unauth across all listings for ${symbol}.`);
     return null;
   }
 

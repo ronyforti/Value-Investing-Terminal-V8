@@ -1,4 +1,5 @@
 import { CompetitorItem, CompetitorRadarDossier, IndustryArchetype, PeerRankingMetric } from "../types.js";
+import { fetchLiveFxRates } from "../currencyGuard.js";
 
 interface FmpQuote {
   symbol: string;
@@ -442,8 +443,24 @@ export async function harvestCompetitorRadar(
       bsTotalAssets = Number(bs.totalAssets || 0);
       netDebt = bsDebt - bsCash;
 
+      let netCashNumerator = bsCash - bsDebt;
+      let normalizedEquity = bsEquity;
+      const reportedCurr = (bs.reportedCurrency || "").toUpperCase();
+      if (reportedCurr && reportedCurr !== "USD") {
+        try {
+          const fxRates = await fetchLiveFxRates();
+          const rate = fxRates[reportedCurr] || 1.0;
+          if (rate > 0) {
+            netCashNumerator = netCashNumerator / rate;
+            normalizedEquity = normalizedEquity / rate;
+          }
+        } catch {
+          // fallback to unadjusted if FX service unreachable
+        }
+      }
+
       if (marketCap && marketCap > 0) {
-        netCashToMarketCap = Number((((bsCash - bsDebt) / marketCap) * 100).toFixed(1));
+        netCashToMarketCap = Number(((netCashNumerator / marketCap) * 100).toFixed(1));
       }
     }
 
@@ -453,7 +470,16 @@ export async function harvestCompetitorRadar(
 
     // Fallback: calculate P/B from Balance Sheet Equity if FMP metric was empty
     if (priceToBook === undefined && marketCap && marketCap > 0 && bsEquity > 0) {
-      priceToBook = Number((marketCap / bsEquity).toFixed(2));
+      const reportedCurr = (bsList[0]?.reportedCurrency || "").toUpperCase();
+      let equityForPb = bsEquity;
+      if (reportedCurr && reportedCurr !== "USD") {
+        try {
+          const fxRates = await fetchLiveFxRates();
+          const rate = fxRates[reportedCurr] || 1.0;
+          if (rate > 0) equityForPb = equityForPb / rate;
+        } catch {}
+      }
+      priceToBook = Number((marketCap / equityForPb).toFixed(2));
     } else if (priceToBook !== undefined) {
       priceToBook = Number(priceToBook.toFixed(2));
     }
