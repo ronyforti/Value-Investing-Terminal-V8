@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 const projectRoot = path.resolve(__dirname, '..');
-const defaultBackupDir = 'G:\\My Drive\\Company Data\\GTD_terminal\\local_Value_Investing_Terminal';
+const defaultBackupDir = 'G:\\My Drive\\Company Data\\GTD_terminal\\local_Value_Investing_Terminal_V8';
 
 function createBackup(resolvedDir = defaultBackupDir) {
   console.log('Starting backup to: ' + resolvedDir);
@@ -15,7 +15,7 @@ function createBackup(resolvedDir = defaultBackupDir) {
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  const zipFileName = `Value-Investing-Terminal_backup_${timestamp}.zip`;
+  const zipFileName = `Value-Investing-Terminal-V8_backup_${timestamp}.zip`;
   const targetZipPath = path.join(resolvedDir, zipFileName);
 
   const zip = new AdmZip();
