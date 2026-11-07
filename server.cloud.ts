@@ -179,6 +179,34 @@ if (!fs.existsSync(VAULT_DOSSIER_DIR)) {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Optional Password Gate (HTTP Basic Auth) for Cloud & Remote Deployments
+const CLOUD_AUTH_PASSWORD = process.env.TERMINAL_PASSWORD || process.env.AUTH_PASSWORD;
+if (CLOUD_AUTH_PASSWORD && CLOUD_AUTH_PASSWORD.trim()) {
+  console.log('[Security Guard] Cloud Password Authentication ACTIVE.');
+  app.use((req: Request, res: Response, next) => {
+    if (req.path === '/api/health') return next();
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Value Investing Terminal"');
+      return res.status(401).send('Authentication required.');
+    }
+    const [scheme, credentials] = authHeader.split(' ');
+    if (scheme !== 'Basic' || !credentials) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Value Investing Terminal"');
+      return res.status(401).send('Authentication required.');
+    }
+    const decoded = Buffer.from(credentials, 'base64').toString('utf8');
+    const [user, pass] = decoded.includes(':') ? decoded.split(':') : ['', decoded];
+    const target = CLOUD_AUTH_PASSWORD.trim();
+    if (pass === target || user === target || decoded === target) {
+      return next();
+    }
+    res.setHeader('WWW-Authenticate', 'Basic realm="Value Investing Terminal"');
+    return res.status(401).send('Access denied. Invalid credentials.');
+  });
+}
+
 // --- App State In-Memory ---
 let state: SessionState = {
   config: null,
