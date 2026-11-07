@@ -7,10 +7,10 @@ import os from "os";
 import AdmZip from "adm-zip";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
-import { MASTER_PROMPTS, CROSSCHECK_PROMPT, STEP_CHAPTER_TITLES } from "./src/prompts.js";
-import { ExecutionMode, SessionState, FileLog, AuditCheck, StepOutput, CustomMessage, PortfolioContext, CurrencyAuditResult, DocumentIntegrityReport, HybridConfig, CacheKeepAliveState } from "./src/types.js";
+import { MASTER_PROMPTS, CROSSCHECK_PROMPT, SLINGSHOT_PROMPT, SENTINEL_PROMPT, STEP_CHAPTER_TITLES } from "./src/prompts.js";
+import { ExecutionMode, SessionMode, SessionState, FileLog, AuditCheck, StepOutput, CustomMessage, PortfolioContext, CurrencyAuditResult, DocumentIntegrityReport, HybridConfig, CacheKeepAliveState, PythonValuationResult } from "./src/types.js";
 import { auditFinancialCsv, harmonizeFinancialCsv } from "./src/currencyGuard.js";
-import { auditDocumentIntegrity, auditFileIntegrity, auditFilesSubstance, checkFileSubstance, parsePeriodString, isSequentialQuarterAhead, formatNormalizedPeriod, isInterimEarningsRelease } from "./src/documentGuard.js";
+import { auditDocumentIntegrity, auditFileIntegrity, auditFilesSubstance, checkFileSubstance, parsePeriodString, isSequentialQuarterAhead, formatNormalizedPeriod, isInterimEarningsRelease, detectAuditCategory, runAudit as runAuditCore } from "./src/documentGuard.js";
 import { batchManager } from "./src/batchManager.js";
 import { sendNtfyNotification, sendEmailNotification, sendTelegramNotification, detectTelegramChatId, dispatchNotification } from "./src/services/notificationService.js";
 import { extractSurgicalProxy, scanTranscriptForTargetMentions, extract10KCompetitionSection } from "./src/services/competitorParser.js";
@@ -20,6 +20,8 @@ import { convertMarkdownToHtml, cleanMarkdownForRendering } from "./src/utils/go
 import { fetchTikrTranscript } from "./src/services/tikrService.js";
 import { parseCrosscheckVerdict } from "./src/utils/dossierFormatGuard.js";
 import { probeFlexTierAvailability, getFlexWatcherState, startFlexWatcher, cancelFlexWatcher } from "./src/services/flexProbeService.js";
+import { runPythonValuation, synthesizeDoubleBlindSection } from "./src/services/valuationBridge.js";
+import { locatePriorDossier } from "./src/services/priorDossierLocator.js";
 
 // Global Process Crash Shields to prevent transient socket drops / stream hangups from crashing Node
 process.on('unhandledRejection', (reason) => {
@@ -30,7 +32,33 @@ process.on('uncaughtException', (err) => {
   console.error('[Process Shield] Caught uncaught exception (prevented crash):', err);
 });
 
-function generateSessionSteps(enableCrosscheck: boolean = true): StepOutput[] {
+function generateSessionSteps(enableCrosscheck: boolean = true, sessionMode?: SessionMode): StepOutput[] {
+  const mode = sessionMode || state.config?.sessionMode || 'full';
+
+  if (mode === 'slingshot') {
+    return [{
+      index: 0,
+      title: SLINGSHOT_PROMPT.title,
+      status: 'idle',
+      prompt: SLINGSHOT_PROMPT.text,
+      temperature: SLINGSHOT_PROMPT.defaultTemp,
+      thinkingLevel: SLINGSHOT_PROMPT.defaultThinkingLevel || 'high',
+      isCrosscheck: false
+    }];
+  }
+
+  if (mode === 'sentinel') {
+    return [{
+      index: 0,
+      title: SENTINEL_PROMPT.title,
+      status: 'idle',
+      prompt: SENTINEL_PROMPT.text,
+      temperature: SENTINEL_PROMPT.defaultTemp,
+      thinkingLevel: SENTINEL_PROMPT.defaultThinkingLevel || 'high',
+      isCrosscheck: false
+    }];
+  }
+
   const steps: StepOutput[] = MASTER_PROMPTS.map((mp, i) => ({
     index: i,
     title: mp.title,
@@ -116,7 +144,7 @@ Structural Brevity Mandate (Token Optimization & Context Management):
   - STANDARD GFM MARKDOWN TABLES ONLY: You are STRICTLY FORBIDDEN from outputting typewriter-style ASCII text boxes, Unicode box characters (│, ┌, ┐, └, ┘, ─, ═), typewriter ladders, tree branches (├──, └──), typewriter sliders ($0.00 ─── [$X] ───>), or ASCII arrows (──>). ALL tables, reverse-audits, debt schedules, segment breakdowns, scenario matrixes, and price bands MUST be clean, standard GitHub-Flavored Markdown tables (| Metric | Value | Source Verification | followed by | :--- | :---: | :--- |).`;
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
 // Setup directories to store physical copies of staged files
 const DOWNLOADS_DIR = path.join(os.tmpdir(), "invest_terminal_downloads");
@@ -244,48 +272,29 @@ function getGeminiClient(customApiKey?: string): GoogleGenAI {
   });
 }
 
-// --- Dynamic File Audit synonyms ---
-const REQUIREMENT_RULES = [
-  { 
-    key: "10-K", 
-    label: "Annual Report (10-K / 20-F / 40-F)",
-    description: "Form 10-K (Domestic) or Form 20-F / 40-F (Foreign Private Issuer)",
-    synonyms: ["10-k", "10k", "20-f", "20f", "40-f", "40f", "annual"] 
-  },
-  { 
-    key: "10-Q", 
-    label: "Quarterly Report (10-Q / 6-K)",
-    description: "Form 10-Q (Domestic) or Form 6-K Quarterly / Interim (Foreign Private Issuer)",
-    synonyms: ["10-q", "10q", "quarterly", "interim", "6-k_quarterly", "6k_quarterly", "6-k_interim", "6k_q"] 
-  },
-  { 
-    key: "Transcript", 
-    label: "Earnings Call Transcript",
-    description: "Quarterly management earnings call text transcript",
-    synonyms: ["transcript", "call", "earnings"] 
-  },
-  { 
-    key: "Financials TTM", 
-    label: "Financial Statements (TTM / 10-Yr)",
-    description: "10-Year historical financials or quarterly statements CSV/Sheets",
-    synonyms: ["financials ttm", "ttm", "csv", "financial"] 
-  },
-  { 
-    key: "Competitor Radar", 
-    label: "Competitor Moat & Valuation Radar",
-    description: "10-K Item 1 + DEF 14A Proxy + Search Grounding + FMP Verification",
-    synonyms: ["competitor_radar", "competitor radar", "_competitor_radar"] 
+async function triggerOutOrBandPythonValuation(csvPath: string): Promise<void> {
+  if (!state.config) return;
+  try {
+    console.log(`[Valuation Engine] Launching out-of-band Python Stream 1 valuation from ${csvPath}...`);
+    state.pythonValuation = await runPythonValuation(csvPath, state.config);
+    console.log(`[Valuation Engine] Python valuation completed: Intrinsic Value = $${state.pythonValuation.dcf_expected.toFixed(2)}, Bolsa Multiple = ${state.pythonValuation.bolsa_multiple}x (Gate 12 passed)`);
+  } catch (err) {
+    console.warn(`[Valuation Engine] Out-of-band execution error:`, err);
   }
-];
+}
 
-function runAudit(files: FileLog[], ticker?: string, period?: string): { passed: boolean; checklist: AuditCheck[]; integrityReport?: DocumentIntegrityReport } {
+function runAudit(files: FileLog[], ticker?: string, period?: string, sessionMode?: SessionMode): { passed: boolean; checklist: AuditCheck[]; integrityReport?: DocumentIntegrityReport } {
   const activeTicker = ticker || state.config?.ticker || "";
   const activePeriod = period || state.config?.period || "";
-  const parsedTargetPeriod = parsePeriodString(activePeriod);
-  const isQ4Target = parsedTargetPeriod.quarter === "Q4" || parsedTargetPeriod.quarter === "FY" || activePeriod.toUpperCase().includes("Q4") || activePeriod.toUpperCase().includes("FY");
-  const checks: AuditCheck[] = [];
+  const activeMode = sessionMode || state.config?.sessionMode || 'full';
+  const hasRadarMemory = Boolean(
+    (state.competitorRadar?.targetTicker?.toUpperCase() === activeTicker.toUpperCase() && state.competitorRadar?.peers?.length) ||
+    (activeCompetitorRadar?.targetTicker?.toUpperCase() === activeTicker.toUpperCase() && activeCompetitorRadar?.peers?.length)
+  );
+  const activeRadar = (state.competitorRadar?.targetTicker?.toUpperCase() === activeTicker.toUpperCase() ? state.competitorRadar : null)
+    || (activeCompetitorRadar?.targetTicker?.toUpperCase() === activeTicker.toUpperCase() ? activeCompetitorRadar : null);
+  const peerCount = activeRadar?.peers?.length || 0;
 
-  // Run integrity audit across files
   const fileInputs = files.map(f => {
     let content: string | undefined;
     const localCachePath = path.join(DOWNLOADS_DIR, f.id);
@@ -297,184 +306,19 @@ function runAudit(files: FileLog[], ticker?: string, period?: string): { passed:
     return {
       name: f.name,
       content,
-      category: f.auditCategory
+      auditCategory: f.auditCategory,
+      tokens: f.tokens,
+      size: f.size
     };
   });
 
-  const integrityReport = (activeTicker || activePeriod)
-    ? auditDocumentIntegrity(fileInputs, activeTicker, activePeriod)
-    : undefined;
-
-  // Update files with their integrity audit result
-  if (integrityReport) {
-    files.forEach(f => {
-      const fa = integrityReport.fileAudits[f.name];
-      if (fa) {
-        f.detectedTicker = fa.detectedTicker || undefined;
-        f.detectedPeriod = fa.detectedPeriod || undefined;
-        f.companyMatch = fa.companyMatch;
-        f.periodMatch = fa.periodMatch;
-        f.integrityDetails = fa.details;
-      }
-    });
-  }
-
-  REQUIREMENT_RULES.forEach(rule => {
-    if (rule.key === "Competitor Radar") {
-      const matched = files.filter(f => {
-        const fnLower = f.name.toLowerCase();
-        return rule.synonyms.some(syn => fnLower.includes(syn));
-      });
-      const hasRadarMemory = Boolean(
-        (state.competitorRadar?.targetTicker?.toUpperCase() === activeTicker.toUpperCase() && state.competitorRadar?.peers?.length) ||
-        (activeCompetitorRadar?.targetTicker?.toUpperCase() === activeTicker.toUpperCase() && activeCompetitorRadar?.peers?.length)
-      );
-      const isConfirmed = matched.length > 0 || hasRadarMemory;
-      const matchedFilesList = matched.length > 0
-        ? matched.map(f => f.name)
-        : (hasRadarMemory ? [`${activeTicker}_Competitor_Radar.md (in-memory)`] : []);
-      
-      const activeRadar = (state.competitorRadar?.targetTicker?.toUpperCase() === activeTicker.toUpperCase() ? state.competitorRadar : null)
-        || (activeCompetitorRadar?.targetTicker?.toUpperCase() === activeTicker.toUpperCase() ? activeCompetitorRadar : null);
-      const peerCount = activeRadar?.peers?.length || 0;
-
-      checks.push({
-        category: rule.key,
-        label: rule.label,
-        description: rule.description,
-        isForeignEquivalent: false,
-        status: isConfirmed ? 'CONFIRMED' : 'MISSING',
-        matchedFiles: matchedFilesList,
-        integrityStatus: isConfirmed ? 'VALID' : undefined,
-        integrityDetails: isConfirmed 
-          ? [`Competitor Moat & Valuation Radar verified with ${peerCount > 0 ? `${peerCount} peers` : 'staged dossier'}`] 
-          : ["Competitor Moat & Valuation Radar not harvested. Peer benchmarking and relative multiples will lack empirical industry grounding."],
-        detectedTicker: activeTicker || undefined,
-        detectedPeriod: activePeriod || undefined,
-        isCoveredBy8K: false,
-        substanceStatus: isConfirmed ? 'VALID' : undefined
-      });
-      return;
-    }
-    const matched = files.filter(f => {
-      const fnLower = f.name.toLowerCase();
-      // Special exclusion for transcripts: if an actual transcript/call file exists, don't match 8-K release to Transcript
-      if (rule.key === "Transcript" && (fnLower.includes("8-k") || fnLower.includes("item2.02") || (fnLower.includes("earnings") && (fnLower.includes("release") || fnLower.includes("press"))))) {
-        const hasTrueTranscript = files.some(other => {
-          const otherLower = other.name.toLowerCase();
-          return (otherLower.includes("transcript") || otherLower.includes("call")) && !otherLower.includes("8-k") && !otherLower.includes("item2.02");
-        });
-        if (hasTrueTranscript) return false;
-      }
-      return rule.synonyms.some(syn => fnLower.includes(syn));
-    });
-
-    const isExemptQ4 = rule.key === "10-Q" && isQ4Target;
-    const isForeign = matched.some(f => {
-      const n = f.name.toLowerCase();
-      return n.includes("20-f") || n.includes("20f") || n.includes("40-f") || n.includes("40f") || n.includes("6-k") || n.includes("6k");
-    });
-
-    let isCoveredBy8K = false;
-    let effectiveMatched = [...matched];
-
-    // Check if missing 10-Q is covered by Form 8-K (Item 2.02 Earnings Release)
-    if (rule.key === "10-Q" && effectiveMatched.length === 0 && !isExemptQ4) {
-      const candidate8K = files.find(f => {
-        const fnLower = f.name.toLowerCase();
-        const is8K = fnLower.includes("8-k") || fnLower.includes("8k") || fnLower.includes("item2.02") || (fnLower.includes("earnings") && (fnLower.includes("release") || fnLower.includes("press")));
-        if (!is8K) return false;
-        const fa = integrityReport?.fileAudits[f.name];
-        if (fa && fa.companyMatch === "MISMATCH") return false;
-        return true;
-      });
-
-      if (candidate8K) {
-        isCoveredBy8K = true;
-        effectiveMatched.push(candidate8K);
-      }
-    }
-
-    // Check integrity status of matched files for this category
-    let integrityStatus: 'VALID' | 'WARNING' | 'MISMATCH' | undefined = undefined;
-    const details: string[] = [];
-    let detectedTicker: string | undefined;
-    let detectedPeriod: string | undefined;
-
-    if (isExemptQ4) {
-      integrityStatus = 'VALID';
-      details.push("Form 10-K covers Q4 & FY (Form 10-Q is not filed for Q4)");
-      detectedPeriod = effectiveMatched.length > 0 ? (detectedPeriod || "Covered by 10-K") : "Covered by 10-K";
-      if (effectiveMatched.length > 0 && integrityReport) {
-        const matchedAudits = effectiveMatched.map(m => integrityReport.fileAudits[m.name]).filter(Boolean);
-        matchedAudits.forEach(a => {
-          if (a.detectedTicker) detectedTicker = a.detectedTicker;
-          if (a.detectedPeriod) detectedPeriod = a.detectedPeriod;
-          details.push(...a.details);
-        });
-      }
-    } else if (isCoveredBy8K) {
-      integrityStatus = 'VALID';
-      details.push("Form 10-Q pending SEC filing; interim quarterly results covered by Form 8-K (Item 2.02 Earnings Release)");
-      if (integrityReport && effectiveMatched.length > 0) {
-        const matchedAudits = effectiveMatched.map(m => integrityReport.fileAudits[m.name]).filter(Boolean);
-        matchedAudits.forEach(a => {
-          if (a.detectedTicker) detectedTicker = a.detectedTicker;
-          if (a.detectedPeriod) detectedPeriod = a.detectedPeriod;
-          details.push(...a.details);
-        });
-      }
-    } else if (integrityReport && effectiveMatched.length > 0) {
-      const matchedAudits = effectiveMatched.map(m => integrityReport.fileAudits[m.name]).filter(Boolean);
-      const hasMismatch = matchedAudits.some(a => a.companyMatch === 'MISMATCH' || a.periodMatch === 'MISMATCH');
-      const hasUnverified = matchedAudits.some(a => a.companyMatch === 'UNVERIFIED' || a.periodMatch === 'UNVERIFIED');
-
-      if (hasMismatch) {
-        integrityStatus = 'MISMATCH';
-      } else if (hasUnverified) {
-        integrityStatus = 'WARNING';
-      } else {
-        integrityStatus = 'VALID';
-      }
-
-      matchedAudits.forEach(a => {
-        if (a.detectedTicker) detectedTicker = a.detectedTicker;
-        if (a.detectedPeriod) detectedPeriod = a.detectedPeriod;
-        details.push(...a.details);
-      });
-    }
-
-    const validMatches = effectiveMatched.filter(m => {
-      const audit = integrityReport?.fileAudits[m.name];
-      return !audit || audit.companyMatch !== 'MISMATCH';
-    });
-    const isConfirmed = validMatches.length > 0 || isExemptQ4 || isCoveredBy8K;
-
-    const description = isExemptQ4 && effectiveMatched.length === 0
-      ? "Form 10-K covers Q4 & FY (Form 10-Q is not filed for Q4)"
-      : isCoveredBy8K
-        ? "Form 10-Q pending filing with SEC. Current quarter covered by Form 8-K (Item 2.02 Earnings Release)."
-        : rule.description;
-
-    checks.push({
-      category: rule.key,
-      label: isCoveredBy8K ? "Quarterly Interim (Form 8-K)" : rule.label,
-      description,
-      isForeignEquivalent: isForeign,
-      status: isConfirmed ? 'CONFIRMED' : 'MISSING',
-      matchedFiles: effectiveMatched.map(f => f.name),
-      integrityStatus,
-      integrityDetails: details.length > 0 ? Array.from(new Set(details)) : undefined,
-      detectedTicker,
-      detectedPeriod,
-      isCoveredBy8K,
-      substanceStatus: effectiveMatched.map(checkFileSubstance).find(Boolean) ? 'TRUNCATED' : (effectiveMatched.length > 0 ? 'VALID' : undefined),
-      substanceReason: effectiveMatched.map(checkFileSubstance).find(Boolean)?.reason
-    });
+  return runAuditCore(fileInputs, {
+    ticker: activeTicker,
+    period: activePeriod,
+    sessionMode: activeMode,
+    competitorRadarMemory: { hasRadar: hasRadarMemory, peerCount },
+    priorDossierMemory: { hasPrior: Boolean(state.config?.priorDossierPath), name: state.config?.priorDossierPath ? path.basename(state.config.priorDossierPath) : undefined }
   });
-
-  const passed = checks.every(c => c.status === 'CONFIRMED');
-  return { passed, checklist: checks, integrityReport };
 }
 
 function updateTokenCounts() {
@@ -764,6 +608,69 @@ function getVoiceArchitecturePrompt(promptIndex: number, isCrosscheck: boolean):
 
 function buildPromptRequest(promptIndex: number, currentStep: StepOutput) {
   const isHolding = state.config?.portfolio?.holdsPosition;
+  const sessionMode = state.config?.sessionMode || 'full';
+
+  if (sessionMode === 'slingshot') {
+    const slingshotDirective = isHolding
+      ? `USER PORTFOLIO CONTEXT: The user ALREADY HOLDS an existing position in ${state.config?.ticker || "this company"}.
+- Entry Price / Cost Basis: $${state.config?.portfolio?.entryPrice ?? "N/A"}
+- Portfolio Weight: ${state.config?.portfolio?.currentWeight ?? "N/A"}%
+- Mandatory Verdict Rule: Because the user is an EXISTING HOLDER, the final portfolio action directive MUST strictly be HOLD, ACCUMULATE, or LIQUIDATE. Under our Never-Trim Compounding Doctrine, we NEVER trim positions simply because they grow large or trade at elevated multiples.`
+      : `USER PORTFOLIO CONTEXT: Prospective NEW POSITION (zero existing holdings).
+- Mandatory Verdict Rule: The suggested action in Section 6 MUST strictly be one of:
+  - SUGGESTED ACTION: INVEST (if MoS >= 30%, clean forensic audit, and durable moat)
+  - SUGGESTED ACTION: PASS (if structurally impaired, aggressive non-GAAP dilution, or overvalued)
+  - SUGGESTED ACTION: ESCALATE TO FULL MODE (if intriguing qualitative moat, dynamic R&D capitalization divergence, complex multi-segment inflection, or close to hurdle requiring full 11-step deep-dive investigation)`;
+
+    const customNotesText = state.config?.notes 
+      ? `CUSTOM USER NOTES / STRATEGIC DIRECTIVES (MUST ENFORCE):\n"${state.config.notes}"\n` 
+      : "";
+
+    return `CRITICAL INSTRUCTIONS: The financial filings, macro reports, and CSV spreadsheets are attached to this context under reference files.
+Do NOT ask the user to provide them again, and do NOT pretend they are absent.
+
+${getVoiceArchitecturePrompt(0, false)}
+
+Ticker Context: ${state.config?.ticker}
+Reporting Period: ${state.config?.period}
+Market Valuation Price: $${state.config?.price}
+${slingshotDirective}
+
+${customNotesText}
+
+Perform the following analytical step immediately using files attached to this prompt contents list, providing the completed analysis with pristine, readable tables and markdown structure.
+
+${currentStep.prompt}`;
+  }
+
+  if (sessionMode === 'sentinel') {
+    const sentinelDirective = `USER PORTFOLIO CONTEXT: Active Position Monitoring.
+- Entry Price / Cost Basis: $${state.config?.portfolio?.entryPrice ?? "N/A"}
+- Portfolio Weight: ${state.config?.portfolio?.currentWeight ?? "N/A"}%
+- Mandatory Verdict Rule: The final portfolio action directive MUST strictly be HOLD, ACCUMULATE, or LIQUIDATE. (TRIM is permanently banned under our Never-Trim Compounding Doctrine).
+- Isolation Gates: Evaluate the 4 Isolation Gates (1. Moat Breach, 2. Capital Allocation Malpractice, 3. Deteriorating Runway / Disruption, 4. Chronic Value Destruction) before rendering your verdict.`;
+
+    const customNotesText = state.config?.notes 
+      ? `CUSTOM USER NOTES / STRATEGIC DIRECTIVES (MUST ENFORCE):\n"${state.config.notes}"\n` 
+      : "";
+
+    return `CRITICAL INSTRUCTIONS: The financial filings, macro reports, refreshed 40Q financial CSV, and Prior Dossier are attached to this context under reference files.
+Do NOT ask the user to provide them again, and do NOT pretend they are absent.
+
+${getVoiceArchitecturePrompt(0, false)}
+
+Ticker Context: ${state.config?.ticker}
+Reporting Period: ${state.config?.period}
+Market Valuation Price: $${state.config?.price}
+${sentinelDirective}
+
+${customNotesText}
+
+Perform the following analytical step immediately using files attached to this prompt contents list, providing the completed analysis with pristine, readable tables and markdown structure.
+
+${currentStep.prompt}`;
+  }
+
   const portfolioDirective = isHolding
     ? `USER PORTFOLIO CONTEXT: The user ALREADY HOLDS an existing position in ${state.config?.ticker || "this company"}.
 - Entry Price / Cost Basis: $${state.config?.portfolio?.entryPrice ?? "N/A"}
@@ -1487,6 +1394,21 @@ async function generateContentWithRetry(ai: any, params: any, maxRetries = 6, in
 async function runStepProcessor(startingIdx: number, allowUncachedFallback = false) {
   stopCacheKeepAlive();
   state.status = 'running';
+
+  if (startingIdx === 0 && !state.hasDispatchedStartNotification) {
+    state.hasDispatchedStartNotification = true;
+    const mode = state.config?.sessionMode || 'full';
+    const modeLabel = mode === 'slingshot' ? 'Mode 1: Slingshot Triage' : mode === 'sentinel' ? 'Mode 3: Quarterly Sentinel' : 'Mode 2: Full Institutional Dossier';
+    dispatchNotification(notificationConfig, {
+      event: 'session_start',
+      title: `⚡ Valuation Started: ${state.config?.ticker || "Company"} (${state.config?.period || "N/A"})`,
+      message: `Initiating ${modeLabel} for ${state.config?.ticker} at $${state.config?.price}. Service Tier: ${state.config?.serviceTier?.toUpperCase() || 'FLEX'}.`,
+      ticker: state.config?.ticker,
+      period: state.config?.period,
+      price: state.config?.price,
+      sessionMode: mode
+    }).catch(err => console.warn("[Notification Warning] Session start alert:", err.message));
+  }
   
   for (let i = startingIdx; i < state.steps.length; i++) {
     // Check if state is still running
@@ -1828,18 +1750,49 @@ async function runStepProcessor(startingIdx: number, allowUncachedFallback = fal
       const formattedDate = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }).replace(/\//g, '-');
       const isInterim = isInterimEarningsReleaseSession();
       const releaseTag = isInterim ? "_Earnings_Release" : "";
-      const mdFileName = `${tickerStr} ${periodStr}${releaseTag}_Complete Doc_${modelName}_${formattedDate}.md`;
+      const sessionMode = state.config?.sessionMode || 'full';
+      let modeTag = "_Complete Doc_";
+      if (sessionMode === 'slingshot') {
+        modeTag = "_Slingshot_Memo_";
+      } else if (sessionMode === 'sentinel') {
+        modeTag = "_Sentinel_Pulse_";
+      }
+      const mdFileName = `${tickerStr} ${periodStr}${releaseTag}${modeTag}${modelName}_${formattedDate}.md`;
       const docTitle = `${tickerStr} - ${periodStr}${isInterim ? ' (Earnings Release)' : ''} Deep Valuation Dossier (${modelName})`;
       const htmlContent = convertMarkdownToHtml(compiledMd, docTitle, tickerStr);
       const htmlFileName = `${tickerStr} ${periodStr}${releaseTag}_Valuation_Dossier_${modelName}_${formattedDate}.html`;
 
+      const fm = extractFrontmatter(compiledMd, tickerStr, periodStr, state.config?.price, modelName);
+      const ivMatch = fm.match(/intrinsic_value:\s*([^\r\n]+)/);
+      const mosMatch = fm.match(/margin_of_safety:\s*"([^"\r\n]+)"/);
+      const decMatch = fm.match(/decision:\s*([^\r\n]+)/);
+
+      let modeTitle = `🚀 Valuation Complete: ${tickerStr} (${periodStr})`;
+      let modeMsg = `Valuation analysis for ${tickerStr} (${periodStr}) at $${state.config?.price} finalized all ${state.steps.length} prompts.`;
+      if (sessionMode === 'slingshot') {
+        modeTitle = `⚡ Slingshot Triage Complete: ${tickerStr} (${periodStr})`;
+        modeMsg = `Slingshot institutional triage memo finalized for ${tickerStr} (${periodStr}) at $${state.config?.price}. Suggested Action: ${decMatch ? decMatch[1] : 'PENDING'}.`;
+      } else if (sessionMode === 'sentinel') {
+        modeTitle = `🛡️ Quarterly Sentinel Pulse Complete: ${tickerStr} (${periodStr})`;
+        modeMsg = `Quarterly position sentinel pulse finalized for ${tickerStr} (${periodStr}) at $${state.config?.price}. Suggested Action: ${decMatch ? decMatch[1] : 'PENDING'}.`;
+      }
+
+      const bolsaMultipleStr = state.pythonValuation?.bolsa_multiple ? `${state.pythonValuation.bolsa_multiple}x (${state.pythonValuation.bolsa_tier || 'Hurdle <= 0.70x'})` : undefined;
+      const divergenceStatusStr = state.pythonValuation?.bolsa_tier || "Parity Verified";
+
       dispatchNotification(notificationConfig, {
         event: 'single_complete',
-        title: `🚀 Valuation Complete: ${tickerStr} (${periodStr})`,
-        message: `Valuation analysis for ${tickerStr} (${periodStr}) at $${state.config?.price} finalized all ${state.steps.length} prompts including Forensic Crosscheck.`,
+        title: modeTitle,
+        message: modeMsg,
         ticker: tickerStr,
         period: periodStr,
         price: state.config?.price,
+        sessionMode,
+        intrinsicValue: ivMatch ? `$${ivMatch[1]}` : undefined,
+        marginOfSafety: mosMatch ? mosMatch[1] : undefined,
+        verdict: decMatch ? decMatch[1] : undefined,
+        bolsaMultiple: bolsaMultipleStr,
+        divergenceStatus: divergenceStatusStr,
         dossierContent: compiledMd,
         dossierHtmlContent: htmlContent,
         dossierMdFileName: mdFileName,
@@ -2114,7 +2067,7 @@ app.post("/api/session/init", (req: Request, res: Response) => {
     enableCrosscheck, crosscheckModel, clearFiles,
     pipelineMode, hybridConfig, serviceTier,
     lastEarningsDate, nextEarningsDate, daysToNextEarnings,
-    isAdr, country, fmpApiKey
+    isAdr, country, fmpApiKey, sessionMode, priorDossierPath
   } = req.body;
   
   if (!ticker || !period || !price) {
@@ -2137,6 +2090,7 @@ app.post("/api/session/init", (req: Request, res: Response) => {
   const parsedPipelineMode: 'single' | 'hybrid' = 'single';
   const defaultTier: 'standard' | 'flex' = (process.env.SERVICE_TIER === 'flex' || process.env.SERVICE_TIER === 'standard') ? process.env.SERVICE_TIER : 'flex';
   const parsedServiceTier: 'standard' | 'flex' = (serviceTier === 'standard' || serviceTier === 'flex') ? serviceTier : defaultTier;
+  const parsedSessionMode: SessionMode = (sessionMode === 'slingshot' || sessionMode === 'sentinel' || sessionMode === 'full') ? sessionMode : 'full';
 
   state.config = {
     ticker: newTicker,
@@ -2154,7 +2108,9 @@ app.post("/api/session/init", (req: Request, res: Response) => {
     nextEarningsDate: nextEarningsDate || null,
     daysToNextEarnings: typeof daysToNextEarnings === 'number' ? daysToNextEarnings : null,
     isAdr: typeof isAdr === 'boolean' ? isAdr : undefined,
-    country: country || null
+    country: country || null,
+    sessionMode: parsedSessionMode,
+    priorDossierPath: priorDossierPath || null
   };
 
   const fmpKey = (typeof fmpApiKey === 'string' ? fmpApiKey.trim() : '') || process.env.FMP_API_KEY || '';
@@ -2172,18 +2128,120 @@ app.post("/api/session/init", (req: Request, res: Response) => {
     } catch {}
   }
 
-  // Reset analysis steps
-  state.steps = generateSessionSteps(state.config.enableCrosscheck);
+  // Reset analysis steps according to session mode
+  state.steps = generateSessionSteps(state.config.enableCrosscheck, parsedSessionMode);
   delete state.crosscheckVerdict;
 
-  console.log(`[Terminal Configured] Ticker: ${state.config.ticker}, Model: ${state.config.model} (Tier: ${state.config.serviceTier}), Mode: ${state.config.executionMode}`);
+  console.log(`[Terminal Configured] Ticker: ${state.config.ticker}, Model: ${state.config.model} (Tier: ${state.config.serviceTier}), Mode: ${state.config.sessionMode} (${state.config.executionMode})`);
   const auditResult = runAudit(state.files);
   state.auditPassed = auditResult.passed;
   updateTokenCounts();
   
-  // Pre-Flight Ingestion: Competitor Radar is harvested after source filings are staged
+  // Launch out-of-band Python valuation stream in background if CSV is already staged
+  const csvFile = state.files.find(f => f.name.toLowerCase().endsWith('.csv') || f.auditCategory === 'Financials TTM');
+  if (csvFile) {
+    const localCsv = path.join(DOWNLOADS_DIR, csvFile.id);
+    if (fs.existsSync(localCsv)) {
+      triggerOutOrBandPythonValuation(localCsv);
+    }
+  }
 
   res.json({ success: true, state, auditChecklist: auditResult.checklist, integrityReport: auditResult.integrityReport });
+});
+
+// Mode 1 Slingshot -> Mode 2 Full Dossier Warm-Cache Escalation Endpoint
+app.post("/api/session/escalate", async (req: Request, res: Response) => {
+  if (!state.config) {
+    return res.status(400).json({ error: "No active session to escalate." });
+  }
+
+  console.log(`[Session Escalation] Escalating ${state.config.ticker} from Slingshot Triage to Full Institutional Dossier`);
+
+  // Archive existing Mode 1 report if present
+  const memoFile = state.files.find(f => f.id === "compiled-obsidian-report");
+  if (memoFile) {
+    const memoPath = path.join(DOWNLOADS_DIR, memoFile.id);
+    if (fs.existsSync(memoPath)) {
+      const archiveName = `${state.config.ticker}_${state.config.period}_Slingshot_Memo_Archived_${Date.now()}.md`;
+      const archivePath = path.join(DOWNLOADS_DIR, archiveName);
+      try {
+        fs.copyFileSync(memoPath, archivePath);
+        state.files.push({
+          id: archiveName,
+          name: archiveName,
+          displayName: archiveName,
+          size: fs.statSync(archivePath).size,
+          mimeType: "text/markdown",
+          uploadedAt: new Date().toISOString(),
+          auditCategory: "Prior Dossier"
+        });
+      } catch (e) {
+        console.warn("[Session Escalation] Could not archive Slingshot memo:", e);
+      }
+    }
+  }
+
+  // Wipe history to eliminate cognitive bias / anchoring
+  state.history = [];
+  delete state.crosscheckVerdict;
+
+  // Switch to Full mode
+  state.config.sessionMode = 'full';
+  state.steps = generateSessionSteps(state.config.enableCrosscheck, 'full');
+  state.activeStepIndex = 0;
+  state.currentPromptIndex = 0;
+  state.status = 'idle';
+
+  // Files and geminiUri handles are strictly preserved for 100% KV prefix cache hits
+  updateTokenCounts();
+
+  res.json({ success: true, state });
+});
+
+// Mode 3 Sentinel Prior Dossier Discovery Endpoint
+app.get("/api/sentinel/prior-dossier", async (req: Request, res: Response) => {
+  const ticker = (req.query.ticker as string) || state.config?.ticker;
+  if (!ticker) {
+    return res.status(400).json({ error: "Ticker symbol is required to locate prior dossier." });
+  }
+
+  try {
+    const searchDirs = [DOWNLOADS_DIR, process.cwd(), path.join(process.cwd(), "public")];
+    const dossier = await locatePriorDossier(ticker, searchDirs);
+
+    if (dossier && dossier.filePath) {
+      if (state.config) {
+        state.config.priorDossierPath = dossier.filePath;
+      }
+
+      // Check if already in state.files
+      const alreadyStaged = state.files.some(f => f.name === dossier.fileName || f.auditCategory === 'Prior Dossier');
+      if (!alreadyStaged && fs.existsSync(dossier.filePath)) {
+        const fileContent = fs.readFileSync(dossier.filePath, 'utf-8');
+        const fileId = `prior-dossier-${Date.now()}`;
+        fs.writeFileSync(path.join(DOWNLOADS_DIR, fileId), fileContent, 'utf-8');
+        state.files.push({
+          id: fileId,
+          name: dossier.fileName,
+          displayName: dossier.fileName,
+          size: Buffer.byteLength(fileContent, 'utf-8'),
+          mimeType: 'text/markdown',
+          uploadedAt: new Date().toISOString(),
+          auditCategory: 'Prior Dossier',
+          tokens: Math.ceil(fileContent.length / 4.2)
+        });
+        const auditRes = runAudit(state.files, ticker, state.config?.period, 'sentinel');
+        state.auditPassed = auditRes.passed;
+      }
+
+      return res.json({ success: true, found: true, dossier, state });
+    }
+
+    return res.json({ success: true, found: false });
+  } catch (err: any) {
+    console.warn(`[Prior Dossier Error] Could not locate prior dossier for ${ticker}:`, err);
+    return res.status(500).json({ success: false, error: err.message || String(err) });
+  }
 });
 
 // file processing & upload to Gemini
@@ -2235,10 +2293,8 @@ app.post("/api/upload", async (req: Request, res: Response) => {
     
     await fs.promises.writeFile(tempPath, finalBuffer);
 
-    // Identify category by matched synonyms
-    const matchedCategory = REQUIREMENT_RULES.find(rule => 
-      rule.synonyms.some(syn => finalName.toLowerCase().includes(syn))
-    )?.key || "Supplementary";
+    // Identify category by detectAuditCategory
+    const matchedCategory = detectAuditCategory(finalName);
 
     console.log(`[Gemini Sync] Cloud Files uploading: ${finalName} (${matchedCategory})`);
     
@@ -2315,6 +2371,11 @@ app.post("/api/upload", async (req: Request, res: Response) => {
 
     state.files = state.files.filter(f => f.name !== finalName);
     state.files.push(log);
+
+    if (matchedCategory === 'Financials TTM' || finalName.toLowerCase().endsWith('.csv')) {
+      triggerOutOrBandPythonValuation(path.join(DOWNLOADS_DIR, log.id));
+    }
+
     const auditRes = runAudit(state.files);
     state.auditPassed = auditRes.passed;
     updateTokenCounts();
@@ -2643,9 +2704,7 @@ async function stageFileToSession(filePath: string): Promise<FileLog> {
 
   const finalMimeType = isCsv ? "text/csv" : "text/plain";
 
-  const matchedCategory = REQUIREMENT_RULES.find(rule => 
-    rule.synonyms.some(syn => finalName.toLowerCase().includes(syn))
-  )?.key || "Supplementary";
+  const matchedCategory = detectAuditCategory(finalName);
 
   const ai = getGeminiClient(state.customApiKey);
   const tempDir = os.tmpdir();
@@ -4238,10 +4297,11 @@ function extractFrontmatter(
   const decSearchText = verdictText || bodyText;
   // Strip template examples to prevent prompt echoes from being matched as verdicts
   const cleanDecSearchText = decSearchText.replace(/\|\s*\*{0,2}Final Portfolio Action Directive\*{0,2}\s*\|\s*\*{0,2}INVEST\s*\/\s*PASS[^\n]*\n/gi, '');
-  const decMatch = cleanDecSearchText.match(/(?:Final Portfolio Action Directive|Portfolio Action Directive|Action Directive|Audited Portfolio Verdict|Authoritative Portfolio Verdict|Portfolio Verdict|Action on Existing (?:Holding|Shares)|Mandate Decision|Definitive Action|Definitive Verdict|EXISTING POSITION VERDICT|PORTFOLIO ALLOCATION ACTION|Allocation Action|FINAL CAPITAL ALLOCATION DECISION|Definitive Decision|Final Definitive Decision|FINAL DECISION|Investment Decision|Ultimate Verdict|Decision Classification|Final Recommendation Check|FINAL DEFINITIVE VERDICT|RECOMMENDATION|Decision)[^a-zA-Z\n]{1,50}\b(INVEST|PASS|HOLD|ACCUMULATE|MAINTAIN|TRIM|LIQUIDATE|EXIT)\b/i) ||
-                   bodyText.replace(/\|\s*\*{0,2}Final Portfolio Action Directive\*{0,2}\s*\|\s*\*{0,2}INVEST\s*\/\s*PASS[^\n]*\n/gi, '').match(/(?:Final Portfolio Action Directive|Portfolio Action Directive|Action Directive|Audited Portfolio Verdict|Authoritative Portfolio Verdict|Portfolio Verdict|Action on Existing (?:Holding|Shares)|Mandate Decision|Definitive Action|Definitive Verdict|EXISTING POSITION VERDICT|PORTFOLIO ALLOCATION ACTION|Allocation Action|FINAL CAPITAL ALLOCATION DECISION|Definitive Decision|Final Definitive Decision|FINAL DECISION|Investment Decision|Ultimate Verdict|Decision Classification|Final Recommendation Check|FINAL DEFINITIVE VERDICT|RECOMMENDATION|Definitive Verdict|VERDICT|Decision)[^a-zA-Z\n]{1,50}\b(INVEST|PASS|HOLD|ACCUMULATE|MAINTAIN|TRIM|LIQUIDATE|EXIT)\b/i);
+  const decMatch = cleanDecSearchText.match(/(?:Final Portfolio Action Directive|Portfolio Action Directive|Action Directive|Audited Portfolio Verdict|Authoritative Portfolio Verdict|Portfolio Verdict|Action on Existing (?:Holding|Shares)|Mandate Decision|Definitive Action|Definitive Verdict|EXISTING POSITION VERDICT|PORTFOLIO ALLOCATION ACTION|Allocation Action|FINAL CAPITAL ALLOCATION DECISION|Definitive Decision|Final Definitive Decision|FINAL DECISION|Investment Decision|Ultimate Verdict|Decision Classification|Final Recommendation Check|FINAL DEFINITIVE VERDICT|RECOMMENDATION|Suggested Action|Decision)[^a-zA-Z\n]{1,50}\b(INVEST|PASS|HOLD|ACCUMULATE|MAINTAIN|TRIM|LIQUIDATE|EXIT|ESCALATE(?:\s+TO\s+FULL\s+MODE)?)\b/i) ||
+                   bodyText.replace(/\|\s*\*{0,2}Final Portfolio Action Directive\*{0,2}\s*\|\s*\*{0,2}INVEST\s*\/\s*PASS[^\n]*\n/gi, '').match(/(?:Final Portfolio Action Directive|Portfolio Action Directive|Action Directive|Audited Portfolio Verdict|Authoritative Portfolio Verdict|Portfolio Verdict|Action on Existing (?:Holding|Shares)|Mandate Decision|Definitive Action|Definitive Verdict|EXISTING POSITION VERDICT|PORTFOLIO ALLOCATION ACTION|Allocation Action|FINAL CAPITAL ALLOCATION DECISION|Definitive Decision|Final Definitive Decision|FINAL DECISION|Investment Decision|Ultimate Verdict|Decision Classification|Final Recommendation Check|FINAL DEFINITIVE VERDICT|RECOMMENDATION|Definitive Verdict|VERDICT|Suggested Action|Decision)[^a-zA-Z\n]{1,50}\b(INVEST|PASS|HOLD|ACCUMULATE|MAINTAIN|TRIM|LIQUIDATE|EXIT|ESCALATE(?:\s+TO\s+FULL\s+MODE)?)\b/i);
   if (decMatch) {
     decision = decMatch[1].toUpperCase();
+    if (decision.includes('ESCALATE')) decision = 'ESCALATE';
     if (decision === 'MAINTAIN') decision = 'HOLD';
     if (decision === 'TRIM') decision = 'HOLD'; // Never-Trim Compounding Doctrine
     if (decision === 'ACCUMULATE') decision = state.config?.portfolio?.holdsPosition ? 'ACCUMULATE' : 'INVEST';
@@ -4339,9 +4399,16 @@ async function updateCompiledReportFile(): Promise<string> {
   const periodStr = state.config?.period || "UNSPECIFIED";
   const formattedDate = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }).replace(/\//g, '-');
   
+  const sessionMode = state.config?.sessionMode || 'full';
+  let modeTag = "_Complete Doc_";
+  if (sessionMode === 'slingshot') {
+    modeTag = "_Slingshot_Memo_";
+  } else if (sessionMode === 'sentinel') {
+    modeTag = "_Sentinel_Pulse_";
+  }
   const isInterim = isInterimEarningsReleaseSession();
   const releaseTag = isInterim ? "_Earnings_Release" : "";
-  const reportFileName = `${tickerStr} ${periodStr}${releaseTag}_Complete Doc_${modelName}_${formattedDate}.md`;
+  const reportFileName = `${tickerStr} ${periodStr}${releaseTag}${modeTag}${modelName}_${formattedDate}.md`;
   const fileId = "compiled-obsidian-report";
 
   if (!state.history || state.history.length === 0) {
@@ -4421,6 +4488,30 @@ async function updateCompiledReportFile(): Promise<string> {
     const radarSummary = formatRadarSummary(radarDossier.markdownSummary);
     bodyMd += `---\n\n${radarSummary}\n\n---\n\n`;
     competitorRadarInjected = true;
+  }
+
+  // Double-Blind Dual-Valuation Synthesis: Appended only after all active steps are completed
+  const allStepsCompleted = state.steps.length > 0 && state.steps.every(s => s.status === 'completed');
+  if (allStepsCompleted) {
+    if (!state.pythonValuation) {
+      const csvFile = state.files.find(f => f.name.toLowerCase().endsWith('.csv') || f.auditCategory === 'Financials TTM');
+      if (csvFile) {
+        const localCsv = path.join(DOWNLOADS_DIR, csvFile.id);
+        if (fs.existsSync(localCsv)) {
+          try {
+            state.pythonValuation = await runPythonValuation(localCsv, state.config);
+          } catch (e) {
+            console.warn('[Valuation Engine] Could not run valuation for double-blind section:', e);
+          }
+        }
+      }
+    }
+    if (state.pythonValuation && !bodyMd.includes("## Part 13: Double-Blind Dual-Valuation Synthesis")) {
+      const doubleBlindMd = synthesizeDoubleBlindSection(state.pythonValuation, bodyMd, sessionMode, state.config);
+      if (doubleBlindMd) {
+        bodyMd += `\n\n${doubleBlindMd}\n\n`;
+      }
+    }
   }
 
   const frontmatter = extractFrontmatter(bodyMd, tickerStr, periodStr, state.config?.price, modelName);
@@ -4652,9 +4743,7 @@ async function saveAndUploadFile(name: string, content: Buffer | string, mimeTyp
   const fileBuffer = typeof content === "string" ? Buffer.from(content, 'utf-8') : content;
   await fs.promises.writeFile(tempPath, fileBuffer);
 
-  const matchedCategory = explicitCategory || REQUIREMENT_RULES.find(rule => 
-    rule.synonyms.some(syn => name.toLowerCase().includes(syn))
-  )?.key || "Supplementary";
+  const matchedCategory = detectAuditCategory(name, explicitCategory);
 
   console.log(`[Staging File] Processing: ${name} (${matchedCategory})`);
   

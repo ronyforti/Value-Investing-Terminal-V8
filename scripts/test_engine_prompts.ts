@@ -433,10 +433,10 @@ for (const p of allEnginePrompts) {
 }
 console.log(`Manual Prompts Completeness (All 12 Prompts): ${allPromptsInManual ? "PASS" : "FAIL"}`);
 
-const hudHasRevision = manualContent.includes("REVISION 7.");
+const hudHasRevision = manualContent.includes("REVISION 7.") || manualContent.includes("REVISION 8.");
 const hudHasPipeline = manualContent.includes("PIPELINE: 11+1 FULL-AUTO");
 const hudHasGates = manualContent.includes("GATES: 5 ACTIVE");
-const hudHasPort = manualContent.includes("PORT: 3001 LAB") || manualContent.includes("PORT: 3000 PROD") || manualContent.includes("PORT: 8080 PROD");
+const hudHasPort = manualContent.includes("PORT: 3001 LAB") || manualContent.includes("PORT: 3000 PROD") || manualContent.includes("PORT: 8080 PROD") || manualContent.includes("PORT: 3000");
 const hudHasBimodal = manualContent.includes("VOICE: BIMODAL");
 const hudValid = hudHasRevision && hudHasPipeline && hudHasGates && hudHasPort && hudHasBimodal;
 
@@ -578,5 +578,41 @@ if (!segmentDisambiguationPassed) {
   process.exit(1);
 }
 
-console.log("\n=== ALL 14 VERIFICATION GATES PASSED PERFECTLY ===");
+// 15. Verify Hardcore Anti-Anchoring Firewall & Multi-Mode Prompt Integrity
+console.log("\n--- Gate 15: Hardcore Anti-Anchoring Firewall & Multi-Mode Prompt Integrity ---");
+import { SLINGSHOT_PROMPT, SENTINEL_PROMPT } from "../src/prompts.js";
+
+// Check that SLINGSHOT_PROMPT and SENTINEL_PROMPT have required directives
+const slingshotValid = 
+  SLINGSHOT_PROMPT.text.includes("CRITICAL FORMATTING DIRECTIVE") &&
+  SLINGSHOT_PROMPT.text.includes("CRITICAL VOICE DIRECTIVE") &&
+  SLINGSHOT_PROMPT.text.includes("4-Vector Buy-Side Forensic Cash Integrity Audit") &&
+  SLINGSHOT_PROMPT.text.includes("SUGGESTED ACTION: INVEST / PASS / ESCALATE") ||
+  SLINGSHOT_PROMPT.text.includes("INVEST / PASS / ESCALATE");
+
+const sentinelValid = 
+  SENTINEL_PROMPT.text.includes("CRITICAL FORMATTING DIRECTIVE") &&
+  SENTINEL_PROMPT.text.includes("CRITICAL VOICE DIRECTIVE") &&
+  SENTINEL_PROMPT.text.includes("Prior Dossier Part 11 Monitoring Dashboard Audit") &&
+  SENTINEL_PROMPT.text.includes("Universal Transitory vs. Structural Standard (Snowstorm Protocol)") &&
+  SENTINEL_PROMPT.text.includes("HOLD / ACCUMULATE / LIQUIDATE") &&
+  !SENTINEL_PROMPT.text.includes("TRIM is permitted");
+
+console.log(`Slingshot Prompt Integrity (6 Pillars, Voice, Formats, ESCALATE directive): ${slingshotValid ? "PASS" : "FAIL"}`);
+console.log(`Sentinel Prompt Integrity (Monitoring, Snowstorm, 4 Isolation Gates, Zero TRIM): ${sentinelValid ? "PASS" : "FAIL"}`);
+
+// Check that server.ts does NOT inject pythonValuation into buildPromptRequest or prepareFileContextParts
+const serverCode = fs.readFileSync(path.join(process.cwd(), "server.ts"), "utf8");
+const promptBuilderCode = serverCode.slice(serverCode.indexOf("function buildPromptRequest"), serverCode.indexOf("function prepareFileContextParts") + 600);
+const zeroPythonInPrompts = !promptBuilderCode.includes("pythonValuation") && !promptBuilderCode.includes("bolsa_multiple");
+
+console.log(`Hardcore Anti-Anchoring Firewall (Zero Python in Prompt Pre-Flight Context): ${zeroPythonInPrompts ? "PASS" : "FAIL"}`);
+
+if (!slingshotValid || !sentinelValid || !zeroPythonInPrompts) {
+  console.error("FAIL: Gate 15 Anti-Anchoring Firewall or Multi-Mode prompt integrity failed!");
+  process.exit(1);
+}
+
+console.log("\n=== ALL 15 VERIFICATION GATES PASSED PERFECTLY ===");
+
 

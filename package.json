@@ -1,7 +1,7 @@
 {
-  "name": "react-example",
+  "name": "value-investing-terminal-v8",
   "private": true,
-  "version": "7.0.0",
+  "version": "8.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
@@ -10,9 +10,10 @@
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
+    "test:python": "python3 -m unittest discover -s tests -p 'test_*.py' -v",
     "test:engine": "tsx scripts/test_engine_prompts.ts",
     "test:format": "tsx scripts/test_format_regression.ts",
-    "test": "tsx scripts/test_engine_prompts.ts && tsx scripts/test_format_regression.ts",
+    "test": "npm run test:python && tsx scripts/test_engine_prompts.ts && tsx scripts/test_format_regression.ts",
     "backup": "node scripts/backup.cjs",
     "package:cloud": "node scripts/packageCloud.cjs",
     "check:gemini-docs": "tsx scripts/check_gemini_docs.ts",

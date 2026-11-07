@@ -1662,7 +1662,8 @@ export function convertMarkdownToHtml(markdown: string, docTitle: string, ticker
     const isPass = cockpit.decision === 'PASS';
     const isHold = cockpit.decision === 'HOLD';
     const isLiquidate = cockpit.decision === 'LIQUIDATE';
-    const decisionClass = isInvest ? 'hero-invest' : (isPass || isLiquidate) ? 'hero-pass' : isHold ? 'hero-hold' : 'hero-neutral';
+    const isEscalate = cockpit.decision === 'ESCALATE' || Boolean(cockpit.decision?.includes('ESCALATE'));
+    const decisionClass = isInvest ? 'hero-invest' : (isPass || isLiquidate) ? 'hero-pass' : isEscalate ? 'hero-escalate' : isHold ? 'hero-hold' : 'hero-neutral';
     const hasPriceAndIv = cockpit.marketPriceNum !== null && cockpit.intrinsicValueNum !== null;
     const mosNum = cockpit.marginOfSafety ? parseFloat(cockpit.marginOfSafety.replace(/[^0-9.-]/g, '')) : null;
     const isPositiveMos = mosNum !== null && mosNum > 0 && !cockpit.marginOfSafety?.includes('Deficit') && !cockpit.marginOfSafety?.startsWith('-');
@@ -1674,7 +1675,7 @@ export function convertMarkdownToHtml(markdown: string, docTitle: string, ticker
           <div class="cockpit-hero-card ${decisionClass}">
             <div class="hero-top-tag">CAPITAL ALLOCATION VERDICT</div>
             <div class="hero-decision-badge">${escapeHtml(cockpit.decision)}</div>
-            <div class="hero-subtext">${cockpit.decision === 'ACCUMULATE' ? `Accumulate Position / High-Conviction Value (${cockpit.userPosition?.weight || 'Active Holding'})` : isInvest ? 'High-Conviction Investment Grade' : isPass ? 'Hurdle Fails / Margin of Safety Deficit' : isLiquidate ? 'Thesis Broken / Impairment Risk (Liquidate)' : isHold ? (cockpit.userPosition ? `Maintain Core Position (${cockpit.userPosition.weight || 'Active'}) / Never Trim Compounder` : 'Maintain Core Position (Hold)') : 'Hold / Neutral Stance'}</div>
+            <div class="hero-subtext">${cockpit.decision === 'ACCUMULATE' ? `Accumulate Position / High-Conviction Value (${cockpit.userPosition?.weight || 'Active Holding'})` : isInvest ? 'High-Conviction Investment Grade' : isPass ? 'Hurdle Fails / Margin of Safety Deficit' : isLiquidate ? 'Thesis Broken / Impairment Risk (Liquidate)' : isEscalate ? 'Triage Candidate: High Moat / Inflection — Escalate to Mode 2' : isHold ? (cockpit.userPosition ? `Maintain Core Position (${cockpit.userPosition.weight || 'Active'}) / Never Trim Compounder` : 'Maintain Core Position (Hold)') : 'Hold / Neutral Stance'}</div>
           </div>
         ` : ''}
 
@@ -2966,6 +2967,18 @@ export function convertMarkdownToHtml(markdown: string, docTitle: string, ticker
       background: linear-gradient(145deg, #0c4a6e30, #0369a120);
       border-color: #0284c780;
       color: #38bdf8;
+    }
+
+    .cockpit-hero-card.hero-escalate {
+      background: linear-gradient(145deg, #fffbeb, #fef3c7);
+      border-color: #f59e0b;
+      color: #b45309;
+    }
+
+    body[data-theme="dark"] .cockpit-hero-card.hero-escalate {
+      background: linear-gradient(145deg, #78350f30, #b4530920);
+      border-color: #f59e0b80;
+      color: #fbbf24;
     }
 
     .cockpit-hero-card.hero-neutral {

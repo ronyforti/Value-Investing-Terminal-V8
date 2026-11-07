@@ -7,16 +7,18 @@ If future changes need to be audited, modified, or rolled back, this document an
 
 ---
 
-## 1. Dual-Output Export Pipeline
+## 1. Dual-Output Export Pipeline & Multi-Mode File Conventions
 
-Every analysis run produces two synchronized output formats, systematically tagged with both the **active AI model** and the **evaluation date** to guarantee collision-free multi-model comparisons:
+Every analysis run produces two synchronized output formats, systematically tagged with both the **active AI model**, **session mode**, and the **evaluation date** to guarantee collision-free multi-model comparisons:
 1. **Obsidian Markdown (`.md`)**:
-   - **Filename Convention:** `${tickerStr} ${periodStr}_Complete Doc_${modelName}_${formattedDate}.md` *(e.g. `MELI Q2-26_Complete Doc_gemini-4-argon_10-15-26.md`)*.
-   - Prepend structured **YAML Frontmatter** at line 1 (includes `ticker`, `company`, `period`, `market_price`, `intrinsic_value`, `margin_of_safety`, `decision`, `lynch_profile`, `date`, `ai_model`, and `tags`).
+   - **Mode 1 Slingshot Triage:** `${tickerStr} ${periodStr}${releaseTag}_Slingshot_Memo_${modelName}_${formattedDate}.md`
+   - **Mode 2 Full Institutional Dossier:** `${tickerStr} ${periodStr}${releaseTag}_Complete Doc_${modelName}_${formattedDate}.md`
+   - **Mode 3 Quarterly Sentinel:** `${tickerStr} ${periodStr}${releaseTag}_Sentinel_Pulse_${modelName}_${formattedDate}.md`
+   - Prepend structured **YAML Frontmatter** at line 1 (includes `ticker`, `company`, `period`, `market_price`, `intrinsic_value`, `margin_of_safety`, `decision`, `lynch_profile`, `date`, `ai_model`, and `tags`). In Mode 1, `decision` can be `INVEST`, `PASS`, or `ESCALATE`.
    - Native Obsidian Knowledge Graphs, local linking (`![[...]]`), Markdown callouts (`> [!NOTE]`), and interactive Mermaid flowchart diagrams.
-   - Chapter-level titles mapped cleanly via `STEP_CHAPTER_TITLES` (`Part 1: Financial Forensics...` through `Part 12: Forensic Audit...`), eliminating raw machine engine markers (`[Step X Output]`).
+   - Chapter-level titles mapped cleanly via `STEP_CHAPTER_TITLES` (`Part 1: Financial Forensics...` through `Part 12: Forensic Audit...`, plus `Part 13: Double-Blind Dual-Valuation Synthesis`), eliminating raw machine engine markers (`[Step X Output]`).
 2. **Institutional Standalone HTML (`.html`)**:
-   - **Filename Convention:** `${cleanTicker} ${cleanPeriod}_Valuation_Dossier_${modelName}_${formattedDate}.html` *(e.g. `MELI Q2-26_Valuation_Dossier_gemini-4-argon_10-15-26.html`)*.
+   - **Filename Convention:** `${cleanTicker} ${cleanPeriod}${releaseTag}_Valuation_Dossier_${modelName}_${formattedDate}.html`.
    - Fully self-contained single-file executive report with zero external CDN dependencies, embedded WebP vector/image assets, interactive Quick Jump Navigator, dynamic Dark/Light theme toggle, and print-to-PDF formatting.
    - High-contrast institutional typography: bold terms are rendered in crisp text primary (`#f8fafc` dark / `#0f172a` light) rather than neon green, preserving emerald accents strictly for quantitative badges, KPI cards, and valuation highlights.
 
@@ -38,6 +40,7 @@ Machine engine markers (`## [Step X Output]`) are mapped to executive chapter he
 * `Part 10: Stress Test: Red Team Forensic Short Attack`
 * `Part 11: Definitive Verdict, Resolution & Monitoring Dashboard`
 * `Part 12: Forensic Audit & Fact-Check Crosscheck`
+* `Part 13: Double-Blind Dual-Valuation Synthesis` (Post-Execution Synthesis)
 
 ### Unique ID Generation & Deduplication
 To ensure 100% reliability in navigation, every heading level ($H_1$ through $H_4$) is stripped of markdown symbols and assigned a deterministic, sanitized DOM ID:

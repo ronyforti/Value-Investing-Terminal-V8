@@ -129,13 +129,14 @@ function escapeTelegramHtml(text: string): string {
  * Builds HTML text message for Telegram.
  */
 function buildTelegramMessage(payload: NotificationPayload): string {
+  const isStart = payload.event === "session_start";
   const isBatch = payload.event === "batch_complete";
   const isBlocked = payload.event === "blocked_alert";
   const isCooldown = payload.event === "cooldown_alert";
   const isRecovered = payload.event === "cooldown_recovered";
   const isModelRequired = payload.event === "model_selection_required";
 
-  const emoji = isRecovered ? "✅" : isModelRequired ? "🤖" : isCooldown ? "⏳" : isBlocked ? "🚨" : isBatch ? "🏁" : "📈";
+  const emoji = isStart ? "🚀" : isRecovered ? "✅" : isModelRequired ? "🤖" : isCooldown ? "⏳" : isBlocked ? "🚨" : isBatch ? "🏁" : "📈";
   let text = `${emoji} <b>${escapeTelegramHtml(payload.title)}</b>\n\n`;
 
   if (payload.message) {
@@ -151,15 +152,21 @@ function buildTelegramMessage(payload: NotificationPayload): string {
       text += `• Tickers: <code>${escapeTelegramHtml(payload.batchStats.tickers.join(", "))}</code>\n`;
     }
   } else if (payload.ticker) {
+    if (payload.sessionMode) {
+      const modeLabel = payload.sessionMode === 'slingshot' ? 'Mode 1: Slingshot Triage' : payload.sessionMode === 'sentinel' ? 'Mode 3: Quarterly Sentinel' : 'Mode 2: Full Institutional Dossier';
+      text += `🎯 <b>Mode:</b> <code>${modeLabel}</code>\n`;
+    }
     text += `🏢 <b>Company:</b> <code>${escapeTelegramHtml(payload.ticker)}</code> ${payload.companyName ? `(${escapeTelegramHtml(payload.companyName)})` : ""}\n`;
     if (payload.period) text += `📅 <b>Period:</b> ${escapeTelegramHtml(payload.period)}\n`;
     if (payload.price) text += `💵 <b>Market Price:</b> $${escapeTelegramHtml(payload.price)}\n`;
     if (payload.intrinsicValue) text += `🎯 <b>Intrinsic Value:</b> <b>${escapeTelegramHtml(payload.intrinsicValue)}</b>\n`;
     if (payload.marginOfSafety) text += `🛡️ <b>Margin of Safety:</b> <b>${escapeTelegramHtml(payload.marginOfSafety)}</b>\n`;
-    if (payload.verdict) text += `⚖️ <b>Verdict:</b> ${escapeTelegramHtml(payload.verdict)}\n`;
+    if (payload.bolsaMultiple) text += `💰 <b>Bolsa 6.0 10-Yr Multiple:</b> <code>${escapeTelegramHtml(payload.bolsaMultiple)}</code>\n`;
+    if (payload.divergenceStatus) text += `⚖️ <b>Dual-Engine Parity:</b> ${escapeTelegramHtml(payload.divergenceStatus)}\n`;
+    if (payload.verdict) text += `🏛️ <b>Suggested Action:</b> <b>${escapeTelegramHtml(payload.verdict)}</b>\n`;
   }
 
-  text += `\n<i>Value Investing Terminal</i>`;
+  text += `\n<i>Value Investing Terminal V8</i>`;
   return text;
 }
 

@@ -1,4 +1,4 @@
-import { DocumentIntegrityAudit, DocumentIntegrityReport, FileSubstanceIssue, FileSubstanceReport } from "./types.js";
+import { AuditCheck, DocumentIntegrityAudit, DocumentIntegrityReport, FileSubstanceIssue, FileSubstanceReport, SessionMode } from "./types.js";
 
 /**
  * Universal Document Integrity Guard for Value Investing Terminal.
@@ -607,7 +607,8 @@ export function auditFileIntegrity(
   const isTargetQ4OrFy = normTargetPeriod.quarter === "Q4" || normTargetPeriod.quarter === "FY" || (Boolean(safePeriod) && (safePeriod.toUpperCase().includes("Q4") || safePeriod.toUpperCase().includes("FY")));
   const is10QFile = file.category === "10-Q" || /10-?q/i.test(file.name) || /10-?q/i.test(file.category || "");
   const isCompetitorRadar = file.name.includes("_Competitor_Radar.md") || file.category === "Competitor Radar";
-  const isSupplementaryFile = file.category === "Supplementary" || isCompetitorRadar || /bought|prior|thesis|supplementary|article|analysis|impact/i.test(file.name);
+  const isPriorDossier = file.category === "Prior Dossier" || /prior|complete_doc|slingshot_memo|sentinel_pulse/i.test(file.name);
+  const isSupplementaryFile = file.category === "Supplementary" || isCompetitorRadar || isPriorDossier || /bought|prior|thesis|supplementary|article|analysis|impact/i.test(file.name);
 
   if (isTargetQ4OrFy && is10QFile) {
     periodMatch = "MATCH";
@@ -629,6 +630,9 @@ export function auditFileIntegrity(
         } else {
           details.push(`Period verified: ${formatNormalizedPeriod(detectedPeriod)} matches target.`);
         }
+      } else if (isPriorDossier) {
+        periodMatch = "MATCH";
+        details.push(`Prior Dossier (${formatNormalizedPeriod(detectedPeriod)}) accepted as baseline context.`);
       } else if (isSupplementaryFile) {
         periodMatch = "MATCH";
         details.push(`Supplementary/historical document (${formatNormalizedPeriod(detectedPeriod)}) accepted as background thesis context.`);
@@ -636,6 +640,9 @@ export function auditFileIntegrity(
         periodMatch = "MISMATCH";
         details.push(pCheck.reason || "Period mismatch detected.");
       }
+    } else if (isPriorDossier) {
+      periodMatch = "MATCH";
+      details.push("Prior Dossier accepted as baseline context without strict reporting period binding.");
     } else if (isSupplementaryFile) {
       periodMatch = "MATCH";
       details.push("Supplementary article/thesis accepted without strict reporting period binding.");
@@ -889,6 +896,22 @@ export function checkFileSubstance(file: {
     }
   }
 
+  const isPriorDossier = category === "Prior Dossier" || nameLower.includes("prior_dossier") || nameLower.includes("complete_doc") || nameLower.includes("slingshot_memo") || nameLower.includes("sentinel_pulse");
+  if (isPriorDossier) {
+    if ((tokens > 0 && tokens < 500) || (tokens === 0 && size > 0 && size < 2000)) {
+      return {
+        fileName: file.name,
+        category: "Prior Dossier",
+        tokens,
+        size,
+        expectedMinTokens: 500,
+        reason: tokens > 0
+          ? `Prior Dossier contains only ${tokens.toLocaleString()} tokens (expected >= 500). Incomplete or empty dossier.`
+          : `Prior Dossier file size is only ${Math.round(size / 1024)} KB (< 2 KB).`
+      };
+    }
+  }
+
   return null;
 }
 
@@ -914,4 +937,393 @@ export function auditFilesSubstance(files: Array<{
     hasIssues: issues.length > 0,
     issues
   };
+}
+
+/**
+ * Detects the standard audit category for a given file name and optional category
+ */
+export function detectAuditCategory(fileName: string, explicitCategory?: string): string {
+  if (explicitCategory && explicitCategory !== "Supplementary") return explicitCategory;
+  const fnLower = (fileName || "").toLowerCase();
+  if (fnLower.endsWith(".csv") || fnLower.includes("financials") || fnLower.includes("ttm")) {
+    return "Financials TTM";
+  }
+  if (
+    fnLower.includes("prior_dossier") ||
+    fnLower.includes("prior dossier") ||
+    fnLower.includes("complete_doc") ||
+    fnLower.includes("complete doc") ||
+    fnLower.includes("slingshot_memo") ||
+    fnLower.includes("slingshot memo") ||
+    fnLower.includes("sentinel_pulse") ||
+    fnLower.includes("sentinel pulse") ||
+    (fnLower.endsWith(".md") && (fnLower.includes("dossier") || fnLower.includes("memo") || fnLower.includes("pulse")))
+  ) {
+    return "Prior Dossier";
+  }
+  if (fnLower.includes("competitor_radar") || fnLower.includes("competitor radar") || fnLower.includes("_competitor_radar")) {
+    return "Competitor Radar";
+  }
+  if (fnLower.includes("8-k") || fnLower.includes("item2.02") || fnLower.includes("item 2.02") || (fnLower.includes("earnings") && (fnLower.includes("release") || fnLower.includes("press")))) {
+    return "8-K";
+  }
+  if (fnLower.includes("transcript") || fnLower.includes("earnings_call") || (fnLower.includes("call") && !fnLower.includes("recall"))) {
+    return "Transcript";
+  }
+  if (fnLower.includes("10-k") || fnLower.includes("10k") || fnLower.includes("20-f") || fnLower.includes("20f") || fnLower.includes("40-f") || fnLower.includes("40f") || fnLower.includes("annual")) {
+    return "10-K";
+  }
+  if (fnLower.includes("10-q") || fnLower.includes("10q") || fnLower.includes("6-k") || fnLower.includes("6k") || fnLower.includes("interim")) {
+    return "10-Q";
+  }
+  if (fnLower.includes("def_14a") || fnLower.includes("def14a") || fnLower.includes("def 14a") || fnLower.includes("proxy")) {
+    return "DEF 14A";
+  }
+  return "Supplementary";
+}
+
+export interface RequirementRule {
+  key: string;
+  label: string;
+  description: string;
+  synonyms: string[];
+  optional?: boolean;
+}
+
+export function getRequirementRules(sessionMode?: SessionMode): RequirementRule[] {
+  if (sessionMode === "sentinel") {
+    return [
+      {
+        key: "10-Q",
+        label: "Quarterly Report (10-Q / 6-K or 8-K)",
+        description: "Form 10-Q, Form 6-K Quarterly, or Form 8-K Item 2.02 Interim Earnings Release",
+        synonyms: ["10q", "10-q", "quarterly", "interim", "6-k_quarterly", "6k_quarterly", "6-k_interim", "6k_q", "8-k", "8k", "item2.02", "item 2.02"]
+      },
+      {
+        key: "Transcript",
+        label: "Earnings Call Transcript",
+        description: "Quarterly management earnings call text transcript",
+        synonyms: ["transcript", "call", "earnings"]
+      },
+      {
+        key: "Financials TTM",
+        label: "Financial Statements (TTM / 40Q Refreshed CSV)",
+        description: "40-Quarter historical financials CSV refreshed with latest reported quarter",
+        synonyms: ["financials ttm", "ttm", "csv", "financial"]
+      },
+      {
+        key: "Prior Dossier",
+        label: "Prior Institutional Dossier",
+        description: "Previous complete dossier or Slingshot memo establishing Part 11 baseline and monitoring metrics",
+        synonyms: ["prior_dossier", "prior dossier", "complete doc", "complete_doc", "slingshot_memo", "sentinel_pulse", "dossier"]
+      },
+      {
+        key: "10-K",
+        label: "Annual Report (10-K / 20-F) [Optional]",
+        description: "Form 10-K (Domestic) or Form 20-F (Foreign Private Issuer) - optional baseline in Mode 3 Sentinel",
+        synonyms: ["10k", "10-k", "20f", "20-f", "40f", "40-f", "annual"],
+        optional: true
+      },
+      {
+        key: "Competitor Radar",
+        label: "Competitor Moat & Valuation Radar [Optional]",
+        description: "Peer benchmarking and relative multiples - optional in Mode 3 Sentinel",
+        synonyms: ["competitor_radar", "competitor radar", "_competitor_radar"],
+        optional: true
+      }
+    ];
+  }
+
+  return [
+    {
+      key: "10-K",
+      label: "Annual Report (10-K / 20-F / 40-F)",
+      description: "Form 10-K (Domestic) or Form 20-F / 40-F (Foreign Private Issuer)",
+      synonyms: ["10k", "10-k", "20f", "20-f", "40f", "40-f", "annual"]
+    },
+    {
+      key: "10-Q",
+      label: "Quarterly Report (10-Q / 6-K)",
+      description: "Form 10-Q (Domestic) or Form 6-K Quarterly / Interim (Foreign Private Issuer)",
+      synonyms: ["10q", "10-q", "quarterly", "interim", "6-k_quarterly", "6k_quarterly", "6-k_interim", "6k_q"]
+    },
+    {
+      key: "Transcript",
+      label: "Earnings Call Transcript",
+      description: "Quarterly management earnings call text transcript",
+      synonyms: ["transcript", "call", "earnings"]
+    },
+    {
+      key: "Financials TTM",
+      label: "Financial Statements (TTM / 10-Yr)",
+      description: "10-Year historical financials or quarterly statements CSV/Sheets",
+      synonyms: ["financials ttm", "ttm", "csv", "financial"]
+    },
+    {
+      key: "Competitor Radar",
+      label: "Competitor Moat & Valuation Radar",
+      description: "10-K Item 1 + DEF 14A Proxy + Search Grounding + FMP Verification",
+      synonyms: ["competitor_radar", "competitor radar", "_competitor_radar"]
+    }
+  ];
+}
+
+export interface RunAuditOptions {
+  ticker?: string;
+  period?: string;
+  sessionMode?: SessionMode;
+  competitorRadarMemory?: { hasRadar: boolean; peerCount: number };
+  priorDossierMemory?: { hasPrior: boolean; name?: string };
+  integrityReport?: DocumentIntegrityReport;
+}
+
+export function runAudit(
+  files: Array<{
+    name: string;
+    auditCategory?: string;
+    category?: string;
+    content?: string;
+    tokens?: number;
+    size?: number;
+    lineCount?: number;
+    detectedTicker?: string;
+    detectedPeriod?: string;
+    companyMatch?: "MATCH" | "MISMATCH" | "UNVERIFIED";
+    periodMatch?: "MATCH" | "MISMATCH" | "UNVERIFIED";
+    integrityDetails?: string[];
+  }>,
+  optionsOrTicker?: string | RunAuditOptions,
+  period?: string,
+  sessionMode?: SessionMode
+): { passed: boolean; checklist: AuditCheck[]; integrityReport?: DocumentIntegrityReport } {
+  let activeTicker: string | undefined;
+  let activePeriod: string | undefined;
+  let activeMode: SessionMode | undefined;
+  let competitorRadarMemory: { hasRadar: boolean; peerCount: number } | undefined;
+  let priorDossierMemory: { hasPrior: boolean; name?: string } | undefined;
+  let externalIntegrity: DocumentIntegrityReport | undefined;
+
+  if (typeof optionsOrTicker === "string") {
+    activeTicker = optionsOrTicker;
+    activePeriod = period;
+    activeMode = sessionMode;
+  } else if (optionsOrTicker && typeof optionsOrTicker === "object") {
+    activeTicker = optionsOrTicker.ticker;
+    activePeriod = optionsOrTicker.period;
+    activeMode = optionsOrTicker.sessionMode;
+    competitorRadarMemory = optionsOrTicker.competitorRadarMemory;
+    priorDossierMemory = optionsOrTicker.priorDossierMemory;
+    externalIntegrity = optionsOrTicker.integrityReport;
+  }
+
+  const normTicker = (activeTicker || "").trim().toUpperCase();
+  const normPeriod = (activePeriod || "").trim();
+  const parsedTargetPeriod = parsePeriodString(normPeriod);
+  const isQ4Target = parsedTargetPeriod.quarter === "Q4" || parsedTargetPeriod.quarter === "FY" || normPeriod.toUpperCase().includes("Q4") || normPeriod.toUpperCase().includes("FY");
+
+  const rules = getRequirementRules(activeMode);
+  const checks: AuditCheck[] = [];
+
+  // Generate or use integrity report
+  const integrityReport = externalIntegrity || ((normTicker || normPeriod)
+    ? auditDocumentIntegrity(files.map(f => ({ name: f.name, content: f.content, category: f.auditCategory || f.category })), normTicker, normPeriod)
+    : undefined);
+
+  if (integrityReport) {
+    files.forEach(f => {
+      const fa = integrityReport.fileAudits[f.name];
+      if (fa) {
+        f.detectedTicker = fa.detectedTicker || undefined;
+        f.detectedPeriod = fa.detectedPeriod || undefined;
+        f.companyMatch = fa.companyMatch;
+        f.periodMatch = fa.periodMatch;
+        f.integrityDetails = fa.details;
+      }
+    });
+  }
+
+  rules.forEach(rule => {
+    if (rule.key === "Competitor Radar") {
+      const matched = files.filter(f => {
+        const fnLower = (f.name || "").toLowerCase();
+        return rule.synonyms.some(syn => fnLower.includes(syn));
+      });
+      const hasRadar = Boolean(matched.length > 0 || competitorRadarMemory?.hasRadar);
+      const isConfirmed = hasRadar || Boolean(rule.optional);
+      const peerCount = competitorRadarMemory?.peerCount || 0;
+      const matchedFilesList = matched.length > 0
+        ? matched.map(f => f.name)
+        : (competitorRadarMemory?.hasRadar ? [`${normTicker || 'Target'}_Competitor_Radar.md (in-memory)`] : []);
+
+      checks.push({
+        category: rule.key,
+        label: rule.label,
+        description: rule.description,
+        isForeignEquivalent: false,
+        status: (matched.length > 0 || competitorRadarMemory?.hasRadar) ? "CONFIRMED" : "MISSING",
+        matchedFiles: matchedFilesList,
+        integrityStatus: hasRadar ? "VALID" : undefined,
+        integrityDetails: hasRadar
+          ? [`Competitor Moat & Valuation Radar verified with ${peerCount > 0 ? `${peerCount} peers` : "staged dossier"}`]
+          : ["Competitor Moat & Valuation Radar not harvested. Peer benchmarking and relative multiples will lack empirical industry grounding."],
+        detectedTicker: normTicker || undefined,
+        detectedPeriod: normPeriod || undefined,
+        isCoveredBy8K: false,
+        substanceStatus: hasRadar ? "VALID" : undefined,
+        optional: rule.optional
+      });
+      return;
+    }
+
+    if (rule.key === "Prior Dossier") {
+      const matched = files.filter(f => {
+        const fnLower = (f.name || "").toLowerCase();
+        const cat = f.auditCategory || f.category || detectAuditCategory(f.name);
+        return cat === "Prior Dossier" || rule.synonyms.some(syn => fnLower.includes(syn));
+      });
+      const hasPrior = Boolean(matched.length > 0 || priorDossierMemory?.hasPrior);
+      const isConfirmed = hasPrior;
+      const matchedFilesList = matched.length > 0
+        ? matched.map(f => f.name)
+        : (priorDossierMemory?.name ? [priorDossierMemory.name] : []);
+
+      checks.push({
+        category: rule.key,
+        label: rule.label,
+        description: rule.description,
+        isForeignEquivalent: false,
+        status: isConfirmed ? "CONFIRMED" : "MISSING",
+        matchedFiles: matchedFilesList,
+        integrityStatus: isConfirmed ? "VALID" : undefined,
+        integrityDetails: isConfirmed
+          ? [`Prior Institutional Dossier baseline located and confirmed for Sentinel pulse tracking.`]
+          : ["Prior Institutional Dossier missing. Sentinel mode requires prior dossier baseline to extract Part 11 monitoring metrics."],
+        detectedTicker: normTicker || undefined,
+        detectedPeriod: normPeriod || undefined,
+        isCoveredBy8K: false,
+        substanceStatus: matched.map(checkFileSubstance).find(Boolean) ? "TRUNCATED" : (isConfirmed ? "VALID" : undefined),
+        substanceReason: matched.map(checkFileSubstance).find(Boolean)?.reason,
+        optional: rule.optional
+      });
+      return;
+    }
+
+    const matched = files.filter(f => {
+      const fnLower = (f.name || "").toLowerCase();
+      if (rule.key === "Transcript" && (fnLower.includes("8-k") || fnLower.includes("item2.02") || (fnLower.includes("earnings") && (fnLower.includes("release") || fnLower.includes("press"))))) {
+        const hasTrueTranscript = files.some(other => {
+          const otherLower = (other.name || "").toLowerCase();
+          return (otherLower.includes("transcript") || otherLower.includes("call")) && !otherLower.includes("8-k") && !otherLower.includes("item2.02");
+        });
+        if (hasTrueTranscript) return false;
+      }
+      return rule.synonyms.some(syn => fnLower.includes(syn));
+    });
+
+    const isExemptQ4 = rule.key === "10-Q" && isQ4Target;
+    const isForeign = matched.some(f => {
+      const n = (f.name || "").toLowerCase();
+      return n.includes("20-f") || n.includes("20f") || n.includes("40-f") || n.includes("40f") || n.includes("6-k") || n.includes("6k");
+    });
+
+    let isCoveredBy8K = false;
+    let effectiveMatched = [...matched];
+
+    if (rule.key === "10-Q" && effectiveMatched.length === 0 && !isExemptQ4) {
+      const candidate8K = files.find(f => {
+        const fnLower = (f.name || "").toLowerCase();
+        const is8K = fnLower.includes("8-k") || fnLower.includes("8k") || fnLower.includes("item2.02") || (fnLower.includes("earnings") && (fnLower.includes("release") || fnLower.includes("press")));
+        if (!is8K) return false;
+        const fa = integrityReport?.fileAudits[f.name];
+        if (fa && fa.companyMatch === "MISMATCH") return false;
+        return true;
+      });
+
+      if (candidate8K) {
+        isCoveredBy8K = true;
+        effectiveMatched.push(candidate8K);
+      }
+    }
+
+    let integrityStatus: "VALID" | "WARNING" | "MISMATCH" | undefined = undefined;
+    const details: string[] = [];
+    let detectedTicker: string | undefined;
+    let detectedPeriod: string | undefined;
+
+    if (isExemptQ4) {
+      integrityStatus = "VALID";
+      details.push("Form 10-K covers Q4 & FY (Form 10-Q is not filed for Q4)");
+      detectedPeriod = effectiveMatched.length > 0 ? (detectedPeriod || "Covered by 10-K") : "Covered by 10-K";
+      if (effectiveMatched.length > 0 && integrityReport) {
+        const matchedAudits = effectiveMatched.map(m => integrityReport.fileAudits[m.name]).filter(Boolean);
+        matchedAudits.forEach(a => {
+          if (a.detectedTicker) detectedTicker = a.detectedTicker;
+          if (a.detectedPeriod) detectedPeriod = a.detectedPeriod;
+          details.push(...a.details);
+        });
+      }
+    } else if (isCoveredBy8K) {
+      integrityStatus = "VALID";
+      details.push("Form 10-Q pending SEC filing; interim quarterly results covered by Form 8-K (Item 2.02 Earnings Release)");
+      if (integrityReport && effectiveMatched.length > 0) {
+        const matchedAudits = effectiveMatched.map(m => integrityReport.fileAudits[m.name]).filter(Boolean);
+        matchedAudits.forEach(a => {
+          if (a.detectedTicker) detectedTicker = a.detectedTicker;
+          if (a.detectedPeriod) detectedPeriod = a.detectedPeriod;
+          details.push(...a.details);
+        });
+      }
+    } else if (integrityReport && effectiveMatched.length > 0) {
+      const matchedAudits = effectiveMatched.map(m => integrityReport.fileAudits[m.name]).filter(Boolean);
+      const hasMismatch = matchedAudits.some(a => a.companyMatch === "MISMATCH" || a.periodMatch === "MISMATCH");
+      const hasUnverified = matchedAudits.some(a => a.companyMatch === "UNVERIFIED" || a.periodMatch === "UNVERIFIED");
+
+      if (hasMismatch) {
+        integrityStatus = "MISMATCH";
+      } else if (hasUnverified) {
+        integrityStatus = "WARNING";
+      } else {
+        integrityStatus = "VALID";
+      }
+
+      matchedAudits.forEach(a => {
+        if (a.detectedTicker) detectedTicker = a.detectedTicker;
+        if (a.detectedPeriod) detectedPeriod = a.detectedPeriod;
+        details.push(...a.details);
+      });
+    }
+
+    const validMatches = effectiveMatched.filter(m => {
+      const audit = integrityReport?.fileAudits[m.name];
+      return !audit || audit.companyMatch !== "MISMATCH";
+    });
+
+    const isConfirmed = validMatches.length > 0 || isExemptQ4 || isCoveredBy8K || Boolean(rule.optional && matched.length === 0);
+
+    const description = isExemptQ4 && effectiveMatched.length === 0
+      ? "Form 10-K covers Q4 & FY (Form 10-Q is not filed for Q4)"
+      : isCoveredBy8K
+        ? "Form 10-Q pending filing with SEC. Current quarter covered by Form 8-K (Item 2.02 Earnings Release)."
+        : rule.description;
+
+    checks.push({
+      category: rule.key,
+      label: isCoveredBy8K ? "Quarterly Interim (Form 8-K)" : rule.label,
+      description,
+      isForeignEquivalent: isForeign,
+      status: (validMatches.length > 0 || isExemptQ4 || isCoveredBy8K) ? "CONFIRMED" : "MISSING",
+      matchedFiles: effectiveMatched.map(f => f.name),
+      integrityStatus,
+      integrityDetails: details.length > 0 ? Array.from(new Set(details)) : undefined,
+      detectedTicker,
+      detectedPeriod,
+      isCoveredBy8K,
+      substanceStatus: effectiveMatched.map(checkFileSubstance).find(Boolean) ? "TRUNCATED" : (effectiveMatched.length > 0 ? "VALID" : undefined),
+      substanceReason: effectiveMatched.map(checkFileSubstance).find(Boolean)?.reason,
+      optional: rule.optional
+    });
+  });
+
+  const passed = checks.filter(c => !c.optional).every(c => c.status === "CONFIRMED");
+  return { passed, checklist: checks, integrityReport };
 }

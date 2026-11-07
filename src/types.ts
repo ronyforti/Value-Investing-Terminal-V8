@@ -39,6 +39,8 @@ export interface HybridConfig {
   transitionStepIndex: number; // 0-indexed (2 = Step 3 Cash Flow Integrity)
 }
 
+export type SessionMode = 'slingshot' | 'full' | 'sentinel';
+
 export interface SessionConfig {
   ticker: string;
   period: string;
@@ -46,6 +48,7 @@ export interface SessionConfig {
   model: string;
   executionMode: ExecutionMode;
   portfolio: PortfolioContext;
+  sessionMode?: SessionMode;
   notes?: string;
   enableCrosscheck?: boolean;
   crosscheckModel?: string;
@@ -57,6 +60,7 @@ export interface SessionConfig {
   daysToNextEarnings?: number | null;
   isAdr?: boolean;
   country?: string | null;
+  priorDossierPath?: string | null;
 }
 
 export interface FileLog {
@@ -97,6 +101,7 @@ export interface AuditCheck {
   isCoveredBy8K?: boolean;
   substanceStatus?: 'VALID' | 'TRUNCATED';
   substanceReason?: string;
+  optional?: boolean;
 }
 
 export interface FileSubstanceIssue {
@@ -199,6 +204,56 @@ export interface CacheKeepAliveState {
   pingCount: number;
 }
 
+export interface PythonOkrItem {
+  id: string;
+  name: string;
+  value: string;
+  passed: boolean;
+  target: string;
+}
+
+export interface PythonForensicVector {
+  vector: string;
+  metric: string;
+  finding: 'PASS' | 'FLAG' | 'BREACH';
+  threshold: string;
+}
+
+export interface PythonValuationResult {
+  ticker: string;
+  currency: string;
+  price: number;
+  mcap_usd: number;
+  mcap_home: number;
+  diluted_shares: number;
+  oe_0: number;
+  g_bolsa_raw_pct: number;
+  g_bolsa_capped_pct: number;
+  pv_10: number;
+  bolsa_multiple: number;
+  bolsa_tier: string;
+  has_rd: boolean;
+  rd_spectrum: Record<string, {
+    alpha: number;
+    oe_0: number;
+    pv_10: number;
+    bolsa_multiple: number;
+    tier: string;
+  }>;
+  epv_per_share: number;
+  dcf_bear: number;
+  dcf_base: number;
+  dcf_bull: number;
+  dcf_expected: number;
+  implied_reverse_g_pct: number;
+  okr_scorecard: PythonOkrItem[];
+  okr_passed_count: number;
+  forensic_4vectors: PythonForensicVector[];
+  qoq_deltas: Record<string, number>;
+  markdown_block: string;
+  computedAt?: string;
+}
+
 export interface SessionState {
   config: SessionConfig | null;
   files: FileLog[];
@@ -222,6 +277,15 @@ export interface SessionState {
     hasBreach: boolean;
     breaches: string[];
   };
+  pythonValuation?: PythonValuationResult | null;
+  hasDispatchedStartNotification?: boolean;
+  priorDossierMeta?: {
+    fileName: string;
+    source: 'obsidian_dossiers' | 'obsidian_vault' | 'local_archive' | 'manual_upload';
+    period?: string;
+    priorIv?: string;
+    priorDecision?: string;
+  } | null;
 }
 
 export interface CurrencyAuditMismatch {
@@ -334,16 +398,19 @@ export interface NotificationConfig {
 }
 
 export interface NotificationPayload {
-  event: 'single_complete' | 'batch_complete' | 'batch_company' | 'blocked_alert' | 'test' | 'flex_gatekeeper_engaged' | 'flex_gatekeeper_launched' | 'model_selection_required' | 'cooldown_alert' | 'cooldown_recovered';
+  event: 'session_start' | 'single_complete' | 'batch_complete' | 'batch_company' | 'blocked_alert' | 'test' | 'flex_gatekeeper_engaged' | 'flex_gatekeeper_launched' | 'model_selection_required' | 'cooldown_alert' | 'cooldown_recovered';
   title: string;
   message: string;
   ticker?: string;
   companyName?: string;
   period?: string;
   price?: string;
+  sessionMode?: SessionMode;
   intrinsicValue?: string;
   marginOfSafety?: string;
   verdict?: string;
+  bolsaMultiple?: string;
+  divergenceStatus?: string;
   dossierPath?: string;
   dossierContent?: string;
   dossierHtmlPath?: string;

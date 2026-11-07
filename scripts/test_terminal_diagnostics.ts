@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-const BASE_URL = process.env.APP_URL || "http://localhost:3000";
+const BASE_URL = process.env.APP_URL || (process.env.PORT ? `http://localhost:${process.env.PORT}` : "http://localhost:3001");
 
 interface DiagnosticResult {
   suite: string;

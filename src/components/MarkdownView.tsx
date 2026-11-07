@@ -360,6 +360,21 @@ export function getTableChartType(headers: string[], rows: string[][]): ChartTyp
     return null;
   }
 
+  // Negative Guards: Explicitly exclude Double-Blind, Dual-Valuation, and Forensic OKR tables
+  const isDoubleBlindOrOkrTable = (
+    headerStr.includes('double-blind') ||
+    headerStr.includes('dual-valuation') ||
+    headerStr.includes('dual engine') ||
+    headerStr.includes('quantitative okr') ||
+    headerStr.includes('forensic vector') ||
+    headerStr.includes('audit vector') ||
+    headerStr.includes('bolsa 6.0') ||
+    headerStr.includes('10-year cash multiple')
+  );
+  if (isDoubleBlindOrOkrTable) {
+    return null;
+  }
+
   // 5. Cash Flow & Owner Earnings Trend (Strict Temporal Validation)
   // A table is ONLY a trend chart if it has at least 3 data columns and >= 80% of data columns represent pure chronological periods
   const dataCols = headers.slice(1);

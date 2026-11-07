@@ -5,18 +5,49 @@
 - **Legacy Deprecation:** The repository at `G:\My Drive\Company Data\GTD_terminal` is legacy and outdated. Never use files, scripts, or configurations from `GTD_terminal` unless the user explicitly asks for "Legacy GTD_Terminal".
 - **Source of Truth:** All prompts, system instructions, document ingestion routines, and batch execution runners must strictly originate from `c:\Users\Ronald\antigravity\Value-Investing-Terminal`.
 
-- **Port:** Default Port `3000`.
+- **Port:** Default Port `3001` (Isolated from production terminal on port `3000`).
+- **Repository Isolation:** Work in `Value-Investing-Terminal-V8` at `/home/antigravity/repos/terminal-v8` on port 3001. The production repository `Value-Investing-Terminal-App` (port 3000) is 100% frozen and untouched.
 
-- **Backend Process Hot-Reload Boundary & Mandatory Server Restart:**
-  The terminal backend executes via persistent Node process (`tsx server.ts` or `Value_Investing_Terminal.bat`). It does NOT hot-reload backend routes, document ingest cleaners, or prompt handlers automatically when source files change. Whenever making changes to `server.ts`, `server.cloud.ts`, or backend ingestion logic:
-  - Either cleanly terminate and restart the server process directly, OR explicitly prompt the user to restart the terminal before testing or running valuations.
-  - Never allow evaluations or document ingestion tests to run against stale in-memory backend instances, preventing false regression alarms.
+## Multi-Mode Terminal Architecture
+The terminal supports 3 specialized operating modes configured via `sessionMode`:
+1. **Mode 1 — Slingshot Triage (`sessionMode: 'slingshot'`):**
+   - Single-turn institutional underwriting triage memo executed across 6 Indispensable Pillars and 4 Cash Integrity Vectors.
+   - Dynamic Red Queen R&D Capitalization spectrum (`0% | 50% | 75%`).
+   - Suggested Action Directive: strictly `INVEST / PASS / ESCALATE TO FULL MODE` for prospective positions (`HOLD / ACCUMULATE / LIQUIDATE` for existing holdings; `TRIM` permanently banned).
+   - 1-Click Warm-Cache Escalation: Clicking `[🏛️ Escalate to Full Dossier]` preserves staged files and Gemini file handles (`geminiUri`), purges conversation history to eliminate cognitive anchoring, and switches to Mode 2 to immediately hit the warm Gemini KV prefix cache.
+2. **Mode 2 — Full Institutional Dossier (`sessionMode: 'full'`):**
+   - Canonical 11 Master Prompts + Step 12 Forensic Crosscheck (`Gates 0–4`).
+   - 100% tool-free closed-universe pipeline preserving byte-for-byte KV prefix cache invariance.
+   - Out-of-band Python valuation stream executed asynchronously and synthesized double-blind.
+3. **Mode 3 — Quarterly Position Sentinel (`sessionMode: 'sentinel'`):**
+   - 90-day holding pulse monitoring active positions.
+   - 4-Way Prior Dossier ingestion triad (discovers previous complete dossier or Slingshot memo).
+   - 40Q historical financials refreshed with latest quarter; YoY and Q/Q operational delta extraction.
+   - Grades the 5 monitoring metrics defined in Part 11 of the Prior Dossier.
+   - Enforces Universal Transitory vs. Structural Standard (Snowstorm Protocol) and Deliberate Strategic Reinvestment Protocol (MELI Doctrine).
+   - Evaluates 4 Isolation Gates: 1. Moat Breach, 2. Capital Allocation Malpractice, 3. Deteriorating Runway / Disruption, 4. Chronic Value Destruction.
+   - Suggested Action Directive: strictly `HOLD / ACCUMULATE / LIQUIDATE`.
 
-## Methodology Ground-Truth Mandate (Zero Parroting / Zero Regression)
-- **Active Canonical Pipeline (11+1):** The terminal operates strictly under the unified **11 Master Prompts + Step 12 Crosscheck** pipeline. 
-- **Mandatory Ground-Truth Verification:** Before referencing any chapter, section title, metric, or methodology, ALWAYS inspect `terminal_methodology_snapshot.md` or `Investment Analysis and Valuation Framework Master Prompts.txt` first. Never rely on parametric or unverified memory.
-- **Decommissioned Concepts (Strictly Banned):**
-  - **No Phased Execution Mode:** The legacy "Tier 1 vs. Tier 2" mode is dead. Execution is unified full-auto.
+## Core Valuation Engine & Bolsa 6.0 10-Yr Cash Multiple
+- **Universal Trailing 3-Year Baseline (`OE_0`):** Every forward DCF and Bolsa valuation in all modes anchors starting owner earnings to the trailing 3-year average (`(OE_{t-2} + OE_{t-1} + OE_t) / 3`) with 100% of SBC expensed as cash and 2-step empirical Maintenance CapEx applied.
+- **Pure Tri-Horizon Growth Average:** Growth rate is calculated strictly as `(Var_3Y + Var_5Y + Var_7Y) / 3`, capped at `15%` standard or `20%` for verified high-growers (`ROIC > 20%` and `3Y Rev CAGR > 20%`).
+- **Bolsa 6.0 10-Yr Cash Multiple Formula:**
+  $$\text{Bolsa Multiple} = \frac{\text{Market Cap}}{\sum_{t=1}^{10} \text{PV of } OE_t \text{ at } 10.00\% \text{ Hurdle}}$$
+  Zero constant or terminal/residual value is credited in the denominator. Hurdle benchmark is `Market Cap / PV_10 <= 0.70x` (~30%+ Margin of Safety). Redundant "Cash Coverage %" row is permanently eliminated.
+- **Dynamic R&D Spectrum (`0% | 50% | 75%`):** Tech/software companies are classified on an empirical spectrum: `0%` (mature/defense maintenance), `50%` (standard growth), or `75%` (aggressive expansionary growth). Net capitalized R&D must deduct 5-year straight-line amortization drag (`Amortization = Gross Capitalized R&D / 5`).
+- **Share-Cannibal Negative Equity Guard:** Companies with negative accounting book value resulting from disciplined historical share repurchases (`BKNG` pattern, cumulative repurchases > net equity deficit) are recognized as fortress capital allocators, not distressed credits.
+- **Negative-WC Float Model:** Companies operating with customer float and negative working capital credit the structural float advantage without penalizing short-term liquidity ratios.
+
+## Hardcore Anti-Anchoring Firewall (Gate 15)
+- **Zero Python Numbers in LLM Pre-Flight Context:** Zero forward DCF numbers, intrinsic value calculations, or Bolsa 6.0 multiples from Python Stream 1 ever enter Gemini prompt context or `state.files`. The LLM derives intrinsic value and margin of safety 100% independently from filings and master prompts.
+- **Post-Execution Double-Blind Synthesis:** The Double-Blind Dual-Valuation Synthesis comparison table (`Part 13`) is generated out-of-band and appended to the final dossier only after all analytical steps are completed.
+
+## Telegram Notification Standard
+- **Zero Build-Time Noise:** Zero Telegram alerts during local compilation, manual testing, or code modification.
+- **Standardized Runtime Telemetry (Modes 1, 2, 3):**
+  1. *Start Alert (`session_start`):* Dispatched when Mode 1, 2, or 3 begins execution.
+  2. *Cooldown / Auto-Resume Alert:* Dispatched on Attempt 1 if Google Flex Tier experiences transient saturation, and recovery alert dispatched on success.
+  3. *Completion Alert (`single_complete`):* Dispatched upon final step completion with mode-specific title, intrinsic value, margin of safety, definitive suggested action, Bolsa 6.0 10-Yr cash multiple, divergence status, and dual file attachments (`.md` and `.html`).
   - **No Generic Macro / Howard Marks Market Temperature:** The 21-pair macro survey is permanently eliminated under the **Micro-Primacy Directive** (Part 7 is DCF Models & Market-Implied Reverse DCF, not macro forecasting).
   - **No Legacy 12+1, 15/16-Part Numbering:** Part titles must strictly match the 11+1 canonical pipeline.
   - **Zero Deprecated Sampling Parameters (`temperature`, `top_p`, `top_k`, `thinking_budget`):** In accordance with Google Gemini API deprecation standards, custom sampling parameters (`temperature`, `top_p`, `top_k`) and legacy `thinking_budget` are permanently eliminated from all Gemini API payloads. All pipeline steps enforce `thinking_level: "high"` (via `thinkingConfig: { thinkingLevel: 'high' }`), ensuring deep dynamic reasoning across all valuation, forensics, and crosscheck phases. Local Ollama parameters remain isolated to local models.

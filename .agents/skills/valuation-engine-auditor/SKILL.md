@@ -315,3 +315,20 @@ To eliminate autoregressive token smoothing and hallucinated math certifications
    When Part 7 Part 3 (`Adjusted DCF - R&D Capitalized`) is skipped under the Red Queen Effect gate (where R&D is defensive maintenance rather than durable growth expansion), Part 8 synthesis tables (`Step 1` & `Step 2`) must explicitly output `N/A` (`or N/A if skipped in Part 7`) rather than inventing uncalculated per-share figures. For active DCF models:
    > **Formula / Calculation:** Distributable FCFF = Sustainable NOPAT * (1 - Reinvestment Rate)
    Verifies that cash flows projected in the DCF table mathematically reflect the stated reinvestment rate.
+
+### 9.10 Bolsa 6.0 10-Yr Cash Multiple & Multi-Mode Operating Framework
+- **Multi-Mode Operation:**
+  - *Mode 1 (Slingshot Triage):* Rapid underwriting memo (6 Pillars, 4 Vectors, suggested action `INVEST / PASS / ESCALATE`). 1-Click warm escalation clears history to preserve KV prefix cache.
+  - *Mode 2 (Full Institutional Dossier):* 11 Master Prompts + Step 12 Forensic Crosscheck + out-of-band Python valuation stream.
+  - *Mode 3 (Quarterly Position Sentinel):* 90-day pulse with Prior Dossier ingestion, 40Q operational delta, Part 11 5-metric dashboard, Snowstorm & MELI doctrines, 4 Isolation Gates (`HOLD / ACCUMULATE / LIQUIDATE`).
+- **Universal Trailing 3-Year Baseline (`OE_0`):** Every forward DCF and Bolsa valuation in all modes anchors starting owner earnings to the trailing 3-year average (`(OE_{t-2} + OE_{t-1} + OE_t) / 3`) with 100% of SBC expensed as cash and 2-step empirical Maintenance CapEx applied.
+- **Pure Tri-Horizon Growth Average:** Growth rate is calculated strictly as `(Var_3Y + Var_5Y + Var_7Y) / 3`, capped at `15%` standard or `20%` for verified high-growers (`ROIC > 20%` and `3Y Rev CAGR > 20%`).
+- **Bolsa 6.0 10-Yr Cash Multiple Formula:**
+  > **Formula / Calculation:** Bolsa Multiple = Market Cap / Sum from t=1 to 10 of [PV of OE_t at 10.00% Hurdle]
+  Zero constant or terminal/residual value is credited in the denominator. Hurdle benchmark is `Market Cap / PV_10 <= 0.70x` (~30%+ Margin of Safety). Redundant "Cash Coverage %" row is permanently eliminated.
+- **Dynamic R&D Spectrum (`0% | 50% | 75%`):** Software/tech firms apply dynamic capitalization net of 5-year straight-line amortization drag (`Amortization = Gross Capitalized R&D / 5`).
+- **Share-Cannibal Negative Equity Guard:** Negative book value from disciplined cumulative share repurchases (`BKNG` pattern) is recognized as fortress capital allocation, not insolvency risk.
+
+### 9.11 Hardcore Anti-Anchoring Firewall (Gate 15)
+- **Zero Python Numbers in Pre-Flight Context:** Zero forward DCF or Bolsa math ever enters LLM pre-flight prompt strings or `state.files`. The LLM reasons completely double-blind.
+- **Post-Execution Double-Blind Synthesis:** The Double-Blind Dual-Valuation Synthesis comparison table (`Part 13`) is generated out-of-band and appended to the final dossier only after all active analytical steps are completed.

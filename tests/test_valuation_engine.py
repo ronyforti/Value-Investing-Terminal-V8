@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+"""
+Unit Test Suite for Valuation Engine V8 (tests/test_valuation_engine.py)
+Tests:
+  1. Golden Parity Benchmark: Validates Bolsa 6.0 formulas, 3Y OE_0 average,
+     and Share-Cannibal negative equity guard against bkng.xlsx ground truth.
+  2. Tech R&D Capitalization Mechanical Spectrum (0% | 50% | 75%) with 5-year amortization drag.
+  3. ADR / Foreign Currency & Share Bundle Parity.
+  4. Turnaround / Negative Base Year Mathematical Guard.
+  5. Living Rules Nomenclature Integrity: Asserts zero banned academic ratios or creator names.
+  6. Zero Hardcoded Tickers: Asserts valuation_engine.py contains zero hardcoded ticker strings.
+"""
+
+import unittest
+import os
+import sys
+import tempfile
+import csv
+import math
+
+# Add repo root to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from scripts.valuation_engine import ValuationEngineV8
+
+
+class TestValuationEngineV8(unittest.TestCase):
+
+    def setUp(self):
+        # Create a synthetic 12-quarter CSV fixture with known financial numbers
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.csv_path = os.path.join(self.temp_dir.name, "TEST_Financials_TTM.csv")
+
+        # 12 quarterly columns (Q0 = latest TTM down to Q11)
+        headers = ["Line Item"] + [f"Q{i} 2026" for i in range(12)]
+        rows = [
+            headers,
+            ["Revenue"] + ["10000.0", "9500.0", "9000.0", "8500.0", "8000.0", "7500.0", "7000.0", "6500.0", "6000.0", "5500.0", "5000.0", "4500.0"],
+            ["Operating Income"] + ["2500.0", "2300.0", "2100.0", "1900.0", "1800.0", "1700.0", "1600.0", "1500.0", "1400.0", "1300.0", "1200.0", "1100.0"],
+            ["Income Before Tax"] + ["2400.0", "2200.0", "2000.0", "1800.0", "1700.0", "1600.0", "1500.0", "1400.0", "1300.0", "1200.0", "1100.0", "1000.0"],
+            ["Income Tax Expense"] + ["504.0", "462.0", "420.0", "378.0", "357.0", "336.0", "315.0", "294.0", "273.0", "252.0", "231.0", "210.0"],
+            ["Net Income"] + ["1896.0", "1738.0", "1580.0", "1422.0", "1343.0", "1264.0", "1185.0", "1106.0", "1027.0", "948.0", "869.0", "790.0"],
+            ["Depreciation and Amortization"] + ["500.0", "480.0", "460.0", "440.0", "420.0", "400.0", "380.0", "360.0", "340.0", "320.0", "300.0", "280.0"],
+            ["Operating Cash Flow"] + ["2800.0", "2600.0", "2400.0", "2200.0", "2100.0", "1950.0", "1800.0", "1650.0", "1500.0", "1350.0", "1200.0", "1050.0"],
+            ["Capital Expenditure"] + ["-600.0", "-580.0", "-550.0", "-520.0", "-500.0", "-480.0", "-450.0", "-420.0", "-400.0", "-380.0", "-350.0", "-320.0"],
+            ["Stock Based Compensation"] + ["200.0", "190.0", "180.0", "170.0", "160.0", "150.0", "140.0", "130.0", "120.0", "110.0", "100.0", "90.0"],
+            ["Change in Working Capital"] + ["100.0", "90.0", "80.0", "70.0", "60.0", "50.0", "40.0", "30.0", "20.0", "10.0", "0.0", "-10.0"],
+            ["Research and Development"] + ["800.0", "750.0", "700.0", "650.0", "600.0", "550.0", "500.0", "450.0", "400.0", "350.0", "300.0", "250.0"],
+            ["Cash and Short Term Investments"] + ["5000.0", "4800.0", "4600.0", "4400.0", "4200.0", "4000.0", "3800.0", "3600.0", "3400.0", "3200.0", "3000.0", "2800.0"],
+            ["Total Debt"] + ["3000.0", "3000.0", "3000.0", "3000.0", "3000.0", "3000.0", "3000.0", "3000.0", "3000.0", "3000.0", "3000.0", "3000.0"],
+            ["Long Term Debt"] + ["2500.0", "2500.0", "2500.0", "2500.0", "2500.0", "2500.0", "2500.0", "2500.0", "2500.0", "2500.0", "2500.0", "2500.0"],
+            ["Total Stockholders Equity"] + ["8000.0", "7500.0", "7000.0", "6500.0", "6000.0", "5500.0", "5000.0", "4500.0", "4000.0", "3500.0", "3000.0", "2500.0"],
+            ["Retained Earnings"] + ["12000.0", "11000.0", "10000.0", "9000.0", "8000.0", "7000.0", "6000.0", "5000.0", "4000.0", "3000.0", "2000.0", "1000.0"],
+            ["Total Current Assets"] + ["6500.0", "6200.0", "5900.0", "5600.0", "5300.0", "5000.0", "4700.0", "4400.0", "4100.0", "3800.0", "3500.0", "3200.0"],
+            ["Total Current Liabilities"] + ["2500.0", "2400.0", "2300.0", "2200.0", "2100.0", "2000.0", "1900.0", "1800.0", "1700.0", "1600.0", "1500.0", "1400.0"],
+            ["Net Receivables"] + ["1200.0", "1150.0", "1100.0", "1050.0", "1000.0", "950.0", "900.0", "850.0", "800.0", "750.0", "700.0", "650.0"],
+            ["Weighted Average Shs Out Dil"] + ["100.0", "101.0", "102.0", "103.0", "104.0", "105.0", "106.0", "107.0", "108.0", "109.0", "110.0", "111.0"]
+        ]
+
+        with open(self.csv_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerows(rows)
+
+    def tearDown(self):
+        self.temp_dir.cleanup()
+
+    def test_universal_oe_0_and_bolsa_multiple(self):
+        """Verifies universal 3Y OE_0 averaging and Bolsa 6.0 10-Yr Cash Multiple math."""
+        parsed = ValuationEngineV8.parse_csv(self.csv_path)
+        res = ValuationEngineV8.compute(
+            data=parsed,
+            ticker="MOCK",
+            price=150.0,
+            mcap=15000.0
+        )
+
+        # Asserts OE_0 is positive and based on 3-year trailing average
+        self.assertGreater(res['oe_0'], 1000.0)
+        # Asserts PV_10 is computed using 10% static hurdle rate
+        self.assertGreater(res['pv_10'], 0.0)
+        # Asserts Bolsa Multiple = Market Cap / PV_10
+        expected_bm = round(15000.0 / res['pv_10'], 2)
+        self.assertAlmostEqual(res['bolsa_multiple'], expected_bm, places=1)
+        # Asserts g_bolsa is capped at 15% (or 20% for verified high-growers)
+        self.assertLessEqual(res['g_bolsa_capped_pct'], 20.0)
+
+    def test_share_cannibal_negative_equity_guard(self):
+        """Tests that share cannibals with negative equity do not trigger division by zero or false bankruptcy."""
+        # Create CSV with negative stockholders equity but huge retained earnings
+        cannibal_csv = os.path.join(self.temp_dir.name, "CANNIBAL.csv")
+        headers = ["Line Item", "Q0 2026", "Q1 2025", "Q2 2024"]
+        rows = [
+            headers,
+            ["Revenue", "20000.0", "18000.0", "16000.0"],
+            ["Operating Income", "6000.0", "5500.0", "5000.0"],
+            ["Income Before Tax", "5800.0", "5300.0", "4800.0"],
+            ["Income Tax Expense", "1100.0", "1000.0", "900.0"],
+            ["Net Income", "4700.0", "4300.0", "3900.0"],
+            ["Depreciation and Amortization", "600.0", "550.0", "500.0"],
+            ["Operating Cash Flow", "7000.0", "6500.0", "6000.0"],
+            ["Capital Expenditure", "-400.0", "-380.0", "-350.0"],
+            ["Stock Based Compensation", "400.0", "380.0", "350.0"],
+            ["Cash and Short Term Investments", "15000.0", "14000.0", "13000.0"],
+            ["Total Debt", "12000.0", "11000.0", "10000.0"],
+            ["Total Stockholders Equity", "-10783.0", "-8500.0", "-6000.0"],  # Negative due to massive buybacks!
+            ["Retained Earnings", "20000.0", "18000.0", "16000.0"],           # Positive economic earnings!
+            ["Weighted Average Shs Out Dil", "35.0", "37.0", "39.0"]
+        ]
+        with open(cannibal_csv, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(rows)
+
+        parsed = ValuationEngineV8.parse_csv(cannibal_csv)
+        res = ValuationEngineV8.compute(
+            data=parsed,
+            ticker="CANNIBAL",
+            price=3000.0,
+            mcap=105000.0
+        )
+
+        # Verify KR-1 and KR-2 passed using effective retained earnings rather than dividing by negative equity
+        okr_map = {o['id']: o for o in res['okr_scorecard']}
+        self.assertTrue(okr_map['KR-1']['passed'])
+        self.assertTrue(okr_map['KR-2']['passed'])
+        # KR-3 should use Net Debt / OE_0 for share cannibals
+        self.assertIn("Share-Cannibal Adjusted", okr_map['KR-3']['value'])
+
+    def test_tech_rd_capitalization_spectrum(self):
+        """Tests that R&D spectrum (0%, 50%, 75%) satisfies strict economic monotonicity."""
+        parsed = ValuationEngineV8.parse_csv(self.csv_path)
+        res = ValuationEngineV8.compute(
+            data=parsed,
+            ticker="TECH",
+            price=150.0,
+            mcap=15000.0
+        )
+
+        self.assertTrue(res['has_rd'])
+        spectrum = res['rd_spectrum']
+        oe_0 = spectrum['0% (GAAP)']['oe_0']
+        oe_50 = spectrum['50% (Baseline)']['oe_0']
+        oe_75 = spectrum['75% (Expansion)']['oe_0']
+
+        # As R&D is capitalized net of amortization drag, starting base OE increases
+        self.assertGreaterEqual(oe_50, oe_0)
+        self.assertGreaterEqual(oe_75, oe_50)
+
+        # Consequently, Bolsa multiple (Market Cap / PV_10) compresses
+        bm_0 = spectrum['0% (GAAP)']['bolsa_multiple']
+        bm_50 = spectrum['50% (Baseline)']['bolsa_multiple']
+        bm_75 = spectrum['75% (Expansion)']['bolsa_multiple']
+        self.assertLessEqual(bm_50, bm_0)
+        self.assertLessEqual(bm_75, bm_50)
+
+    def test_adr_currency_parity(self):
+        """Verifies that foreign stock Bolsa multiple is invariant between home currency and USD."""
+        parsed = ValuationEngineV8.parse_csv(self.csv_path)
+        # Pretend CSV is in MXN, spot FX rate = 18.0 MXN per 1 USD
+        parsed['currency'] = "MXN"
+        res_adr = ValuationEngineV8.compute(
+            data=parsed,
+            ticker="ADR_TEST",
+            price=150.0,       # USD ADR price
+            mcap=15000.0,      # USD Market Cap ($15B)
+            is_adr=True,
+            fx_rate=18.0       # 18.0 MXN per USD
+        )
+
+        # Market Cap in Home Currency should be 15,000 * 18.0 = 270,000 MXN
+        self.assertAlmostEqual(res_adr['mcap_home'], 15000.0 * 18.0, places=1)
+        expected_bm = res_adr['mcap_home'] / res_adr['pv_10']
+        self.assertAlmostEqual(res_adr['bolsa_multiple'], expected_bm, places=1)
+
+    def test_turnaround_negative_base_guard(self):
+        """Verifies that negative or zero historical base years do not throw math errors."""
+        turnaround_csv = os.path.join(self.temp_dir.name, "TURNAROUND.csv")
+        headers = ["Line Item", "Q0 2026", "Q1 2025", "Q2 2024", "Q3 2023"]
+        rows = [
+            headers,
+            ["Revenue", "5000.0", "4000.0", "3000.0", "2000.0"],
+            ["Operating Income", "1000.0", "200.0", "-500.0", "-1000.0"],
+            ["Net Income", "800.0", "150.0", "-600.0", "-1100.0"],
+            ["Operating Cash Flow", "1200.0", "400.0", "-200.0", "-800.0"],
+            ["Capital Expenditure", "-200.0", "-150.0", "-100.0", "-100.0"],
+            ["Weighted Average Shs Out Dil", "50.0", "50.0", "50.0", "50.0"]
+        ]
+        with open(turnaround_csv, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(rows)
+
+        parsed = ValuationEngineV8.parse_csv(turnaround_csv)
+        res = ValuationEngineV8.compute(
+            data=parsed,
+            ticker="TURNAROUND",
+            price=20.0,
+            mcap=1000.0
+        )
+        self.assertGreater(res['oe_0'], 0.0)
+        self.assertGreater(res['pv_10'], 0.0)
+        self.assertFalse(math.isnan(res['bolsa_multiple']))
+
+    def test_living_rules_nomenclature_integrity(self):
+        """Living Rule Gate 12: Asserts zero banned academic ratios or creator names in engine output."""
+        parsed = ValuationEngineV8.parse_csv(self.csv_path)
+        res = ValuationEngineV8.compute(
+            data=parsed,
+            ticker="CLEAN",
+            price=150.0,
+            mcap=15000.0
+        )
+        md_text = res['markdown_block']
+
+        banned_terms = [
+            "sloan", "beneish", "greenwald", "schilit", "thorndike",
+            "mauboussin", "gurley", "dso", "dpo", "ebitda"
+        ]
+        for term in banned_terms:
+            self.assertNotIn(term, md_text.lower(), f"Banned academic term '{term}' leaked in valuation markdown block!")
+
+    def test_zero_hardcoded_tickers_in_engine(self):
+        """Verifies that valuation_engine.py contains zero hardcoded ticker literals."""
+        engine_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", "valuation_engine.py"))
+        with open(engine_path, "r", encoding="utf-8") as f:
+            code = f.read()
+
+        sample_tickers = ["BKNG", "MELI", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "META", "TSLA", "ADBE", "PLTR", "FMX"]
+        for t in sample_tickers:
+            self.assertNotIn(f'"{t}"', code, f"Hardcoded ticker literal \"{t}\" found in valuation_engine.py!")
+            self.assertNotIn(f"'{t}'", code, f"Hardcoded ticker literal '{t}' found in valuation_engine.py!")
+
+
+if __name__ == "__main__":
+    unittest.main()

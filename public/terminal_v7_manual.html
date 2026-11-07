@@ -463,7 +463,7 @@ tr:nth-child(even) td {
       <span style="font-size:1.4rem;">✈️</span>
       <div>
         <h1>Value Investing Terminal</h1>
-        <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">FLIGHT CREW OPERATING MANUAL (FCOM) — REVISION 7.0.0</div>
+        <div style="font-size:0.7rem; color:var(--text-muted); font-weight:600;">FLIGHT CREW OPERATING MANUAL (FCOM) — REVISION 8.0.0</div>
       </div>
       <div style="display:flex; gap:0.4rem; margin-left:1rem; flex-wrap:wrap;">
         <span class="hud-badge" id="hud-status">SYS: ONLINE</span>
@@ -884,7 +884,7 @@ CRITICAL OWNER EARNINGS DIRECTIVE: You are strictly forbidden from calculating O
      - Owner Earnings Margin (% of Revenue)
 
 * 1.5 Rolling 3-Year Baseline &amp; Longitudinal Growth Rate Calibration:
-   - 3-Year Rolling Average Normalized Owner Earnings: Calculate the arithmetic mean of Normalized Owner Earnings over the last 3 fiscal periods. Compare this 3-year rolling average to the TTM figure. If TTM exhibits an abnormal peak or trough, use the 3-Year Rolling Average as the initial cash flow anchor for DCF projections to eliminate non-repeatable cyclical distortions.
+   - 3-Year Rolling Average Normalized Owner Earnings (Mandatory Universal Cash Baseline OE_0): Calculate the arithmetic mean of Normalized Owner Earnings over the last 3 fiscal periods [(OE_TTM0 + OE_TTM1 + OE_TTM2) / 3]. You must strictly use this 3-Year Rolling Average as your starting cash flow anchor (OE_0) across all forward DCF projections and intrinsic value calculations to eliminate single-year cyclical peak/trough distortions and normalize through-the-cycle economic earning power.
    - 10-Period Longitudinal Growth Rate Calibration: Using all available periods from the financial CSV, calculate the compound annual growth rates (CAGR) for Revenue and Normalized Owner Earnings across:
      1. 3-Year Horizon (50% weighting)
      2. 5-Year Horizon (30% weighting)
@@ -1116,7 +1116,7 @@ CRITICAL PREAMBLE DIRECTIVE: You are strictly forbidden from outputting unprompt
     * REITs: Invert Price-to-AFFO to solve for the implied Net Property Initial Capitalization Rate.
 
 * Part 1: Initial Cash Flow Anchor &amp; Longitudinal Growth Anchor:
-  - Initial Cash Flow Anchor: Start from the 3-Year Rolling Average Normalized Owner Earnings calculated in Part 3, Section 1.5 to eliminate cyclical peak/trough distortions (or Normalized TTM Owner Earnings if an audited structural step-change is verified). Clarify that because Part 2&#039;s Enterprise-to-Equity Bridge adds Cash &amp; Short-Term Investments and subtracts Gross Debt and Debt Equivalents, the cash flow stream discounted in Part 2 must be Unlevered Normalized Owner Earnings (i.e., if starting from Part 3&#039;s OCF-based Normalized Owner Earnings, add back After-Tax Interest Expense = Interest Expense * (1 - Normalized Effective Tax Rate) so debt is not double-counted in both the cash flow stream and the Gross Debt deduction).
+  - Initial Cash Flow Anchor (Mandatory Universal OE_0 Baseline): Start strictly from the 3-Year Rolling Average Normalized Owner Earnings calculated in Part 3, Section 1.5 [(OE_TTM0 + OE_TTM1 + OE_TTM2) / 3] to eliminate single-year cyclical distortions and anchor valuation to sustainable through-the-cycle economic earning power. Clarify that because Part 2&#039;s Enterprise-to-Equity Bridge adds Cash &amp; Short-Term Investments and subtracts Gross Debt and Debt Equivalents, the cash flow stream discounted in Part 2 must be Unlevered Normalized Owner Earnings (i.e., if starting from Part 3&#039;s OCF-based Normalized Owner Earnings, add back After-Tax Interest Expense = Interest Expense * (1 - Normalized Effective Tax Rate) so debt is not double-counted in both the cash flow stream and the Gross Debt deduction).
   - Growth Rate Anchor: Anchor base-case projections to the Synthesized CSV-Weighted Longitudinal Growth Rate from Part 3, Section 1.5 (50% 3-Yr, 30% 5-Yr, 20% 10-Yr CAGR).
   - Economic Profit Engine: Verify that Return on Invested Capital (ROIC) and Marginal Return on Incremental Invested Capital (Marginal ROIIC) exceed the 10% hurdle rate. Marginal ROIIC must be anchored to the modern 3-to-5 year operational baseline (using the 50% 3-Yr / 30% 5-Yr / 20% 10-Yr recency weighting) rather than pulling forward a distant 10-year historical anchor from a pre-scale era. If ROIC &lt;= 10%, incremental growth destroys value.
 

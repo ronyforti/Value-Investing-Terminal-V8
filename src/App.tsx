@@ -6,7 +6,7 @@ import {
   Pin, Eye, EyeOff, Key, ChevronDown, ChevronUp, Trash2, Globe, ShieldAlert,
   FileWarning, Layers, Loader2, Zap, ShieldCheck, Bell, Radar, ArrowRight, Calendar
 } from "lucide-react";
-import { ExecutionMode, SessionState, FileLog, AuditCheck, StepOutput, CurrencyAuditResult, DocumentIntegrityReport, BatchQueueState, NotificationConfig, CompetitorRadarDossier, PortfolioContext, FlexProbeResult, FlexWatcherState } from "./types.js";
+import { ExecutionMode, SessionMode, SessionState, FileLog, AuditCheck, StepOutput, CurrencyAuditResult, DocumentIntegrityReport, BatchQueueState, NotificationConfig, CompetitorRadarDossier, PortfolioContext, FlexProbeResult, FlexWatcherState } from "./types.js";
 import { MASTER_PROMPTS, CROSSCHECK_PROMPT } from "./prompts.js";
 import MarkdownView, { cleanMarkdownForRendering } from "./components/MarkdownView.tsx";
 import DocumentPreviewModal from "./components/DocumentPreviewModal.tsx";
@@ -19,7 +19,7 @@ import NotificationModal from "./components/NotificationModal.tsx";
 import CompetitorRadarModal from "./components/CompetitorRadarModal.tsx";
 import FileSubstanceModal from "./components/FileSubstanceModal.tsx";
 import TranscriptAlertModal from "./components/TranscriptAlertModal.tsx";
-import { checkFileSubstance, auditFilesSubstance } from "./documentGuard.js";
+import { checkFileSubstance, auditFilesSubstance, runAudit } from "./documentGuard.js";
 import { FileSubstanceIssue } from "./types.js";
 import { triggerDesktopAlert } from "./utils/audioAlert.js";
 import { auditDocumentIntegrity, parsePeriodString } from "./documentGuard.js";
@@ -318,6 +318,10 @@ export default function App() {
 
 
   const [serviceTier, setServiceTier] = useState<'standard' | 'flex'>('flex');
+  const [sessionMode, setSessionMode] = useState<SessionMode>('full');
+  const [priorDossierPath, setPriorDossierPath] = useState<string | null>(null);
+  const [priorDossierSearching, setPriorDossierSearching] = useState<boolean>(false);
+  const [escalating, setEscalating] = useState<boolean>(false);
   const [executionMode, setExecutionMode] = useState<ExecutionMode>(ExecutionMode.FullAuto);
   const [holdsPosition, setHoldsPosition] = useState<boolean>(false);
   const [currentWeight, setCurrentWeight] = useState<string>("----");
@@ -1034,202 +1038,32 @@ export default function App() {
   };
 
   const runAuditLocally = (files: any[]) => {
-    const rules = [
-      { 
-        key: "10-K", 
-        label: "Annual Report (10-K / 20-F / 40-F)",
-        description: "Form 10-K (Domestic) or Form 20-F / 40-F (Foreign Private Issuer)",
-        synonyms: ["10k", "10-k", "20f", "20-f", "40f", "40-f", "annual"] 
-      },
-      { 
-        key: "10-Q", 
-        label: "Quarterly Report (10-Q / 6-K)",
-        description: "Form 10-Q (Domestic) or Form 6-K Quarterly / Interim (Foreign Private Issuer)",
-        synonyms: ["10q", "10-q", "quarterly", "interim", "6-k_quarterly", "6k_quarterly", "6-k_interim", "6k_q"] 
-      },
-      { 
-        key: "Transcript", 
-        label: "Earnings Call Transcript",
-        description: "Quarterly management earnings call text transcript",
-        synonyms: ["transcript", "call", "earnings"] 
-      },
-      { 
-        key: "Financials TTM", 
-        label: "Financial Statements (TTM / 10-Yr)",
-        description: "10-Year historical financials or quarterly statements CSV/Sheets",
-        synonyms: ["ttm", "financials", "csv", "excel", "sheets"] 
-      },
-      { 
-        key: "Competitor Radar", 
-        label: "Competitor Moat & Valuation Radar",
-        description: "10-K Item 1 + DEF 14A Proxy + Search Grounding + FMP Verification",
-        synonyms: ["competitor_radar", "competitor radar", "_competitor_radar"] 
-      }
-    ];
-    let passedCount = 0;
     const activeTicker = ticker || session?.config?.ticker || "";
     const activePeriod = period || session?.config?.period || "";
-    const parsedTargetPeriod = parsePeriodString(activePeriod);
-    const isQ4Target = parsedTargetPeriod.quarter === "Q4" || parsedTargetPeriod.quarter === "FY" || activePeriod.toUpperCase().includes("Q4") || activePeriod.toUpperCase().includes("FY");
-    const localIntegrity = (activeTicker || activePeriod)
-      ? auditDocumentIntegrity(files, activeTicker, activePeriod)
-      : null;
+    const activeMode = sessionMode || session?.config?.sessionMode || 'full';
+    const effectivePriorPath = priorDossierPath || session?.config?.priorDossierPath;
 
-    if (localIntegrity) {
-      setIntegrityReport(localIntegrity);
-    }
-
-    const checklist = rules.map(rule => {
-      if (rule.key === "Competitor Radar") {
-        const matched = files.filter(f => {
-          const fnLower = (f.name || "").toLowerCase();
-          return rule.synonyms.some(syn => fnLower.includes(syn));
-        });
-        const hasRadarMemory = Boolean(
+    const res = runAudit(files, {
+      ticker: activeTicker,
+      period: activePeriod,
+      sessionMode: activeMode,
+      competitorRadarMemory: {
+        hasRadar: Boolean(
           (competitorDossier?.peers?.length && (!activeTicker || (competitorDossier.targetTicker || '').toUpperCase() === activeTicker.toUpperCase())) ||
           (session?.competitorRadar?.peers?.length && (!activeTicker || (session.competitorRadar.targetTicker || '').toUpperCase() === activeTicker.toUpperCase()))
-        );
-        const isConfirmed = matched.length > 0 || hasRadarMemory;
-        if (isConfirmed) passedCount++;
-        const matchedFilesList = matched.length > 0
-          ? matched.map(f => f.name)
-          : (hasRadarMemory ? [`${activeTicker}_Competitor_Radar.md (in-memory)`] : []);
-        const activeRadar = (competitorDossier?.peers?.length && (!activeTicker || (competitorDossier.targetTicker || '').toUpperCase() === activeTicker.toUpperCase()) ? competitorDossier : null)
-          || (session?.competitorRadar?.peers?.length && (!activeTicker || (session.competitorRadar.targetTicker || '').toUpperCase() === activeTicker.toUpperCase()) ? session.competitorRadar : null);
-        const peerCount = activeRadar?.peers?.length || 0;
-
-        return {
-          category: rule.key,
-          label: rule.label,
-          description: rule.description,
-          isForeignEquivalent: false,
-          status: isConfirmed ? ("CONFIRMED" as const) : ("MISSING" as const),
-          matchedFiles: matchedFilesList,
-          integrityStatus: isConfirmed ? ('VALID' as const) : undefined,
-          integrityDetails: isConfirmed 
-            ? [`Competitor Moat & Valuation Radar verified with ${peerCount > 0 ? `${peerCount} peers` : 'staged dossier'}`] 
-            : ["Competitor Moat & Valuation Radar not harvested. Peer benchmarking and relative multiples will lack empirical industry grounding."],
-          detectedTicker: activeTicker || undefined,
-          detectedPeriod: activePeriod || undefined,
-          isCoveredBy8K: false,
-          substanceStatus: isConfirmed ? ('VALID' as const) : undefined
-        };
+        ),
+        peerCount: competitorDossier?.peers?.length || session?.competitorRadar?.peers?.length || 0
+      },
+      priorDossierMemory: {
+        hasPrior: Boolean(effectivePriorPath),
+        name: effectivePriorPath ? effectivePriorPath.split(/[/\\]/).pop() : undefined
       }
-      const matched = files.filter(f => {
-        const fnLower = f.name.toLowerCase();
-        // Special exclusion for transcripts: if an actual transcript/call file exists, don't match 8-K release to Transcript
-        if (rule.key === "Transcript" && (fnLower.includes("8-k") || fnLower.includes("item2.02") || (fnLower.includes("earnings") && (fnLower.includes("release") || fnLower.includes("press"))))) {
-          const hasTrueTranscript = files.some(other => {
-            const otherLower = other.name.toLowerCase();
-            return (otherLower.includes("transcript") || otherLower.includes("call")) && !otherLower.includes("8-k") && !otherLower.includes("item2.02");
-          });
-          if (hasTrueTranscript) return false;
-        }
-        return rule.synonyms.some(syn => fnLower.includes(syn));
-      });
-
-      const isExemptQ4 = rule.key === "10-Q" && isQ4Target;
-      const isForeign = matched.some(f => {
-        const n = f.name.toLowerCase();
-        return n.includes("20-f") || n.includes("20f") || n.includes("40-f") || n.includes("40f") || n.includes("6-k") || n.includes("6k");
-      });
-
-      let isCoveredBy8K = false;
-      let effectiveMatched = [...matched];
-
-      // Check if missing 10-Q is covered by Form 8-K (Item 2.02 Earnings Release)
-      if (rule.key === "10-Q" && effectiveMatched.length === 0 && !isExemptQ4) {
-        const candidate8K = files.find(f => {
-          const fnLower = f.name.toLowerCase();
-          const is8K = fnLower.includes("8-k") || fnLower.includes("8k") || fnLower.includes("item2.02") || (fnLower.includes("earnings") && (fnLower.includes("release") || fnLower.includes("press")));
-          if (!is8K) return false;
-          const fa = localIntegrity?.fileAudits[f.name];
-          if (fa && fa.companyMatch === "MISMATCH") return false;
-          return true;
-        });
-
-        if (candidate8K) {
-          isCoveredBy8K = true;
-          effectiveMatched.push(candidate8K);
-        }
-      }
-
-      const validMatches = effectiveMatched.filter(f => {
-        const audit = localIntegrity?.fileAudits[f.name];
-        return !audit || audit.companyMatch !== "MISMATCH";
-      });
-      const isConfirmed = validMatches.length > 0 || isExemptQ4 || isCoveredBy8K;
-      if (isConfirmed) passedCount++;
-
-      let integrityStatus: 'VALID' | 'WARNING' | 'MISMATCH' | undefined = undefined;
-      const details: string[] = [];
-      let detectedTicker: string | undefined;
-      let detectedPeriod: string | undefined;
-
-      if (isExemptQ4) {
-        integrityStatus = 'VALID';
-        details.push("Form 10-K covers Q4 & FY (Form 10-Q is not filed for Q4)");
-        detectedPeriod = effectiveMatched.length > 0 ? (detectedPeriod || "Covered by 10-K") : "Covered by 10-K";
-        if (effectiveMatched.length > 0 && localIntegrity) {
-          const matchedAudits = effectiveMatched.map(m => localIntegrity.fileAudits[m.name]).filter(Boolean);
-          matchedAudits.forEach(a => {
-            if (a.detectedTicker) detectedTicker = a.detectedTicker;
-            if (a.detectedPeriod) detectedPeriod = a.detectedPeriod;
-            details.push(...a.details);
-          });
-        }
-      } else if (isCoveredBy8K) {
-        integrityStatus = 'VALID';
-        details.push("Form 10-Q pending SEC filing; interim quarterly results covered by Form 8-K (Item 2.02 Earnings Release)");
-        if (localIntegrity && effectiveMatched.length > 0) {
-          const matchedAudits = effectiveMatched.map(m => localIntegrity.fileAudits[m.name]).filter(Boolean);
-          matchedAudits.forEach(a => {
-            if (a.detectedTicker) detectedTicker = a.detectedTicker;
-            if (a.detectedPeriod) detectedPeriod = a.detectedPeriod;
-            details.push(...a.details);
-          });
-        }
-      } else if (localIntegrity && effectiveMatched.length > 0) {
-        const matchedAudits = effectiveMatched.map(m => localIntegrity.fileAudits[m.name]).filter(Boolean);
-        const hasMismatch = matchedAudits.some(a => a.companyMatch === 'MISMATCH' || a.periodMatch === 'MISMATCH');
-        const hasUnverified = matchedAudits.some(a => a.companyMatch === 'UNVERIFIED' || a.periodMatch === 'UNVERIFIED');
-
-        if (hasMismatch) {
-          integrityStatus = 'MISMATCH';
-        } else if (hasUnverified) {
-          integrityStatus = 'WARNING';
-        } else {
-          integrityStatus = 'VALID';
-        }
-
-        matchedAudits.forEach(a => {
-          if (a.detectedTicker) detectedTicker = a.detectedTicker;
-          if (a.detectedPeriod) detectedPeriod = a.detectedPeriod;
-          details.push(...a.details);
-        });
-      }
-
-      return {
-        category: rule.key,
-        label: isCoveredBy8K ? "Quarterly Interim (Form 8-K)" : rule.label,
-        description: isExemptQ4 && effectiveMatched.length === 0
-          ? "Form 10-K covers Q4 & FY (Form 10-Q not applicable for Q4)"
-          : isCoveredBy8K
-            ? "Form 10-Q pending filing with SEC. Current quarter covered by Form 8-K (Item 2.02 Earnings Release)."
-            : rule.description,
-        isForeignEquivalent: isForeign,
-        status: isConfirmed ? ("CONFIRMED" as const) : ("MISSING" as const),
-        matchedFiles: effectiveMatched.map(f => f.name),
-        integrityStatus,
-        integrityDetails: details.length > 0 ? Array.from(new Set(details)) : undefined,
-        detectedTicker,
-        detectedPeriod,
-        isCoveredBy8K,
-        substanceStatus: effectiveMatched.map(checkFileSubstance).find(Boolean) ? ('TRUNCATED' as const) : (effectiveMatched.length > 0 ? ('VALID' as const) : undefined),
-        substanceReason: effectiveMatched.map(checkFileSubstance).find(Boolean)?.reason
-      };
     });
-    return { passed: passedCount >= 4, checklist, integrityReport: localIntegrity };
+
+    if (res.integrityReport) {
+      setIntegrityReport(res.integrityReport);
+    }
+    return res;
   };
 
   // --- Handlers ---
@@ -1665,6 +1499,12 @@ export default function App() {
         if (data.state.config.serviceTier) {
           setServiceTier(data.state.config.serviceTier);
         }
+        if (data.state.config.sessionMode) {
+          setSessionMode(data.state.config.sessionMode);
+        }
+        if (data.state.config.priorDossierPath) {
+          setPriorDossierPath(data.state.config.priorDossierPath);
+        }
 
         const currModel = data?.state?.config?.model;
         if (currModel && currModel !== "custom") {
@@ -1775,6 +1615,43 @@ export default function App() {
     }
   }, [session?.history?.length, session?.status]);
 
+  const discoverPriorDossier = async (targetTicker?: string) => {
+    const t = targetTicker || ticker || session?.config?.ticker;
+    if (!t) return;
+    setPriorDossierSearching(true);
+    try {
+      const res = await authFetch(`/api/sentinel/prior-dossier?ticker=${encodeURIComponent(t.toUpperCase())}`);
+      const data = await res.json();
+      if (data.success && data.found && data.dossier) {
+        setPriorDossierPath(data.dossier.filePath);
+        if (data.state) {
+          setSession(data.state);
+          setAuditChecklist(runAuditLocally(data.state.files).checklist);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not discover prior dossier:", err);
+    } finally {
+      setPriorDossierSearching(false);
+    }
+  };
+
+  const handleEscalateSession = async () => {
+    setEscalating(true);
+    try {
+      const res = await authFetch("/api/session/escalate", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Escalation failed");
+      setSession(data.state);
+      setSessionMode('full');
+      setAuditChecklist(runAuditLocally(data.state.files).checklist);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to escalate session.");
+    } finally {
+      setEscalating(false);
+    }
+  };
+
   // Init Session Handlers
   const handleInitialize = async (e?: React.FormEvent) => {
     if (e && typeof e.preventDefault === 'function') {
@@ -1802,6 +1679,8 @@ export default function App() {
           price,
           model: effectiveModel,
           executionMode,
+          sessionMode,
+          priorDossierPath,
           portfolio: {
             holdsPosition,
             currentWeight: holdsPosition ? currentWeight : undefined,
@@ -3297,6 +3176,63 @@ export default function App() {
                 </div>
               </div>
 
+              {/* 3-Mode Terminal Architecture Selector */}
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                  <label className="block text-[11px] font-mono text-[#10B981] uppercase font-semibold">Terminal Analysis Mode</label>
+                  <span className="text-[9px] font-mono text-slate-400 bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded">
+                    {sessionMode === 'slingshot' ? '1 Prompt' : sessionMode === 'sentinel' ? '1 Prompt' : '11 Prompts + Crosscheck'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { 
+                      val: 'slingshot' as SessionMode, 
+                      icon: '⚡', 
+                      name: 'Mode 1', 
+                      title: 'Slingshot Triage'
+                    },
+                    { 
+                      val: 'full' as SessionMode, 
+                      icon: '🏛️', 
+                      name: 'Mode 2', 
+                      title: 'Full Dossier'
+                    },
+                    { 
+                      val: 'sentinel' as SessionMode, 
+                      icon: '🛡️', 
+                      name: 'Mode 3', 
+                      title: 'Sentinel Pulse'
+                    }
+                  ].map((m) => (
+                    <button
+                      key={m.val}
+                      type="button"
+                      onClick={() => {
+                        setSessionMode(m.val);
+                        if (m.val === 'sentinel') {
+                          discoverPriorDossier();
+                        }
+                      }}
+                      className={`py-2 px-1.5 rounded-xl text-center cursor-pointer border transition-all flex flex-col items-center justify-center gap-1 ${
+                        sessionMode === m.val
+                          ? "bg-[#10B981]/15 text-[#10B981] border-[#10B981]/50 shadow-sm"
+                          : "bg-[#0a0d14] text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700"
+                      }`}
+                    >
+                      <span className="text-sm">{m.icon}</span>
+                      <span className="text-[11px] font-bold tracking-tight leading-none">{m.name}</span>
+                      <span className="text-[9px] font-mono opacity-80 leading-none truncate max-w-full">{m.title.split(' ')[0]}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1.5 leading-relaxed">
+                  {sessionMode === 'slingshot' && '⚡ Mode 1: Rapid institutional triage memo. Underwrite or pass in 1 turn (INVEST / PASS / ESCALATE).'}
+                  {sessionMode === 'full' && '🏛️ Mode 2: Deep 11-step institutional valuation dossier with forensic crosscheck & double-blind dual valuation.'}
+                  {sessionMode === 'sentinel' && '🛡️ Mode 3: 90-day holding pulse. 40Q operational delta, Part 11 dashboard (HOLD / ACCUMULATE / LIQUIDATE).'}
+                </p>
+              </div>
+
               <div>
                 <label className="block text-[11px] font-mono text-[#10B981] uppercase mb-1.5">Workflow Execution Mode</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -4146,12 +4082,26 @@ export default function App() {
                             </div>
                           )
                         ) : (
-                          <div 
-                            onClick={() => setMissingModalOpen(true)}
-                            className="flex items-center gap-1 bg-red-950/20 text-red-400 px-2 py-0.5 rounded-full border border-red-900/40 text-[10px] font-semibold cursor-pointer hover:bg-red-900/30 transition"
-                            title="Click to view and stage missing required document"
-                          >
-                            <span>Missing</span>
+                          <div className="flex items-center gap-1.5">
+                            {check.category === "Prior Dossier" && (
+                              <button
+                                type="button"
+                                onClick={() => discoverPriorDossier()}
+                                disabled={priorDossierSearching}
+                                className="px-2 py-0.5 rounded-full text-[9px] font-mono bg-emerald-950/40 text-emerald-300 border border-emerald-700/60 hover:bg-emerald-900/50 transition cursor-pointer flex items-center gap-1"
+                                title="Search local downloads and dossiers directory for previous dossier matching ticker"
+                              >
+                                {priorDossierSearching ? <RefreshCw className="w-2.5 h-2.5 animate-spin" /> : <Layers className="w-2.5 h-2.5 text-emerald-400" />}
+                                <span>{priorDossierSearching ? "Searching..." : "Auto-Discover"}</span>
+                              </button>
+                            )}
+                            <div 
+                              onClick={() => setMissingModalOpen(true)}
+                              className="flex items-center gap-1 bg-red-950/20 text-red-400 px-2 py-0.5 rounded-full border border-red-900/40 text-[10px] font-semibold cursor-pointer hover:bg-red-900/30 transition"
+                              title="Click to view and stage missing required document"
+                            >
+                              <span>{check.optional ? "Optional" : "Missing"}</span>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -4847,6 +4797,33 @@ export default function App() {
                   </div>
                 )}
 
+                {/* Slingshot Completion Callout with Warm-Cache Escalation */}
+                {session.status === "completed" && session.config?.sessionMode === "slingshot" && (
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-teal-950/30 to-cyan-950/40 border border-emerald-500/40 text-emerald-200 ml-12 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-xs uppercase font-mono tracking-wider text-emerald-400 font-bold flex items-center gap-2">
+                        <span>⚡ Slingshot Triage Finalized</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-900/60 border border-emerald-600/40 text-emerald-200">
+                          Mode 1 Complete
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                        Triage Underwriting complete. If this company presents high strategic optionality or requires the full 11-step deep dive, escalate now to immediately hit the warm Gemini KV prefix cache.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleEscalateSession}
+                      disabled={escalating}
+                      className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20 border border-emerald-400/40 shrink-0 self-start sm:self-center"
+                      title="Escalate from Slingshot Triage to Full Institutional Dossier using warm Gemini KV prefix cache"
+                    >
+                      {escalating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
+                      <span>🏛️ Escalate to Full Dossier</span>
+                    </button>
+                  </div>
+                )}
+
                 <div ref={consoleEndRef} />
               </div>
             )}
@@ -5103,9 +5080,23 @@ export default function App() {
                       </button>
                     </div>
                   ) : session.status === "completed" ? (
-                    <div className="px-5 py-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0">
-                      <Check className="w-4 h-4" />
-                      <span>Job Completed</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {session?.config?.sessionMode === 'slingshot' && (
+                        <button
+                          type="button"
+                          onClick={handleEscalateSession}
+                          disabled={escalating}
+                          className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-500/20 border border-emerald-400/40 shrink-0"
+                          title="Escalate from Slingshot Triage to Full Institutional Dossier using warm Gemini KV prefix cache"
+                        >
+                          {escalating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Layers className="w-4 h-4" />}
+                          <span>🏛️ Escalate to Full Dossier</span>
+                        </button>
+                      )}
+                      <div className="px-5 py-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 shrink-0">
+                        <Check className="w-4 h-4" />
+                        <span>Job Completed</span>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
