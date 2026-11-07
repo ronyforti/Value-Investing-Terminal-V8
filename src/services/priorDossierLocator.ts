@@ -46,11 +46,19 @@ export function locatePriorDossier(ticker: string, extraDirs?: string[]): PriorD
     }
   }
 
+  const terminalDir = process.env.OBSIDIAN_TERMINAL_DIR ||
+    (process.platform === 'win32'
+      ? "G:\\My Drive\\Company Data\\GTD_Investing_Journal\\GTD_Investment_Latticework_Organized\\02 AI_Terminal"
+      : "/home/antigravity/dossiers");
+  if (fs.existsSync(terminalDir) && !candidateDirs.some(c => c.dir === terminalDir)) {
+    candidateDirs.push({ dir: terminalDir, source: 'obsidian_dossiers' });
+  }
+
   const dossiersDir = process.env.OBSIDIAN_DOSSIERS_DIR || 
     (process.platform === 'win32' 
       ? "G:\\My Drive\\Company Data\\GTD_Investing_Journal\\GTD_Investment_Latticework_Organized\\02 AI_Terminal\\Dossiers"
-      : "/home/antigravity/dossiers");
-  if (fs.existsSync(dossiersDir)) {
+      : path.join(terminalDir, "Dossiers"));
+  if (fs.existsSync(dossiersDir) && !candidateDirs.some(c => c.dir === dossiersDir)) {
     candidateDirs.push({ dir: dossiersDir, source: 'obsidian_dossiers' });
   }
 

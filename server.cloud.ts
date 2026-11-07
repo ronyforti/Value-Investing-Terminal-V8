@@ -164,7 +164,7 @@ if (!fs.existsSync(STAGING_DIR)) {
 }
 
 export const VAULT_DOSSIER_DIR = (IS_LOCAL_WINDOWS && fs.existsSync("G:/My Drive/Company Data/GTD_Investing_Journal"))
-  ? "G:/My Drive/Company Data/GTD_Investing_Journal/GTD_Investment_Latticework_Organized/02 AI_Terminal/Dossiers"
+  ? "G:/My Drive/Company Data/GTD_Investing_Journal/GTD_Investment_Latticework_Organized/02 AI_Terminal"
   : path.join(process.cwd(), "dossiers");
 
 if (!fs.existsSync(VAULT_DOSSIER_DIR)) {
