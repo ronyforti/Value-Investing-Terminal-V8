@@ -36,11 +36,28 @@ if not exist "node_modules\" (
     )
 )
 
-:: 3. Launch browser directly to Port 3001
+:: 3. Check for .env credentials, copy from previous terminal if missing
+if not exist "node_modules\.env" if not exist ".env" (
+    if exist "c:\Users\Ronald\antigravity\Value-Investing-Terminal\.env" (
+        echo [INFO] Found .env credentials in Value-Investing-Terminal, copying...
+        copy /Y "c:\Users\Ronald\antigravity\Value-Investing-Terminal\.env" "%CD%\.env" >nul
+        echo [SUCCESS] Copied .env credentials to Terminal V8!
+    ) else if exist "c:\Users\Ronald\antigravity\Value-Investing-Terminal-App\.env" (
+        echo [INFO] Found .env credentials in Value-Investing-Terminal-App, copying...
+        copy /Y "c:\Users\Ronald\antigravity\Value-Investing-Terminal-App\.env" "%CD%\.env" >nul
+        echo [SUCCESS] Copied .env credentials to Terminal V8!
+    ) else if exist "G:\My Drive\Company Data\GTD_terminal\.env" (
+        echo [INFO] Found .env in Google Drive GTD_terminal, copying...
+        copy /Y "G:\My Drive\Company Data\GTD_terminal\.env" "%CD%\.env" >nul
+        echo [SUCCESS] Copied .env credentials to Terminal V8!
+    )
+)
+
+:: 4. Launch browser directly to Port 3001
 echo Opening browser to http://localhost:3001 ...
 start "" "http://localhost:3001"
 
-:: 4. Start the Terminal V8 development server
+:: 5. Start the Terminal V8 development server
 echo Starting Terminal V8 server (npm run dev)...
 echo.
 call npm run dev
