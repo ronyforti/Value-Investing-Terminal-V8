@@ -33,7 +33,7 @@ process.on('uncaughtException', (err) => {
 });
 
 function generateSessionSteps(enableCrosscheck: boolean = true, sessionMode?: SessionMode): StepOutput[] {
-  const mode = sessionMode || state.config?.sessionMode || 'full';
+  const mode = sessionMode || (state && state.config ? state.config.sessionMode : undefined) || 'full';
 
   if (mode === 'slingshot') {
     return [{
@@ -188,7 +188,7 @@ let state: SessionState = {
   files: [],
   auditPassed: false,
   activeStepIndex: 0,
-  steps: generateSessionSteps(true),
+  steps: [],
   history: [],
   status: 'idle',
   currentPromptIndex: 0,
@@ -197,6 +197,7 @@ let state: SessionState = {
   cacheStatus: 'bypassed',
   cacheKeepAlive: null,
 };
+state.steps = generateSessionSteps(true);
 
 // --- Persistent Notification Configuration ---
 const NOTIFICATION_CONFIG_FILE = path.join(DOWNLOADS_DIR, "notification_config.json");
