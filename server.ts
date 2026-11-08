@@ -1,4 +1,7 @@
 import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config();
+dotenv.config({ path: "/opt/terminal-v8/.env" });
 import http from "http";
 import express, { Request, Response } from "express";
 import path from "path";
