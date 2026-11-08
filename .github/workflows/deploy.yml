@@ -1,0 +1,24 @@
+name: Deploy to Google Cloud VM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Value Terminal e2 VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH and Run Update
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.GCP_VM_IP }}
+          username: ${{ secrets.GCP_USER || 'ronforti' }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          port: 22
+          script: |
+            echo "=== Executing automated deploy on Google Cloud e2 ==="
+            /opt/terminal-v8/update.sh
