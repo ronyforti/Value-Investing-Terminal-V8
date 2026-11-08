@@ -34,8 +34,8 @@ jobs:
             echo "=== [4/5] Building Production Assets ==="
             npm run build
 
-            echo "=== [5/5] Restarting PM2 Server ==="
-            sudo pm2 restart all 2>/dev/null || pm2 restart all 2>/dev/null || sudo pm2 restart terminal 2>/dev/null || pm2 restart terminal 2>/dev/null || true
+            echo "=== [5/5] Restarting PM2 Server with Updated Env ==="
+            sudo pm2 restart all --update-env 2>/dev/null || pm2 restart all --update-env 2>/dev/null || sudo pm2 restart terminal --update-env 2>/dev/null || pm2 restart terminal --update-env 2>/dev/null || true
 
             echo "=== Verifying Built Artifacts ==="
             ls -l dist/assets/

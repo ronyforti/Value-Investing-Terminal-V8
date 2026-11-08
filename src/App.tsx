@@ -105,6 +105,38 @@ export default function App() {
     });
   }, [customKeyInput]);
 
+  const [keyDiagnostic, setKeyDiagnostic] = useState<{
+    serverEnvConfigured?: boolean;
+    serverEnvMasked?: string;
+    clientOverrideConfigured?: boolean;
+    clientOverrideMasked?: string;
+    activeKeySource?: string;
+    activeKeyMasked?: string;
+    testResult?: { valid: boolean; message: string; model?: string } | null;
+  } | null>(null);
+  const [isTestingKey, setIsTestingKey] = useState<boolean>(false);
+
+  const checkKeyDiagnostics = useCallback(async (runTest: boolean = false) => {
+    try {
+      if (runTest) setIsTestingKey(true);
+      const res = await authFetch(`/api/diagnostics/api-key${runTest ? "?test=true" : ""}`);
+      if (res.ok) {
+        const data = await res.json();
+        setKeyDiagnostic(data);
+      }
+    } catch (e) {
+      console.warn("Could not check API key diagnostics:", e);
+    } finally {
+      if (runTest) setIsTestingKey(false);
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
+    if (apiKeysDropdownOpen) {
+      checkKeyDiagnostics(false);
+    }
+  }, [apiKeysDropdownOpen, checkKeyDiagnostics]);
+
   // Collapsible Steps State for Performance Optimization
   const [expandedStepIndices, setExpandedStepIndices] = useState<Record<number, boolean>>({});
   const [expandAllSteps, setExpandAllSteps] = useState<boolean>(false);
@@ -2992,6 +3024,43 @@ export default function App() {
                       <p className="text-[10px] text-slate-500 mt-1 leading-normal">
                         Saves securely in local cache. Blank out or click <strong>Unlink Key</strong> to disconnect anytime.
                       </p>
+
+                      {/* Server .env & Live Key Diagnostic HUD */}
+                      <div className="mt-2.5 p-2.5 bg-slate-900/60 border border-slate-800 rounded-lg space-y-1.5 font-mono text-[10px]">
+                        <div className="flex items-center justify-between text-slate-400">
+                          <span>Server .env Key:</span>
+                          <span className={keyDiagnostic?.serverEnvConfigured ? "text-emerald-400 font-semibold" : "text-amber-400"}>
+                            {keyDiagnostic?.serverEnvConfigured ? `LINKED (${keyDiagnostic.serverEnvMasked})` : "NOT DETECTED IN /opt/terminal-v8/.env"}
+                          </span>
+                        </div>
+                        {customKeyInput.trim() && (
+                          <div className="text-amber-400/90 text-[9px] bg-amber-950/30 border border-amber-900/50 p-1.5 rounded">
+                            ⚠️ Browser custom key is active. It overrides the server .env key for all API calls. Unlink key above to use server .env.
+                          </div>
+                        )}
+                        <div className="pt-1 flex items-center justify-between border-t border-slate-800/60">
+                          <button
+                            type="button"
+                            onClick={() => checkKeyDiagnostics(true)}
+                            disabled={isTestingKey}
+                            className="text-[9px] text-emerald-400 hover:text-emerald-300 font-semibold uppercase tracking-wider flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                          >
+                            {isTestingKey ? (
+                              <>
+                                <span className="animate-spin inline-block w-2.5 h-2.5 border border-emerald-400 border-t-transparent rounded-full" />
+                                Testing API Key...
+                              </>
+                            ) : (
+                              "⚡ Test Live Connection"
+                            )}
+                          </button>
+                          {keyDiagnostic?.testResult && (
+                            <span className={`text-[9px] ${keyDiagnostic.testResult.valid ? "text-emerald-400" : "text-red-400"}`}>
+                              {keyDiagnostic.testResult.valid ? "✓ 200 OK (Key Valid)" : `✗ ${keyDiagnostic.testResult.message.slice(0, 45)}...`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     <div>

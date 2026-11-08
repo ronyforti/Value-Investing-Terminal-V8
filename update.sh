@@ -20,7 +20,7 @@ npm install
 echo "=== [3/4] Building production bundle ==="
 npm run build
 
-echo "=== [4/4] Restarting PM2 process ==="
-sudo pm2 restart all 2>/dev/null || pm2 restart all 2>/dev/null || sudo pm2 restart terminal 2>/dev/null || pm2 restart terminal 2>/dev/null || true
+echo "=== [4/4] Restarting PM2 process with updated env ==="
+sudo pm2 restart all --update-env 2>/dev/null || pm2 restart all --update-env 2>/dev/null || sudo pm2 restart terminal --update-env 2>/dev/null || pm2 restart terminal --update-env 2>/dev/null || true
 
 echo "=== Update Complete ==="

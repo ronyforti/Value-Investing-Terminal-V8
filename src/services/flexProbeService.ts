@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { sanitizeApiKey } from "../utils/apiKeyUtils.js";
 
 export interface FlexProbeResult {
   available: boolean;
@@ -57,7 +58,7 @@ export async function probeFlexTierAvailability(
     return cachedProbeResult;
   }
 
-  const effectiveApiKey = apiKey || process.env.GEMINI_API_KEY;
+  const effectiveApiKey = sanitizeApiKey(apiKey) || sanitizeApiKey(process.env.GEMINI_API_KEY);
   if (!effectiveApiKey) {
     const errorResult: FlexProbeResult = {
       available: false,

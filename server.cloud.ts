@@ -1,12 +1,32 @@
 import "dotenv/config";
-import http from "http";
-import express, { Request, Response } from "express";
+import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 import os from "os";
+
+// Load .env with override: true across candidate locations to guarantee freshness
+const envCandidates = [
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(process.cwd(), ".env.local"),
+  "/opt/terminal-v8/.env",
+  "/opt/terminal-v8/.env.local",
+  path.resolve(os.homedir(), ".env")
+];
+
+for (const envPath of envCandidates) {
+  try {
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath, override: true });
+    }
+  } catch (ignore) {}
+}
+
+import http from "http";
+import express, { Request, Response } from "express";
 import AdmZip from "adm-zip";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { sanitizeApiKey, maskApiKey } from "./src/utils/apiKeyUtils.js";
 import { MASTER_PROMPTS, CROSSCHECK_PROMPT, SLINGSHOT_PROMPT, SENTINEL_PROMPT, STEP_CHAPTER_TITLES } from "./src/prompts.js";
 import { ExecutionMode, SessionMode, SessionState, FileLog, AuditCheck, StepOutput, CustomMessage, PortfolioContext, CurrencyAuditResult, DocumentIntegrityReport, BatchQueueItem, BatchQueueState, NotificationConfig, NotificationPayload, HybridConfig, PythonValuationResult } from "./src/types.js";
 import { auditFinancialCsv, harmonizeFinancialCsv } from "./src/currencyGuard.js";
@@ -247,16 +267,20 @@ try {
 function getApiHeaderKey(req: any): string {
   const headerKey = req.headers["x-gemini-key"] || req.headers["x-custom-key"] || req.headers["authorization"];
   if (typeof headerKey === "string" && headerKey.trim()) {
-    return headerKey.replace("Bearer ", "").trim();
+    return sanitizeApiKey(headerKey);
   }
   return "";
 }
 
 function getGeminiClient(customApiKey?: string): GoogleGenAI {
-  const key = customApiKey || process.env.GEMINI_API_KEY;
+  const cleanCustom = sanitizeApiKey(customApiKey);
+  const cleanEnv = sanitizeApiKey(process.env.GEMINI_API_KEY);
+  const key = cleanCustom || cleanEnv;
   if (!key) {
-    throw new Error("GEMINI_API_KEY is missing. Please set your Gemini API key in Settings > Secrets or in the custom key field of the Analyst Configuration panel.");
+    throw new Error("GEMINI_API_KEY is missing. Please set your Gemini API key in /opt/terminal-v8/.env on the server or in the API Key Overrides panel of the UI.");
   }
+  const source = cleanCustom ? "Client UI/Header Override" : "Server .env";
+  console.log(`[Gemini Client] Initializing client using key from ${source} [${maskApiKey(key)}]`);
   return new GoogleGenAI({
     apiKey: key,
     httpOptions: {

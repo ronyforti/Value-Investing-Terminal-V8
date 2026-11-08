@@ -1,15 +1,32 @@
 import "dotenv/config";
 import dotenv from "dotenv";
-dotenv.config();
-dotenv.config({ path: "/opt/terminal-v8/.env" });
-import http from "http";
-import express, { Request, Response } from "express";
 import path from "path";
 import fs from "fs";
 import os from "os";
+
+// Load .env with override: true across candidate locations to guarantee freshness
+const envCandidates = [
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(process.cwd(), ".env.local"),
+  "/opt/terminal-v8/.env",
+  "/opt/terminal-v8/.env.local",
+  path.resolve(os.homedir(), ".env")
+];
+
+for (const envPath of envCandidates) {
+  try {
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath, override: true });
+    }
+  } catch (ignore) {}
+}
+
+import http from "http";
+import express, { Request, Response } from "express";
 import AdmZip from "adm-zip";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { sanitizeApiKey, maskApiKey } from "./src/utils/apiKeyUtils.js";
 import { MASTER_PROMPTS, CROSSCHECK_PROMPT, SLINGSHOT_PROMPT, SENTINEL_PROMPT, STEP_CHAPTER_TITLES } from "./src/prompts.js";
 import { ExecutionMode, SessionMode, SessionState, FileLog, AuditCheck, StepOutput, CustomMessage, PortfolioContext, CurrencyAuditResult, DocumentIntegrityReport, HybridConfig, CacheKeepAliveState, PythonValuationResult } from "./src/types.js";
 import { auditFinancialCsv, harmonizeFinancialCsv } from "./src/currencyGuard.js";
@@ -283,16 +300,20 @@ try {
 function getApiHeaderKey(req: any): string {
   const headerKey = req.headers["x-gemini-key"] || req.headers["x-custom-key"] || req.headers["authorization"];
   if (typeof headerKey === "string" && headerKey.trim()) {
-    return headerKey.replace("Bearer ", "").trim();
+    return sanitizeApiKey(headerKey);
   }
   return "";
 }
 
 function getGeminiClient(customApiKey?: string): GoogleGenAI {
-  const key = customApiKey || process.env.GEMINI_API_KEY;
+  const cleanCustom = sanitizeApiKey(customApiKey);
+  const cleanEnv = sanitizeApiKey(process.env.GEMINI_API_KEY);
+  const key = cleanCustom || cleanEnv;
   if (!key) {
-    throw new Error("GEMINI_API_KEY is missing. Please set your Gemini API key in Settings > Secrets or in the custom key field of the Analyst Configuration panel.");
+    throw new Error("GEMINI_API_KEY is missing. Please set your Gemini API key in /opt/terminal-v8/.env on the server or in the API Key Overrides panel of the UI.");
   }
+  const source = cleanCustom ? "Client UI/Header Override" : "Server .env";
+  console.log(`[Gemini Client] Initializing client using key from ${source} [${maskApiKey(key)}]`);
   return new GoogleGenAI({
     apiKey: key,
     httpOptions: {
@@ -4605,6 +4626,58 @@ async function updateCompiledReportFile(): Promise<string> {
   return formattedMd;
 }
 
+// --- API Key Diagnostics & Live Verification Endpoint ---
+app.get("/api/diagnostics/api-key", async (req: Request, res: Response) => {
+  const cleanEnv = sanitizeApiKey(process.env.GEMINI_API_KEY);
+  const clientHeaderKey = sanitizeApiKey(getApiHeaderKey(req));
+  const activeCustom = sanitizeApiKey(state.customApiKey) || clientHeaderKey;
+
+  const envLocations = [
+    path.resolve(process.cwd(), ".env"),
+    "/opt/terminal-v8/.env",
+    path.resolve(os.homedir(), ".env")
+  ].map(p => ({ path: p, exists: fs.existsSync(p) }));
+
+  const activeKey = activeCustom || cleanEnv;
+  const activeSource = activeCustom ? "client_override" : cleanEnv ? "server_env" : "none";
+
+  let testResult: { valid: boolean; message: string; model?: string } | null = null;
+  const doTest = req.query.test === "true";
+
+  if (doTest && activeKey) {
+    try {
+      const ai = new GoogleGenAI({ apiKey: activeKey });
+      await ai.models.generateContent({
+        model: "models/gemini-3.8-flash",
+        contents: [{ role: "user", parts: [{ text: "ping" }] }],
+        config: { maxOutputTokens: 1 }
+      });
+      testResult = {
+        valid: true,
+        message: "API key successfully verified with Google Generative Language API.",
+        model: "models/gemini-3.8-flash"
+      };
+    } catch (testErr: any) {
+      testResult = {
+        valid: false,
+        message: testErr?.message || String(testErr)
+      };
+    }
+  }
+
+  res.json({
+    success: true,
+    serverEnvConfigured: Boolean(cleanEnv),
+    serverEnvMasked: maskApiKey(cleanEnv),
+    clientOverrideConfigured: Boolean(activeCustom),
+    clientOverrideMasked: maskApiKey(activeCustom),
+    activeKeySource: activeSource,
+    activeKeyMasked: maskApiKey(activeKey),
+    envFileLocations: envLocations,
+    testResult
+  });
+});
+
 // --- Gemini Flex Tier Probe & Automated Gatekeeper Endpoints ---
 
 // Check live Flex Tier capacity with a 1-token canary probe
@@ -6011,7 +6084,7 @@ function cleanAndParseJson(text: string): any {
 
 // FMP Ticker AutoFill info endpoint
 async function queryGeminiForTickerInfo(symbol: string, userKey?: string): Promise<{ price: string; period: string }> {
-  const apiKey = userKey || process.env.GEMINI_API_KEY || "";
+  const apiKey = sanitizeApiKey(userKey) || sanitizeApiKey(process.env.GEMINI_API_KEY);
   if (!apiKey) {
     throw new Error("Missing Gemini API Key for search fallback.");
   }
@@ -6255,7 +6328,7 @@ app.post("/api/ingest/fmp-ticker-info", async (req: Request, res: Response) => {
 
 // 3. Earnings call transcripts downloader & de-boilerplater
 async function optimizeTranscriptForTokens(symbol: string, period: string, rawText: string, userKey?: string): Promise<string> {
-  const apiKey = userKey || process.env.GEMINI_API_KEY || "";
+  const apiKey = sanitizeApiKey(userKey) || sanitizeApiKey(process.env.GEMINI_API_KEY);
   if (!apiKey) {
     return cleanTranscriptTextBlock(rawText);
   }
