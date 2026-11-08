@@ -1727,8 +1727,8 @@ async function runStepProcessor(startingIdx: number, allowUncachedFallback = fal
         if (currentAttempts === 1) {
           dispatchNotification(notificationConfig, {
             event: 'cooldown_alert',
-            title: `⏳ Flex Tier Cooldown: ${state.config?.ticker || "Company"}`,
-            message: `Step ${i + 1} ("${step.title}") encountered transient cluster saturation / stream drop:\n\n"${detailedError}"\n\nEntering 45-minute Auto-Resume queue on ${state.config?.serviceTier?.toUpperCase() || 'FLEX'} tier. Retrying automatically every 45s. You can also open the terminal to switch to Standard tier if preferred.`,
+            title: `⏳ Flex Tier Saturated: ${state.config?.ticker || "Company"}`,
+            message: `Step ${i + 1} ("${step.title}") encountered transient Flex cluster saturation:\n\n"${detailedError}"\n\n⚠️ ACTION REQUIRED: The terminal is waiting in the Auto-Resume queue on FLEX tier (retrying every 45s). To bypass the queue and run immediately on Standard Tier, open the terminal UI and click [⚡ Switch to Standard], or leave it to keep waiting for Flex capacity.`,
             ticker: state.config?.ticker,
             period: state.config?.period,
             price: state.config?.price
