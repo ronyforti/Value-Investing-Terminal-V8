@@ -13,6 +13,7 @@ The terminal supports 3 specialized operating modes configured via `sessionMode`
 1. **Mode 1 — Slingshot Triage (`sessionMode: 'slingshot'`):**
    - Single-turn institutional underwriting triage memo executed across 6 Indispensable Pillars and 4 Cash Integrity Vectors.
    - Dynamic Red Queen R&D Capitalization spectrum (`0% | 50% | 75%`).
+   - Foreign Currency & ADR Dual-Currency Invariant: When auditing foreign private issuers or ADRs (e.g., Novo Nordisk `NVO` in `DKK`), historical operations, balance sheet integrity, and Starting Owner Earnings ($OE_0$) remain strictly anchored to the native reporting currency. Intrinsic Value per share and the Zero-Growth EPV Floor Benchmark calculate in native currency first, then convert via the dual-currency bridge: $\text{IV per ADS (USD)} = [\text{IV per Ordinary (Native)} \times \text{Ordinary Shares per 1 ADS}] / \text{Spot FX Rate}$. In Pillar 6, the Market Price, Intrinsic Value, and EPV Floor are strictly presented in USD per ADS to guarantee 1:1 parity with the US market tape.
    - Suggested Action Directive: strictly `INVEST / PASS / ESCALATE TO FULL MODE` for prospective positions (`HOLD / ACCUMULATE / LIQUIDATE` for existing holdings; `TRIM` permanently banned).
    - 1-Click Warm-Cache Escalation: Clicking `[🏛️ Escalate to Full Dossier]` preserves staged files and Gemini file handles (`geminiUri`), purges conversation history to eliminate cognitive anchoring, and switches to Mode 2 to immediately hit the warm Gemini KV prefix cache.
 2. **Mode 2 — Full Institutional Dossier (`sessionMode: 'full'`):**
@@ -37,6 +38,15 @@ The terminal supports 3 specialized operating modes configured via `sessionMode`
 - **Dynamic R&D Spectrum (`0% | 50% | 75%`):** Tech/software companies are classified on an empirical spectrum: `0%` (mature/defense maintenance), `50%` (standard growth), or `75%` (aggressive expansionary growth). Net capitalized R&D must deduct 5-year straight-line amortization drag (`Amortization = Gross Capitalized R&D / 5`).
 - **Share-Cannibal Negative Equity Guard:** Companies with negative accounting book value resulting from disciplined historical share repurchases (`BKNG` pattern, cumulative repurchases > net equity deficit) are recognized as fortress capital allocators, not distressed credits.
 - **Negative-WC Float Model:** Companies operating with customer float and negative working capital credit the structural float advantage without penalizing short-term liquidity ratios.
+- **Multi-Statement CSV Normalization & Protection Invariant (`scripts/valuation_engine.py`):**
+  Financial CSV files from FMP and SEC aggregate Cash Flow, Income Statement, Balance Sheet, and Segment tables. When parsing keys, `_normalize_row_key` must discard lines containing `:` or `segment`/`breakdown`, explicitly distinguish `costofrevenue` and `deferredrevenue` from top-line `revenue`, and protect already populated non-zero series in `series_map` from being overwritten by subsequent blank or all-zero rows.
+
+## Service Tier Governance & Google Gemini Flex Saturation Protocol
+- **Gemini Flex Tier Saturation & Context-Size Boundary:**
+  Google's Flex tier (`serviceTier: "flex"`) relies strictly on surplus/idle TPU cluster capacity. During weekends and off-peak batch maintenance windows, Google TPU pods allocate surplus capacity to internal batch training, leaving zero available memory blocks for 100k+ token contexts.
+  - Tiny canary pings (<50 tokens) may pass after minutes of queue latency (e.g. 218 seconds), but heavy valuation prompts (100k+ tokens) are immediately rejected with HTTP 503 `UNAVAILABLE` (*"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."*).
+  - The terminal's auto-resume retry loop (45s * 60 retries = 45 minutes) will repeatedly cycle and fail during cluster saturation.
+  - **Standard Tier Failover Protocol:** Whenever Flex encounters persistent 503 saturation on Attempt 1 or 2, the run must switch to **Standard Tier** (`serviceTier: "standard"` or the UI's `[🚀 Upgrade to Standard Tier]` button), which bypasses surplus scheduling and executes 100k+ token prompts reliably in 50–90 seconds.
 
 ## Hardcore Anti-Anchoring Firewall (Gate 15)
 - **Zero Python Numbers in LLM Pre-Flight Context:** Zero forward DCF numbers, intrinsic value calculations, or Bolsa 6.0 multiples from Python Stream 1 ever enter Gemini prompt context or `state.files`. The LLM derives intrinsic value and margin of safety 100% independently from filings and master prompts.

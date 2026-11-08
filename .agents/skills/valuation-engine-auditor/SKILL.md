@@ -332,3 +332,18 @@ To eliminate autoregressive token smoothing and hallucinated math certifications
 ### 9.11 Hardcore Anti-Anchoring Firewall (Gate 15)
 - **Zero Python Numbers in Pre-Flight Context:** Zero forward DCF or Bolsa math ever enters LLM pre-flight prompt strings or `state.files`. The LLM reasons completely double-blind.
 - **Post-Execution Double-Blind Synthesis:** The Double-Blind Dual-Valuation Synthesis comparison table (`Part 13`) is generated out-of-band and appended to the final dossier only after all active analytical steps are completed.
+
+### 9.12 Google Gemini Flex Tier Saturation & Context-Size Boundary Protocol
+- **Surplus TPU Scheduling Dynamics:** Google's Flex tier (`serviceTier: "flex"`) relies strictly on surplus/idle TPU cluster capacity. During weekends and off-peak batch maintenance windows, Google TPU pods allocate surplus capacity to internal batch training, leaving zero available memory blocks for 100k+ token contexts.
+- **Context-Size Saturation Asymmetry:**
+  - Tiny canary pings (<50 tokens) may pass after minutes of queue latency (e.g. 218 seconds), but heavy multi-document valuation prompts (100k+ tokens) are immediately rejected by Google with HTTP 503 `UNAVAILABLE` (*"This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later."*).
+  - The terminal's auto-resume retry loop (45s * 60 retries = 45 minutes) will repeatedly cycle and fail during cluster saturation.
+- **Standard Tier Failover Protocol:** Whenever Flex encounters persistent 503 saturation on Attempt 1 or 2, the run must switch to **Standard Tier** (`serviceTier: "standard"` or the UI's `[🚀 Upgrade to Standard Tier]` button), which bypasses surplus scheduling and executes 100k+ token prompts reliably in 50–90 seconds.
+
+### 9.13 Multi-Statement CSV Parsing Invariant (scripts/valuation_engine.py)
+- **Concatenated Statement Table Isolation:** Financial CSV files from FMP and SEC aggregate multiple financial statement blocks (Cash Flow, Income Statement, Balance Sheet, Segment breakdowns) into a single file.
+- **Row Key Collision Prevention:**
+  - `_normalize_row_key` must discard any line containing `:` or `segment`/`breakdown` as a section header.
+  - Parsers must explicitly distinguish `costofrevenue`, `deferredrevenue`, and `operatingincome` from top-line `revenue`.
+  - Parsers must enforce a protect-on-overwrite guard: do NOT overwrite an already populated non-zero series in `series_map` with an empty or all-zero row from secondary or tertiary statement blocks.
+

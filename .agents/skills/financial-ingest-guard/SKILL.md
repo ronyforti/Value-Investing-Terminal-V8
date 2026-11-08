@@ -41,8 +41,8 @@ The SEC Form 10-K only provides 3 historical years of financial statements. The 
   - For operating profitability and margins by segment (which FMP does not report quarterly), bridge interim reports to true TTM using the canonical SEC formula:
     > **Formula / Calculation:** TTM = Full Prior Fiscal Year (10-K) + Current YTD (10-Q) - Prior-Year YTD (10-Q)
   - If interim quarterly segment profit is not disclosed in the 10-Q notes, use the latest audited Form 10-K full-year breakdown and explicitly state the period.
-- **Manual Math Prohibition:** Do NOT manually calculate consolidated financial statement TTM numbers by adding or subtracting quarterly 10-Q and annual 10-K figures. The CSV is pre-harmonized and serves as your single source of mathematical truth.
 - **10-Period Trend Consistency:** 5-year and 10-year compounding rates (revenue growth, gross margin trends, return on retained capital) must be anchored strictly in the CSV dataset.
+- **Multi-Statement CSV Parser Protection:** Financial CSV files from FMP and SEC aggregate multiple statements (Cash Flow, Income Statement, Balance Sheet, Segments). Parsers (`scripts/valuation_engine.py` and backend ingests) must discard section headers containing `:` or `segment`/`breakdown`, disambiguate `costofrevenue` and `deferredrevenue` from top-line `revenue`, and protect already populated non-zero series from being overwritten by subsequent blank or all-zero rows.
 
 ---
 
@@ -51,7 +51,7 @@ The SEC Form 10-K only provides 3 historical years of financial statements. The 
 When analyzing international businesses, foreign private issuers, and American Depositary Receipts (ADRs):
 
 ### A. Home Currency Preservation
-- The financial CSV is harmonized in the company's native Home Currency (e.g., MXN, JPY, EUR, GBP, CAD, CHF, BRL) across all historical periods.
+- The financial CSV is harmonized in the company's native Home Currency (e.g., MXN, JPY, EUR, GBP, CAD, CHF, BRL, DKK) across all historical periods.
 - You must perform all operational evaluations, margin compounding, working capital analysis, and the Return on Retained Capital (RORC) strictly in the **native Home Currency**.
 - **Rationale:** Prevents foreign exchange translation volatility from distorting underlying business unit economics.
 
@@ -59,8 +59,10 @@ When analyzing international businesses, foreign private issuers, and American D
 - Ensure Cash, Marketable Securities, and Gross Funded Debt are evaluated in identical currency units before calculating Net Cash, Enterprise Value, or Cash-Adjusted Margin of Safety.
 
 ### C. Dual-Currency Valuation Bridge
-- In Parts 6, 7, and 8 (Valuation Floor, Engine, and Synthesis), calculate Intrinsic Value per share/unit in the native Home Currency.
-- Then apply the verified Current Spot Exchange Rate and ADS conversion ratio to state the final Intrinsic Value in **USD per ADS** to compare directly against the US Market Price.
+- In Full Mode Parts 6, 7, and 8 (Valuation Floor, Engine, and Synthesis) and Mode 1 Slingshot (Pillars 4 and 6), calculate Intrinsic Value and the Zero-Growth EPV Floor per share/unit in the native Home Currency first.
+- Then apply the verified Current Spot Exchange Rate and ADS conversion ratio to state the final Intrinsic Value and EPV Floor in **USD per ADS** to compare directly against the US Market Tape Price:
+  $$\text{IV per ADS (USD)} = \frac{\text{IV per Ordinary Share (Native)} \times \text{Ordinary Shares per 1 ADS}}{\text{Spot FX Rate (Native per 1 USD)}}$$
+- **US Market Tape Parity Contract:** In Mode 1 Pillar 6 and Mode 2 Part 11/Part 13 decision tables, Current Market Tape Price, Synthesized Intrinsic Value, and Zero-Growth EPV Floor Benchmark MUST be stated in USD per ADS. Never compare unadjusted native currency figures against the USD market tape.
 
 ---
 
