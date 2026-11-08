@@ -63,11 +63,16 @@ class ValuationEngineV8:
                 continue
             key = row[0].strip()
             norm_key = cls._normalize_row_key(key)
+            if not norm_key:
+                continue
             vals: List[float] = []
             for c in row[1:len(periods) + 1]:
                 vals.append(cls._parse_number(c))
-            if norm_key:
-                series_map[norm_key] = vals
+            
+            # Protect existing non-zero series from being overwritten by empty/zero rows or secondary tables
+            if norm_key in series_map and any(v != 0.0 for v in series_map[norm_key]) and (len(vals) == 0 or not any(v != 0.0 for v in vals)):
+                continue
+            series_map[norm_key] = vals
 
         # Detect reporting currency
         detected_currency = "USD"
@@ -86,18 +91,31 @@ class ValuationEngineV8:
 
     @staticmethod
     def _normalize_row_key(raw: str) -> str:
+        if ":" in raw:
+            return ""
         s = raw.strip().lower()
         s = s.replace("-", "").replace("_", "").replace(" ", "").replace("/", "").replace("&", "and")
+        if "segment" in s or "breakdown" in s:
+            return ""
+
+        # Specific exclusions / distinct rows
+        if s in ("costofrevenue", "costofsales", "costofgoodssold", "cogs"):
+            return "costofrevenue"
+        if "deferredrevenue" in s or "unearnedrevenue" in s:
+            return "deferredrevenue"
+
         # Direct canonical mappings
-        if "revenue" in s or "sales" in s:
+        if s in ("revenue", "totalrevenue", "sales", "totalsales", "revenues") or (
+            ("revenue" in s or "sales" in s) and not any(k in s for k in ("cost", "deferred", "unearned", "growth", "margin", "%", "share", "per", "operating"))
+        ):
             return "revenue"
-        if "operatingincome" in s or "ebit" in s or "operatingprofit" in s:
+        if ("operatingincome" in s or "ebit" in s or "operatingprofit" in s) and not any(k in s for k in ("margin", "%", "ratio")):
             return "operatingincome"
-        if "incomebeforetax" in s or "ebt" in s or "pretaxincome" in s:
+        if ("incomebeforetax" in s or "ebt" in s or "pretaxincome" in s) and not any(k in s for k in ("margin", "%")):
             return "incomebeforetax"
         if "incometaxexpense" in s or "taxexpense" in s or "incometaxes" in s:
             return "incometaxexpense"
-        if "netincome" in s or "netearnings" in s:
+        if ("netincome" in s or "netearnings" in s) and not any(k in s for k in ("margin", "%", "ratio", "pershare")):
             return "netincome"
         if "depreciationandamortization" in s or "dna" in s:
             return "depreciationandamortization"
@@ -113,11 +131,11 @@ class ValuationEngineV8:
             return "researchanddevelopment"
         if "cashandshortterminvestments" in s or "cashandcashequivalents" in s:
             return "cashandshortterminvestments"
-        if "totaldebt" in s:
+        if "totaldebt" in s and not any(k in s for k in ("ratio", "ebitda", "%")):
             return "totaldebt"
         if "shorttermdebt" in s or "currentportionoflongtermdebt" in s:
             return "shorttermdebt"
-        if "longtermdebt" in s:
+        if "longtermdebt" in s and "short" not in s:
             return "longtermdebt"
         if "totalstockholdersequity" in s or "shareholdersequity" in s or "totalequity" in s:
             return "totalstockholdersequity"
@@ -131,9 +149,9 @@ class ValuationEngineV8:
             return "totalcurrentliabilities"
         if "netreceivables" in s or "accountsreceivable" in s:
             return "netreceivables"
-        if "weightedaverageshsoutdil" in s or "dilutedshares" in s:
+        if ("weightedaverageshsoutdil" in s or "dilutedshares" in s) and "basic" not in s:
             return "weightedaverageshsoutdil"
-        if "grossprofit" in s:
+        if "grossprofit" in s and not any(k in s for k in ("margin", "%")):
             return "grossprofit"
         return s
 
