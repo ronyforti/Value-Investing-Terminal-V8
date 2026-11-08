@@ -293,8 +293,8 @@ npm run build     # Production Vite client bundle + esbuild Node server
 10. **Gate 10:** Step 11 Definitive Verdict, Sunk-Cost Prohibition, Fortress Balance Sheet Protection & Monitoring Dashboard.
 11. **Gate 11:** Bimodal Voice Architecture across all 12 steps.
 12. **Gate 12:** Dossier Format Guard (Static Prompt Directives, Mermaid preservation, zero LaTeX, GFM tables, dual visualizer parity, zero hardcoded tickers).
-13. **Gate 13:** Terminal FCOM Manual Synchronization & Automated HUD.
-14. **Gate 14:** Trend Series Disambiguation & Single Trajectory Chart Latch.
+13. **Gate 13:** Trend Series Disambiguation & Single Trajectory Chart Latch.
+14. **Gate 14:** Hardcore Anti-Anchoring Firewall & Multi-Mode Prompt Integrity.
 
 ### The Offline Golden Snapshot Regression Suite (`scripts/test_format_regression.ts`):
 - Runs against [`tests/fixtures/golden_dossier_fixture.md`](file:///c:/Users/Ronald/antigravity/Value-Investing-Terminal/tests/fixtures/golden_dossier_fixture.md) in **34 milliseconds** with zero API calls.

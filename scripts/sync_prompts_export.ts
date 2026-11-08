@@ -1,5 +1,4 @@
 import fs from "fs";
-import { execSync } from "child_process";
 import { MASTER_PROMPTS, CROSSCHECK_PROMPT } from "../src/prompts.js";
 
 function syncExports() {
@@ -24,11 +23,6 @@ function syncExports() {
   fs.writeFileSync("Investment Analysis and Valuation Framework Master Prompts.txt", txt, "utf-8");
   fs.writeFileSync("Investment Analysis and Valuation Framework Master Prompts", txt, "utf-8");
   console.log("Updated Master Prompts text files.");
-
-  // 3. Automated Interactive Manual Compilation
-  console.log("Rebuilding interactive Terminal FCOM manual...");
-  execSync("node scripts/build_manual.cjs", { stdio: "inherit" });
-  console.log("Synchronized public/terminal_v7_manual.html successfully.");
 }
 
 syncExports();

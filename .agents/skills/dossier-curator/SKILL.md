@@ -235,7 +235,7 @@ This skill governs the visual presentation, document architecture, and export fi
   ```
 - **Authoritative Server Export Parity:** The browser **"Export HTML Dossier"** button must NOT construct an un-frontmattered markdown string on the client. It must fetch `/api/session/export-html` directly to ensure 100% parity with the HTML dossiers dispatched to Telegram, Email, and the vault.
 
-### 16. Single Trajectory Chart Latch & Table Schema Disambiguation (Gate 14)
+### 16. Single Trajectory Chart Latch & Table Schema Disambiguation (Gate 13)
 - **Part 3 Section 1.4 Exclusivity:** The Cash Flow & Owner Earnings Trajectory visualizer chart must render exclusively in Part 3 Section 1.4 (Historical Cash Flow & Owner Earnings Trend Table) and strictly at most once (enforced via `hasRenderedTrendChart` latch in `src/utils/googleDocs.ts`).
 - **Zero Part 1 RORC & Part 3 CAGR Calibration False Positives:** The trajectory chart must NEVER trigger on Part 1 Section 2.9 RORC / Retained Capital tables or Part 3 Section 1.5 CAGR / Growth Rate Calibration tables.
 - **Strict Table Schema Verification:** `getTableChartType` in `src/components/MarkdownView.tsx` enforces:

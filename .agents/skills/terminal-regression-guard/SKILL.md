@@ -122,10 +122,11 @@ Every code change must pass all four verification gates before being declared co
 
 ### Gate 3.5: Engine Verification & Offline Format Regression Suite
 - Run `npm run test:engine` (`npx tsx scripts/test_engine_prompts.ts`).
-  - Must pass all 13 verification gates, including:
+  - Must pass all 14 verification gates, including:
     - Gate 11: Bimodal Voice Architecture across all parts.
     - Gate 12: Dossier Format Guard (Static Prompt Directives, Zero LaTeX, Zero Unicode box characters `│`, Zero typewriter sliders, Zero piped bullets, GFM table normalization, and Buy-Side Desk Nomenclature scrubbing).
-    - Gate 13: Terminal FCOM Manual Synchronization & HUD.
+    - Gate 13: Visualizer Chart Disambiguation & Single Cardinality Guard.
+    - Gate 14: Hardcore Anti-Anchoring Firewall & Multi-Mode Prompt Integrity.
 - Run `npm run test:format` (`npx tsx scripts/test_format_regression.ts`).
   - Must pass all offline Golden Snapshot assertions in < 50ms (Zero LaTeX, Zero typewriter sliders, rogue code fence unwrap, GFM table schemas, HTML standalone integrity).
 

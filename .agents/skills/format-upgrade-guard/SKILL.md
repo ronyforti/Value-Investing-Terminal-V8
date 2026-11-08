@@ -63,7 +63,7 @@ npx tsx scripts/test_engine_prompts.ts
   - `Dossier Format Guard - Dual Visualizer Parity (Organic Flywheel): PASS`
   - `Dossier Format Guard - Dual Visualizer Parity (Linear Value Chain Zero-Loop): PASS`
   - `Dossier Format Guard - Exact Fences: PASS`
-  - `Gate 14: Visualizer Chart Disambiguation & Single Cardinality Guard: PASS`
+  - `Gate 13: Visualizer Chart Disambiguation & Single Cardinality Guard: PASS`
 
 ### Step 3: Empirical Dossier Validation (Offline Golden Snapshot Suite)
 Run the automated offline regression test against the golden fixture (`tests/fixtures/golden_dossier_fixture.md`):

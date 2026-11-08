@@ -329,7 +329,7 @@ To eliminate autoregressive token smoothing and hallucinated math certifications
 - **Dynamic R&D Spectrum (`0% | 50% | 75%`):** Software/tech firms apply dynamic capitalization net of 5-year straight-line amortization drag (`Amortization = Gross Capitalized R&D / 5`).
 - **Share-Cannibal Negative Equity Guard:** Negative book value from disciplined cumulative share repurchases (`BKNG` pattern) is recognized as fortress capital allocation, not insolvency risk.
 
-### 9.11 Hardcore Anti-Anchoring Firewall (Gate 15)
+### 9.11 Hardcore Anti-Anchoring Firewall (Gate 14)
 - **Zero Python Numbers in Pre-Flight Context:** Zero forward DCF or Bolsa math ever enters LLM pre-flight prompt strings or `state.files`. The LLM reasons completely double-blind.
 - **Post-Execution Double-Blind Synthesis:** The Double-Blind Dual-Valuation Synthesis comparison table (`Part 13`) is generated out-of-band and appended to the final dossier only after all active analytical steps are completed.
 

@@ -412,43 +412,8 @@ if (
   process.exit(1);
 }
 
-// 13. Verify Terminal FCOM Manual Synchronization & Automated HUD
-console.log("\n--- Gate 13: Terminal FCOM Manual Synchronization & Automated HUD ---");
-const manualPath = path.join(process.cwd(), "public", "terminal_v7_manual.html");
-const manualExists = fs.existsSync(manualPath);
-console.log(`Manual File Existence: ${manualExists ? "PASS" : "FAIL"}`);
-if (!manualExists) {
-  console.error("FAIL: public/terminal_v7_manual.html does not exist!");
-  process.exit(1);
-}
-
-const manualContent = fs.readFileSync(manualPath, "utf8");
-let allPromptsInManual = true;
-const allEnginePrompts = [...MASTER_PROMPTS, CROSSCHECK_PROMPT];
-for (const p of allEnginePrompts) {
-  if (!manualContent.includes(`id="prompt-part-${p.id}"`)) {
-    console.error(`FAIL: Part ${p.id} accordion missing in manual!`);
-    allPromptsInManual = false;
-  }
-}
-console.log(`Manual Prompts Completeness (All 12 Prompts): ${allPromptsInManual ? "PASS" : "FAIL"}`);
-
-const hudHasRevision = manualContent.includes("REVISION 7.") || manualContent.includes("REVISION 8.");
-const hudHasPipeline = manualContent.includes("PIPELINE: 11+1 FULL-AUTO");
-const hudHasGates = manualContent.includes("GATES: 5 ACTIVE");
-const hudHasPort = manualContent.includes("PORT: 3001 LAB") || manualContent.includes("PORT: 3000 PROD") || manualContent.includes("PORT: 8080 PROD") || manualContent.includes("PORT: 3000");
-const hudHasBimodal = manualContent.includes("VOICE: BIMODAL");
-const hudValid = hudHasRevision && hudHasPipeline && hudHasGates && hudHasPort && hudHasBimodal;
-
-console.log(`HUD Automated Badges (Revision, Pipeline, Gates, Port, Voice): ${hudValid ? "PASS" : "FAIL"}`);
-
-if (!allPromptsInManual || !hudValid) {
-  console.error("FAIL: Terminal FCOM Manual is out of sync with engine! Run 'npm run build:manual'.");
-  process.exit(1);
-}
-
-// 14. Verify Visualizer Chart Disambiguation & Single Cardinality Guard
-console.log("\n--- Gate 14: Visualizer Chart Disambiguation & Single Cardinality Guard ---");
+// 13. Verify Visualizer Chart Disambiguation & Single Cardinality Guard
+console.log("\n--- Gate 13: Visualizer Chart Disambiguation & Single Cardinality Guard ---");
 import { getTableChartType } from "../src/components/MarkdownView.js";
 import { convertMarkdownToHtml } from "../src/utils/googleDocs.js";
 
@@ -578,8 +543,8 @@ if (!segmentDisambiguationPassed) {
   process.exit(1);
 }
 
-// 15. Verify Hardcore Anti-Anchoring Firewall & Multi-Mode Prompt Integrity
-console.log("\n--- Gate 15: Hardcore Anti-Anchoring Firewall & Multi-Mode Prompt Integrity ---");
+// 14. Verify Hardcore Anti-Anchoring Firewall & Multi-Mode Prompt Integrity
+console.log("\n--- Gate 14: Hardcore Anti-Anchoring Firewall & Multi-Mode Prompt Integrity ---");
 import { SLINGSHOT_PROMPT, SENTINEL_PROMPT } from "../src/prompts.js";
 
 // Check that SLINGSHOT_PROMPT and SENTINEL_PROMPT have required directives
@@ -609,10 +574,10 @@ const zeroPythonInPrompts = !promptBuilderCode.includes("pythonValuation") && !p
 console.log(`Hardcore Anti-Anchoring Firewall (Zero Python in Prompt Pre-Flight Context): ${zeroPythonInPrompts ? "PASS" : "FAIL"}`);
 
 if (!slingshotValid || !sentinelValid || !zeroPythonInPrompts) {
-  console.error("FAIL: Gate 15 Anti-Anchoring Firewall or Multi-Mode prompt integrity failed!");
+  console.error("FAIL: Gate 14 Anti-Anchoring Firewall or Multi-Mode prompt integrity failed!");
   process.exit(1);
 }
 
-console.log("\n=== ALL 15 VERIFICATION GATES PASSED PERFECTLY ===");
+console.log("\n=== ALL 14 VERIFICATION GATES PASSED PERFECTLY ===");
 
 

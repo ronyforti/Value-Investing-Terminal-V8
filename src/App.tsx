@@ -2592,18 +2592,6 @@ export default function App() {
             )}
           </button>
 
-          {/* Flight Crew Operating Manual (FCOM) Button */}
-          <a
-            href="/terminal_v7_manual.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold cursor-pointer transition shadow-md border bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border-indigo-500/30"
-            title="Open Flight Crew Operating Manual (FCOM) in a new tab"
-          >
-            <BookOpen className="w-4 h-4 text-indigo-400 shrink-0" />
-            <span>FCOM MANUAL</span>
-          </a>
-
           {/* Gemini Flex Tier Live Capacity HUD Pill */}
           {probingFlex ? (
             <button
