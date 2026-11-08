@@ -20,5 +20,22 @@ jobs:
           key: ${{ secrets.GCP_SSH_KEY }}
           port: 22
           script: |
-            echo "=== Executing automated deploy on Google Cloud e2 ==="
-            /opt/terminal-v8/update.sh
+            echo "=== [1/5] Navigating to /opt/terminal-v8 ==="
+            cd /opt/terminal-v8 || exit 1
+
+            echo "=== [2/5] Resetting to origin/main ==="
+            sudo git fetch origin main
+            sudo git reset --hard origin/main
+            sudo chown -R $(whoami):$(whoami) /opt/terminal-v8 2>/dev/null || true
+
+            echo "=== [3/5] Installing Dependencies ==="
+            npm install
+
+            echo "=== [4/5] Building Production Assets ==="
+            npm run build
+
+            echo "=== [5/5] Restarting PM2 Server ==="
+            sudo pm2 restart all 2>/dev/null || pm2 restart all 2>/dev/null || sudo pm2 restart terminal 2>/dev/null || pm2 restart terminal 2>/dev/null || true
+
+            echo "=== Verifying Built Artifacts ==="
+            ls -l dist/assets/
