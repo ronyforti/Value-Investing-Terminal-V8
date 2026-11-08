@@ -265,9 +265,17 @@ try {
 
 // --- Lazy Gemini SDK initialization ---
 function getApiHeaderKey(req: any): string {
-  const headerKey = req.headers["x-gemini-key"] || req.headers["x-custom-key"] || req.headers["authorization"];
+  // Check explicit application custom headers first
+  const headerKey = req.headers["x-gemini-key"] || req.headers["x-custom-key"];
   if (typeof headerKey === "string" && headerKey.trim()) {
-    return sanitizeApiKey(headerKey);
+    const clean = sanitizeApiKey(headerKey);
+    if (clean) return clean;
+  }
+  // Check authorization header ONLY if it is a Bearer token or direct key, NEVER HTTP Basic auth
+  const authHeader = req.headers["authorization"];
+  if (typeof authHeader === "string" && authHeader.trim() && !authHeader.toLowerCase().startsWith("basic ")) {
+    const clean = sanitizeApiKey(authHeader);
+    if (clean) return clean;
   }
   return "";
 }

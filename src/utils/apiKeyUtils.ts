@@ -19,8 +19,12 @@ export function sanitizeApiKey(rawKey?: string | null): string {
   // Strip stray leading/trailing quotes or backslashes
   key = key.replace(/^["'\\]+/, '').replace(/["'\\]+$/, '').trim();
   // Strip 'Bearer ' if inadvertently copied
-  if (key.startsWith("Bearer ")) {
+  if (key.startsWith("Bearer ") || key.startsWith("bearer ")) {
     key = key.slice(7).trim();
+  }
+  // Reject HTTP Basic Auth proxy headers unconditionally (e.g. Caddy/Nginx reverse proxy basicauth)
+  if (key.toLowerCase().startsWith("basic ") || key.includes(":")) {
+    return "";
   }
   // Strict regex extraction for standard Google Cloud API keys (AIza...)
   const aizaMatch = key.match(/AIza[a-zA-Z0-9_\-]{35}/);
