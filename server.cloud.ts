@@ -272,7 +272,20 @@ async function triggerOutOrBandPythonValuation(csvPath: string): Promise<void> {
   if (!state.config) return;
   try {
     console.log(`[Valuation Engine] Launching out-of-band Python Stream 1 valuation from ${csvPath}...`);
-    state.pythonValuation = await runPythonValuation(csvPath, state.config);
+    let fxRate = 1.0;
+    if (fs.existsSync(csvPath)) {
+      try {
+        const csvContent = fs.readFileSync(csvPath, "utf-8");
+        const audit = await auditFinancialCsv(csvContent, path.basename(csvPath), state.config.ticker);
+        if (audit.hasForeignCurrency && audit.fxRate > 0) {
+          fxRate = audit.fxRate;
+          if (state.config.isAdr === undefined) {
+            state.config.isAdr = true;
+          }
+        }
+      } catch (e) {}
+    }
+    state.pythonValuation = await runPythonValuation(csvPath, state.config, fxRate);
     console.log(`[Valuation Engine] Python valuation completed: Intrinsic Value = $${state.pythonValuation.dcf_expected.toFixed(2)}, Bolsa Multiple = ${state.pythonValuation.bolsa_multiple}x (Gate 12 passed)`);
   } catch (err) {
     console.warn(`[Valuation Engine] Out-of-band execution error:`, err);
@@ -1380,7 +1393,9 @@ app.post("/api/session/init", (req: Request, res: Response) => {
   const { 
     ticker, period, price, model, executionMode, portfolio, notes, 
     enableCrosscheck, crosscheckModel, clearFiles,
-    pipelineMode, hybridConfig, serviceTier, sessionMode, priorDossierPath
+    pipelineMode, hybridConfig, serviceTier, sessionMode, priorDossierPath,
+    lastEarningsDate, nextEarningsDate, daysToNextEarnings,
+    isAdr, country, fmpApiKey
   } = req.body;
   
   if (!ticker || !period || !price) {
@@ -1432,8 +1447,28 @@ app.post("/api/session/init", (req: Request, res: Response) => {
     enableCrosscheck: enableCrosscheck !== false,
     crosscheckModel: crosscheckModel || "default",
     pipelineMode: parsedPipelineMode,
-    serviceTier: parsedServiceTier
+    serviceTier: parsedServiceTier,
+    lastEarningsDate: lastEarningsDate || null,
+    nextEarningsDate: nextEarningsDate || null,
+    daysToNextEarnings: typeof daysToNextEarnings === 'number' ? daysToNextEarnings : null,
+    isAdr: typeof isAdr === 'boolean' ? isAdr : undefined,
+    country: country || null
   };
+
+  const fmpKey = (typeof fmpApiKey === 'string' ? fmpApiKey.trim() : '') || process.env.FMP_API_KEY || '';
+  if (fmpKey && (!state.config.country || state.config.isAdr === undefined)) {
+    try {
+      fetch(`https://financialmodelingprep.com/stable/profile?symbol=${newTicker}&apikey=${fmpKey}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(pData => {
+          if (Array.isArray(pData) && pData[0] && state.config && state.config.ticker === newTicker) {
+            state.config.isAdr = Boolean(pData[0].isAdr);
+            state.config.country = pData[0].country || 'US';
+          }
+        })
+        .catch(() => {});
+    } catch {}
+  }
 
   // Reset analysis logs
   state.activeStepIndex = 0;
@@ -3641,7 +3676,18 @@ async function updateCompiledReportFile(): Promise<string> {
         const localCsv = path.join(DOWNLOADS_DIR, csvFile.id);
         if (fs.existsSync(localCsv)) {
           try {
-            state.pythonValuation = await runPythonValuation(localCsv, state.config);
+            let fxRate = 1.0;
+            try {
+              const csvContent = fs.readFileSync(localCsv, "utf-8");
+              const audit = await auditFinancialCsv(csvContent, path.basename(localCsv), state.config.ticker);
+              if (audit.hasForeignCurrency && audit.fxRate > 0) {
+                fxRate = audit.fxRate;
+                if (state.config.isAdr === undefined) {
+                  state.config.isAdr = true;
+                }
+              }
+            } catch (e) {}
+            state.pythonValuation = await runPythonValuation(localCsv, state.config, fxRate);
           } catch (e) {
             console.warn('[Valuation Engine] Could not run valuation for double-blind section:', e);
           }

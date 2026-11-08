@@ -74,7 +74,7 @@ export async function probeFlexTierAvailability(
   const ai = new GoogleGenAI({ apiKey: effectiveApiKey });
   const startTime = Date.now();
 
-  const PROBE_TIMEOUT_MS = 12000; // 12-second ceiling for fast canary probing
+  const PROBE_TIMEOUT_MS = 60000; // 60-second ceiling to accommodate Google Flex queue scheduling
 
   try {
     const probePromise = ai.models.generateContent({
@@ -89,7 +89,7 @@ export async function probeFlexTierAvailability(
 
     const timeoutPromise = new Promise<never>((_, reject) => {
       const timer = setTimeout(() => {
-        reject(new Error("503: Canary probe timeout (Flex cluster queue latency exceeded 12s)"));
+        reject(new Error("503: Canary probe timeout (Flex cluster queue latency exceeded 60s)"));
       }, PROBE_TIMEOUT_MS);
       // Ensure timeout does not hold node process open
       if (typeof timer.unref === "function") timer.unref();
