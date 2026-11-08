@@ -5889,7 +5889,7 @@ async function startServer() {
   // Client-side Vite configuration in development, or Express static in production
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, allowedHosts: true },
       appType: "spa"
     });
     app.use(vite.middlewares);

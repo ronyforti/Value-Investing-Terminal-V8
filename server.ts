@@ -6882,6 +6882,7 @@ async function startServer() {
     const vite = await createViteServer({
       server: {
         middlewareMode: true,
+        allowedHosts: true,
         watch: {
           ignored: [
             '**/backups/**',
