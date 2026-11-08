@@ -5886,15 +5886,16 @@ function cleanTranscriptTextBlock(text: string): string {
 
 // --- Initialize Server Middleware ---
 async function startServer() {
-  // Client-side Vite configuration in development, or Express static in production
-  if (process.env.NODE_ENV !== "production") {
+  const distPath = path.join(process.cwd(), "dist");
+  const isProduction = process.env.NODE_ENV === "production" || (fs.existsSync(path.join(distPath, "index.html")) && process.env.NODE_ENV !== "development");
+
+  if (!isProduction) {
     const vite = await createViteServer({
       server: { middlewareMode: true, allowedHosts: true },
       appType: "spa"
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req: Request, res: Response) => {
       res.sendFile(path.join(distPath, "index.html"));
