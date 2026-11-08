@@ -10,7 +10,8 @@
  */
 export function sanitizeApiKey(rawKey?: string | null): string {
   if (!rawKey || typeof rawKey !== "string") return "";
-  let key = rawKey.trim();
+  // Strip non-printable ASCII control codes and invisible Unicode characters (zero-width spaces, BOM, joiners)
+  let key = rawKey.replace(/[\x00-\x1F\x7F\u200B-\u200D\uFEFF]/g, "").trim();
   // Strip outer quotes repeatedly
   while ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
     key = key.slice(1, -1).trim();
@@ -21,6 +22,9 @@ export function sanitizeApiKey(rawKey?: string | null): string {
   if (key.startsWith("Bearer ")) {
     key = key.slice(7).trim();
   }
+  // Strict regex extraction for standard Google Cloud API keys (AIza...)
+  const aizaMatch = key.match(/AIza[a-zA-Z0-9_\-]{35}/);
+  if (aizaMatch) return aizaMatch[0];
   return key;
 }
 

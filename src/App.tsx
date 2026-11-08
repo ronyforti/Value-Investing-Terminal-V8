@@ -118,14 +118,23 @@ export default function App() {
 
   const checkKeyDiagnostics = useCallback(async (runTest: boolean = false) => {
     try {
-      if (runTest) setIsTestingKey(true);
+      if (runTest) {
+        setIsTestingKey(true);
+        setKeyDiagnostic(prev => prev ? { ...prev, testResult: null } : null);
+      }
       const res = await authFetch(`/api/diagnostics/api-key${runTest ? "?test=true" : ""}`);
       if (res.ok) {
         const data = await res.json();
         setKeyDiagnostic(data);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("Could not check API key diagnostics:", e);
+      if (runTest) {
+        setKeyDiagnostic(prev => prev ? {
+          ...prev,
+          testResult: { valid: false, message: e?.message || "Network error contacting API diagnostic endpoint" }
+        } : null);
+      }
     } finally {
       if (runTest) setIsTestingKey(false);
     }
@@ -3033,6 +3042,14 @@ export default function App() {
                             {keyDiagnostic?.serverEnvConfigured ? `LINKED (${keyDiagnostic.serverEnvMasked})` : "NOT DETECTED IN /opt/terminal-v8/.env"}
                           </span>
                         </div>
+                        {keyDiagnostic?.activeKeyMasked && keyDiagnostic.activeKeyMasked !== "EMPTY/MISSING" && (
+                          <div className="flex items-center justify-between text-[9px] text-slate-400">
+                            <span>Active In Pipeline:</span>
+                            <span className="text-emerald-400 font-medium">
+                              {keyDiagnostic.activeKeySource === "server_env" ? `Server .env (${keyDiagnostic.activeKeyMasked})` : `UI Override (${keyDiagnostic.activeKeyMasked})`}
+                            </span>
+                          </div>
+                        )}
                         {customKeyInput.trim() && (
                           <div className="text-amber-400/90 text-[9px] bg-amber-950/30 border border-amber-900/50 p-1.5 rounded">
                             ⚠️ Browser custom key is active. It overrides the server .env key for all API calls. Unlink key above to use server .env.
