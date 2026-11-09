@@ -215,12 +215,27 @@ class ValuationEngineV8:
 
         # Determine effective shares and market cap
         diluted_shs = shares[0] if (shares and shares[0] > 0) else 1.0
+        rev_0 = rev[0] if rev else 0.0
+        # Guard against unit mismatch: FMP CSVs scale dollar lines to millions while shares remain in raw units
+        if diluted_shs >= 100000.0 and rev_0 > 0 and rev_0 < 10000000.0:
+            diluted_shs = diluted_shs / 1000000.0
+            shares = [s / 1000000.0 for s in shares]
+
         effective_price = price if price > 0 else 1.0
         calc_mcap = mcap if (mcap and mcap > 0) else (effective_price * diluted_shs)
 
-        # Build annual-equivalent slices stepped by 4 quarters (t = 0, 1, 2, ..., N/4)
-        # Slices represent rolling TTM figures across time
-        step = 4 if n_periods >= 8 else 1
+        # Detect if columns are already annual-stepped TTM periods (e.g. Q3 2026, Q3 2025...) vs sequential quarters
+        is_annual_stepped = False
+        if len(periods) >= 2:
+            p0_parts = periods[0].strip().upper().split()
+            p1_parts = periods[1].strip().upper().split()
+            if len(p0_parts) >= 2 and len(p1_parts) >= 2 and p0_parts[0] == p1_parts[0]:
+                is_annual_stepped = True
+            elif "FY" in periods[0].upper() and "FY" in periods[1].upper():
+                is_annual_stepped = True
+
+        # Build annual-equivalent slices (step=1 for annual TTM columns, step=4 for sequential quarters)
+        step = 1 if is_annual_stepped or n_periods < 8 else 4
         slice_indices = list(range(0, n_periods, step))
 
         slices_rev = [rev[i] for i in slice_indices if i < len(rev)]
@@ -560,12 +575,13 @@ class ValuationEngineV8:
 
         # 8. Mode 3 40Q Same-Quarter YoY & Sequential Q/Q Operational Deltas
         qoq_deltas = {}
-        if len(rev) >= 5:
-            # Same-quarter YoY: Q0 vs Q4
-            yoy_rev = ((rev[0] / rev[4]) - 1.0) * 100.0 if rev[4] > 0 else 0.0
-            yoy_ebit = ((ebit[0] / ebit[4]) - 1.0) * 100.0 if (len(ebit) > 4 and ebit[4] > 0) else 0.0
-            yoy_ocf = ((ocf[0] / ocf[4]) - 1.0) * 100.0 if (len(ocf) > 4 and ocf[4] > 0) else 0.0
-            seq_rev = ((rev[0] / rev[1]) - 1.0) * 100.0 if (len(rev) > 1 and rev[1] > 0) else 0.0
+        yoy_idx = 1 if is_annual_stepped else 4
+        if len(rev) > yoy_idx:
+            # Same-quarter YoY: Q0 vs Q4 (sequential quarters) or Q0 vs Q1 (annual-stepped TTM)
+            yoy_rev = ((rev[0] / rev[yoy_idx]) - 1.0) * 100.0 if rev[yoy_idx] > 0 else 0.0
+            yoy_ebit = ((ebit[0] / ebit[yoy_idx]) - 1.0) * 100.0 if (len(ebit) > yoy_idx and ebit[yoy_idx] > 0) else 0.0
+            yoy_ocf = ((ocf[0] / ocf[yoy_idx]) - 1.0) * 100.0 if (len(ocf) > yoy_idx and ocf[yoy_idx] > 0) else 0.0
+            seq_rev = ((rev[0] / rev[1]) - 1.0) * 100.0 if (not is_annual_stepped and len(rev) > 1 and rev[1] > 0) else 0.0
             qoq_deltas = {
                 'same_quarter_yoy_rev_pct': round(yoy_rev, 2),
                 'same_quarter_yoy_ebit_pct': round(yoy_ebit, 2),

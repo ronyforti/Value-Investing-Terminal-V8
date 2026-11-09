@@ -225,6 +225,44 @@ class TestValuationEngineV8(unittest.TestCase):
             self.assertNotIn(f'"{t}"', code, f"Hardcoded ticker literal \"{t}\" found in valuation_engine.py!")
             self.assertNotIn(f"'{t}'", code, f"Hardcoded ticker literal '{t}' found in valuation_engine.py!")
 
+    def test_fmp_raw_share_unit_scaling_and_annual_stepped_ttm(self):
+        """Verifies that raw share counts (e.g. 31,110,000) in millions-scaled CSVs are scaled by 1e6 and annual TTM columns step by 1."""
+        raw_shs_csv = os.path.join(self.temp_dir.name, "RAW_SHARES.csv")
+        headers = ["Line Item", "Q3 2026", "Q3 2025", "Q3 2024", "Q3 2023"]
+        rows = [
+            headers,
+            ["Revenue", "4313.39", "2233.27", "2102.90", "1777.86"],
+            ["Operating Income", "783.32", "360.48", "258.12", "192.85"],
+            ["Income Before Tax", "750.00", "340.00", "240.00", "180.00"],
+            ["Income Tax Expense", "150.00", "70.00", "50.00", "38.00"],
+            ["Net Income", "600.00", "270.00", "190.00", "142.00"],
+            ["Depreciation and Amortization", "98.42", "72.39", "65.81", "55.78"],
+            ["Operating Cash Flow", "611.74", "428.21", "470.20", "419.68"],
+            ["Capital Expenditure", "-141.85", "-66.57", "-80.44", "-62.32"],
+            ["Stock Based Compensation", "32.74", "17.53", "17.40", "3.97"],
+            ["Change in Working Capital", "-100.00", "50.00", "30.00", "20.00"],
+            ["Cash and Short Term Investments", "216.94", "150.00", "120.00", "100.00"],
+            ["Total Debt", "165.81", "150.00", "140.00", "130.00"],
+            ["Weighted Average Shs Out Dil", "31110000.0", "30762000.0", "31145000.0", "31000000.0"]
+        ]
+        with open(raw_shs_csv, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(rows)
+
+        parsed = ValuationEngineV8.parse_csv(raw_shs_csv)
+        res = ValuationEngineV8.compute(parsed, ticker="RAWSHS", price=250.0)
+
+        # Asserts shares scaled from 31,110,000 to 31.11M
+        self.assertAlmostEqual(res['diluted_shares'], 31.11, places=1)
+        # Asserts market cap is in millions ($7,777M, not $7.7 Trillion)
+        self.assertLess(res['mcap_usd'], 15000.0)
+        # Asserts Bolsa Multiple is a sane single-digit ratio (e.g. ~1.5x - 2.5x, not 2.5 Million x)
+        self.assertLess(res['bolsa_multiple'], 10.0)
+        self.assertGreater(res['bolsa_multiple'], 0.5)
+        # Asserts EPV and DCF per share are non-zero dollars per share
+        self.assertGreater(res['epv_per_share'], 50.0)
+        self.assertGreater(res['dcf_expected'], 100.0)
+
 
 if __name__ == "__main__":
     unittest.main()
+

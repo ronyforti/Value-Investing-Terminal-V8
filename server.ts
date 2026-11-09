@@ -4276,8 +4276,10 @@ function extractFrontmatter(
     if (pm) price = pm[1];
   }
 
-  const p11Match = text.match(/^##\s+\[?Part\s+11:/im);
-  const p12Match = text.match(/^##\s+\[?Part\s+12:/im);
+  const p11Match = text.match(/^##?\s+\[?Part\s+11:/im);
+  const p12Match = text.match(/^##?\s+\[?Part\s+12:/im);
+  const m1Match = text.match(/^###?\s+\[?(?:(?:Pillar\s+)?6\.?\s+)?Decision-Support\s+Triage\s+Directive/im);
+  const m3Match = text.match(/^###?\s+\[?(?:(?:Part\s+)?(?:5\.?\s+)?)(?:The\s+4\s+)?Isolation\s+Gates/im);
   let verdictText = '';
   if (p11Match && p11Match.index !== undefined) {
     const p11Idx = p11Match.index;
@@ -4288,39 +4290,50 @@ function extractFrontmatter(
     }
   } else if (p12Match && p12Match.index !== undefined) {
     verdictText = text.slice(p12Match.index);
+  } else if (m1Match && m1Match.index !== undefined) {
+    verdictText = text.slice(m1Match.index);
+  } else if (m3Match && m3Match.index !== undefined) {
+    verdictText = text.slice(m3Match.index);
   }
 
-  // 2. Intrinsic Value (check Part 11 verdict block first, then synthesis tables)
+  const dbMatch = verdictText.match(/^##\s+Quantitative Double-Blind/im);
+  if (dbMatch && dbMatch.index !== undefined) {
+    verdictText = verdictText.slice(0, dbMatch.index);
+  }
+
+  // 2. Intrinsic Value (check verdict block first, then synthesis tables)
   const curSymbolPattern = "(?:[\\$\\€\\¥\\£]|CA\\$|R\\$|MX\\$|CHF|USD)?\\s*";
+  const curSymbolPatternStrict = "(?:[\\$\\€\\¥\\£]|CA\\$|R\\$|MX\\$|CHF|USD)\\s*";
   let iv: string | null = null;
   const verdictIvMatch = verdictText ? (
-    verdictText.match(new RegExp(`\\|\\s*\\*{0,2}(?:Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n|]*\\*{0,2}\\s*\\|\\s*[:\\s]*\\*{0,2}${curSymbolPattern}([0-9,]+\\.?[0-9]*)`, 'i')) ||
-    verdictText.match(new RegExp(`(?:\\|\\s*)?(?:\\*{0,2})?(?:Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n$|]*?[:=|\\s]\\s*\\*{0,2}${curSymbolPattern}([0-9,]+\\.?[0-9]*)`, 'i'))
+    verdictText.match(new RegExp(`(?:\\|\\s*)?[\\\`*]{0,3}(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^$\\d\\n|]{0,50}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i')) ||
+    verdictText.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?!%)`, 'i')) ||
+    verdictText.match(new RegExp(`(?:\\|\\s*)?(?:[\\\`*]{0,3})?(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n$|]*?[:=|\\s]\\s*[\\\`*]{0,3}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'))
   ) : null;
   if (verdictIvMatch) {
     iv = verdictIvMatch[1];
   } else {
-    const synthMatch = text.match(new RegExp(`\\|\\s*\\*{0,2}(?:Final |Synthesized |Sovereign )*(?:Sovereign )?Intrinsic Value[^\\n|]*\\*{0,2}\\s*\\|\\s*[:\\s]*\\*{0,2}${curSymbolPattern}([0-9,]+\\.?[0-9]*)`, 'i')) ||
-                       text.match(new RegExp(`\\*\\s*\\*{0,2}(?:Final |Synthesized |Sovereign )*(?:Sovereign )?Intrinsic Value[^\\n]*?[:=][^\\n$]*?${curSymbolPattern}([0-9,]+\\.?[0-9]*)`, 'i')) ||
-                       text.match(new RegExp(`(?:synthesized sovereign intrinsic value|synthesized intrinsic value|final intrinsic value)[^\\n$]*?${curSymbolPattern}([0-9,]+\\.?[0-9]*)`, 'i'));
+    const synthMatch = text.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized |Sovereign )*(?:Sovereign )?Intrinsic Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?!%)`, 'i')) ||
+                       text.match(new RegExp(`\\*\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized |Sovereign )*(?:Sovereign )?Intrinsic Value[^\\n]*?[:=][^\\n$]*?${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i')) ||
+                       text.match(new RegExp(`(?:synthesized sovereign intrinsic value|synthesized intrinsic value|final intrinsic value)[^\\n$]*?${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'));
     if (synthMatch) {
       iv = synthMatch[1];
     } else {
-      const tableMatch = text.match(new RegExp(`\\|\\s*\\*{0,2}(?:Final |Synthesized )?Intrinsic Value[^\\n|]*\\*{0,2}\\s*\\|\\s*[:\\s]*\\*{0,2}${curSymbolPattern}([0-9,]+\\.?[0-9]*)`, 'i'));
+      const tableMatch = text.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized )?Intrinsic Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'));
       if (tableMatch) {
         iv = tableMatch[1];
       } else {
-        const bulletMatch = text.match(new RegExp(`\\*\\s*\\*{0,2}(?:Final |Synthesized )?Intrinsic Value[^\\n]*?[:=]\\s*\\*{0,2}${curSymbolPattern}([0-9,]+\\.?[0-9]*)`, 'i'));
+        const bulletMatch = text.match(new RegExp(`\\*\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized )?Intrinsic Value[^\\n]*?[:=]\\s*[\\\`*]{0,3}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'));
         if (bulletMatch) {
           iv = bulletMatch[1];
         } else {
-          const proseMatch = text.match(new RegExp(`(?:synthesized intrinsic value|final intrinsic value)[^\\n$]*?${curSymbolPattern}([0-9,]+\\.?[0-9]*)`, 'i'));
+          const proseMatch = text.match(new RegExp(`(?:synthesized intrinsic value|final intrinsic value)[^\\n$]*?${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'));
           if (proseMatch) {
             iv = proseMatch[1];
           } else {
-            const fallback = text.match(new RegExp(`(?:Synthesized Final Intrinsic Value Per Share|Synthesized Final Intrinsic Value|Synthesized Intrinsic Value)[^$]*?${curSymbolPattern}([0-9,]+\\.?[0-9]*)`, 'i')) ||
-                             text.match(new RegExp(`(?:Final Synthesized Intrinsic Value:?\\s*${curSymbolPattern}([0-9,]+\\.?[0-9]*))`, 'i')) ||
-                             text.match(new RegExp(`(?:Intrinsic Value Per Share).*?${curSymbolPattern}([0-9,]+\\.?[0-9]*)`, 'i'));
+            const fallback = text.match(new RegExp(`(?:Synthesized Final Intrinsic Value Per Share|Synthesized Final Intrinsic Value|Synthesized Intrinsic Value)[^$\\d\\n]{0,40}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i')) ||
+                             text.match(new RegExp(`(?:Final Synthesized Intrinsic Value:?\\s*${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*))(?!%)`, 'i')) ||
+                             text.match(new RegExp(`(?:Intrinsic Value Per Share)[^$\\d\\n]{0,30}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'));
             if (fallback) iv = fallback[1];
           }
         }
@@ -4328,19 +4341,19 @@ function extractFrontmatter(
     }
   }
 
-  // 3. Margin of Safety (check Part 11 verdict block first, then synthesis tables)
+  // 3. Margin of Safety (check verdict block first, then synthesis tables)
   let mos: string | null = null;
   const verdictMosMatch = verdictText ? (
-    verdictText.match(/\|\s*\*{0,2}(?:Current\s+|Standard\s+|Calculated\s+)?Margin\s+of\s+Safety[^\n|]*\*{0,2}\s*\|\s*[:\s]*\*{0,2}([+-]?[0-9,.]+\%)/i) ||
-    verdictText.match(/(?:\|\s*)?(?:\*{0,2})?(?:Current\s+|Standard\s+|Calculated\s+)?Margin\s+of\s+Safety(?:\s*\(Standard\))?[^\n|%]{0,45}?(?:[:|=]\s*|\s*\|\s*)([+-]?[0-9,.]+\%)/i) ||
-    verdictText.match(/(?:Current Margin of Safety|Standard Margin of Safety|Margin of Safety)[^%\n]{1,45}?([+-]?[0-9,.]+\%)/i)
+    verdictText.match(/\|\s*[`*]{0,3}(?:Refreshed\s+|Current\s+|Standard\s+|Calculated\s+)?Margin\s+of\s+Safety[^\n|]*[`*]{0,3}\s*\|\s*[:\s]*[`*]{0,3}([+-]?[0-9,.]+\%)/i) ||
+    verdictText.match(/(?:\|\s*)?[`*]{0,3}(?:Refreshed\s+|Current\s+|Standard\s+|Calculated\s+)?Margin\s+of\s+Safety(?:\s*\(Standard\))?[^\n|%]{0,45}?(?:[:|=]\s*|\s*\|\s*)([+-]?[0-9,.]+\%)/i) ||
+    verdictText.match(/(?:Refreshed Margin of Safety|Current Margin of Safety|Standard Margin of Safety|Margin of Safety)[^%\n]{1,45}?([+-]?[0-9,.]+\%)/i)
   ) : null;
   const mosTableMatch = verdictMosMatch ||
-                        text.match(/\|\s*\*{0,2}(?:Standard |Calculated )?Margin of Safety\*{0,2}\s*\|\s*[:\s]*\*{0,2}([+-]?[0-9,.]+\%)/i);
+                        text.match(/\|\s*[`*]{0,3}(?:Refreshed\s+|Standard\s+|Calculated\s+)?Margin\s+of\s+Safety[`*]{0,3}\s*\|\s*[:\s]*[`*]{0,3}([+-]?[0-9,.]+\%)/i);
   if (mosTableMatch) {
     mos = mosTableMatch[1];
   } else {
-    const mosMatch = text.match(/(?:Current Standard Margin of Safety at Market|Margin of Safety at Market|Standard Margin of Safety)[^%\r\n]*?([+-]?[0-9,.]+\%)/i) ||
+    const mosMatch = text.match(/(?:Refreshed Standard Margin of Safety|Current Standard Margin of Safety at Market|Margin of Safety at Market|Standard Margin of Safety)[^%\r\n]*?([+-]?[0-9,.]+\%)/i) ||
                      text.match(/Standard Margin of Safety\s*=?[^%\r\n]*?([+-]?[0-9,.]+\%)/i);
     if (mosMatch) {
       mos = mosMatch[1];
