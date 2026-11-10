@@ -1053,6 +1053,86 @@ function renderDebtMaturitiesHtml(headers: string[], rows: string[][]): string {
   </div>`;
 }
 
+function renderStyle1ValuationSvg(parsed: Array<{ name: string; value: number; role: string }>, priceVal: number): string {
+  const epvItem = parsed.find(p => p.role === 'epv' || /epv|earnings power/i.test(p.name));
+  const bearItem = parsed.find(p => /bear|conservative/i.test(p.name));
+  const ivItem = parsed.find(p => p.role === 'iv' || /expected|synthesized|sovereign|base/i.test(p.name));
+  const bullItem = parsed.find(p => /bull|optimistic/i.test(p.name));
+
+  const allVals = [
+    epvItem?.value,
+    bearItem?.value,
+    ivItem?.value,
+    bullItem?.value,
+    priceVal > 0 ? priceVal : undefined
+  ].filter((v): v is number => typeof v === 'number' && v > 0);
+
+  if (allVals.length < 2) return '';
+
+  const minVal = Math.min(...allVals) * 0.85;
+  const maxVal = Math.max(...allVals) * 1.15;
+  const valSpan = maxVal - minVal || 1;
+  const getX = (val: number) => Math.min(800, Math.max(70, 70 + Math.round(((val - minVal) / valSpan) * 720)));
+
+  const cxTape = priceVal > 0 ? getX(priceVal) : 0;
+  const cxEpv = epvItem ? getX(epvItem.value) : 0;
+  const cxBear = bearItem ? getX(bearItem.value) : 0;
+  const cxIv = ivItem ? getX(ivItem.value) : 0;
+  const cxBull = bullItem ? getX(bullItem.value) : 0;
+
+  const rectX = Math.min(720, Math.max(10, cxTape - 65));
+
+  const tapeTopLane = priceVal > 0 ? `
+    <g class="tape-pointer">
+      <rect x="${rectX}" y="6" width="130" height="26" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" />
+      <circle cx="${rectX + 13}" cy="19" r="4" fill="#f59e0b" />
+      <text x="${rectX + 24}" y="23" fill="#f59e0b" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="700">TAPE $${priceVal.toFixed(2)}</text>
+      <line x1="${cxTape}" y1="32" x2="${cxTape}" y2="52" stroke="#f59e0b" stroke-width="2" />
+      <polygon points="${cxTape - 4},50 ${cxTape + 4},50 ${cxTape},56" fill="#f59e0b" />
+    </g>` : '';
+
+  const fairValueZone = (cxBear > 0 && cxBull > 0) ? `
+    <line x1="${cxBear}" y1="56" x2="${cxBull}" y2="56" stroke="#0369a1" stroke-width="8" stroke-linecap="round" opacity="0.35" />` : (cxEpv > 0 && cxIv > 0) ? `
+    <line x1="${cxEpv}" y1="56" x2="${cxIv}" y2="56" stroke="#0369a1" stroke-width="8" stroke-linecap="round" opacity="0.35" />` : '';
+
+  const epvMarker = epvItem ? `
+    <circle cx="${cxEpv}" cy="56" r="6" fill="#64748b" />
+    <line x1="${cxEpv}" y1="56" x2="${cxEpv}" y2="72" stroke="#64748b" stroke-width="1.5" />
+    <text x="${cxEpv}" y="86" fill="#94a3b8" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="600" text-anchor="middle">EPV Floor $${epvItem.value.toFixed(2)}</text>
+    <text x="${cxEpv}" y="99" fill="#475569" font-size="9" font-family="'JetBrains Mono', monospace" text-anchor="middle">Perpetual Cash Anchor</text>` : '';
+
+  const bearMarker = bearItem ? `
+    <circle cx="${cxBear}" cy="56" r="6" fill="#f43f5e" />
+    <line x1="${cxBear}" y1="56" x2="${cxBear}" y2="72" stroke="#f43f5e" stroke-width="1.5" />
+    <text x="${cxBear}" y="86" fill="#f43f5e" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="600" text-anchor="middle">Bear $${bearItem.value.toFixed(2)}</text>
+    <text x="${cxBear}" y="99" fill="#64748b" font-size="9" font-family="'JetBrains Mono', monospace" text-anchor="middle">Cycle Digestion (25%)</text>` : '';
+
+  const ivMarker = ivItem ? `
+    <circle cx="${cxIv}" cy="56" r="7" fill="#38bdf8" />
+    <line x1="${cxIv}" y1="56" x2="${cxIv}" y2="72" stroke="#38bdf8" stroke-width="1.5" />
+    <text x="${cxIv}" y="86" fill="#38bdf8" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="700" text-anchor="middle">Expected DCF $${ivItem.value.toFixed(2)}</text>
+    <text x="${cxIv}" y="99" fill="#0284c7" font-size="9" font-family="'JetBrains Mono', monospace" text-anchor="middle">Probability-Weighted</text>` : '';
+
+  const bullMarker = bullItem ? `
+    <circle cx="${cxBull}" cy="56" r="6" fill="#10b981" />
+    <line x1="${cxBull}" y1="56" x2="${cxBull}" y2="72" stroke="#10b981" stroke-width="1.5" />
+    <text x="${cxBull}" y="86" fill="#10b981" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="600" text-anchor="middle">Bull $${bullItem.value.toFixed(2)}</text>
+    <text x="${cxBull}" y="99" fill="#059669" font-size="9" font-family="'JetBrains Mono', monospace" text-anchor="middle">Expansion (25%)</text>` : '';
+
+  return `
+  <div class="spectrum-svg-wrap" style="width: 100%; overflow-x: auto; margin-bottom: 1.25rem;">
+    <svg viewBox="0 0 860 110" class="spectrum-svg" style="width: 100%; min-width: 650px; height: auto;">
+      ${tapeTopLane}
+      <line x1="40" y1="56" x2="820" y2="56" stroke="#1e293b" stroke-width="8" stroke-linecap="round" />
+      ${fairValueZone}
+      ${epvMarker}
+      ${bearMarker}
+      ${ivMarker}
+      ${bullMarker}
+    </svg>
+  </div>`;
+}
+
 function renderValuationSpectrumHtml(headers: string[], rows: string[][], marketPrice?: number | null): string {
   let valColIdx = -1;
   headers.forEach((h, idx) => {
@@ -1098,6 +1178,8 @@ function renderValuationSpectrumHtml(headers: string[], rows: string[][], market
 
   const priceVal = marketPrice || parsed.find(p => p.role === 'price')?.value || 0;
   const maxVal = Math.max(...parsed.map(p => p.value), (priceVal || 0) * 1.15, 100);
+
+  const style1Svg = renderStyle1ValuationSvg(parsed, priceVal);
 
   const barsHtml = parsed.map(p => {
     let barColor = '#059669';
@@ -1150,6 +1232,7 @@ function renderValuationSpectrumHtml(headers: string[], rows: string[][], market
       <span class="pipeline-badge">Floor-to-Ceiling Valuation Architecture</span>
     </div>
     <div class="spectrum-container">
+      ${style1Svg}
       ${barsHtml}
     </div>
     ${priceVal > 0 ? `
@@ -1770,6 +1853,10 @@ export function convertMarkdownToHtml(markdown: string, docTitle: string, ticker
   let cleanDocTitle = docTitle;
   if (cleanDocTitle.includes('_Complete Doc_')) {
     cleanDocTitle = cleanDocTitle.replace(/_Complete Doc_.*$/, '').replace(/_/g, ' ') + ' Institutional Valuation Dossier';
+  } else if (cleanDocTitle.includes('_Slingshot_Memo_')) {
+    cleanDocTitle = cleanDocTitle.replace(/_Slingshot_Memo_.*$/, '').replace(/_/g, ' ') + ' Slingshot Triage Memo';
+  } else if (cleanDocTitle.includes('_Sentinel_Pulse_')) {
+    cleanDocTitle = cleanDocTitle.replace(/_Sentinel_Pulse_.*$/, '').replace(/_/g, ' ') + ' Quarterly Sentinel Pulse';
   }
 
   const generationDate = new Date().toLocaleDateString('en-US', {

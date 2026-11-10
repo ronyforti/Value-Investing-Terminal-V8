@@ -221,7 +221,14 @@ export default function App() {
     const tickerStr = session.config?.ticker || "UNSPECIFIED";
     const periodStr = session.config?.period || "UNSPECIFIED";
     const isInterim = isInterimEarningsRelease(session.files);
-    return `${tickerStr} — ${periodStr}${isInterim ? ' (Earnings Release)' : ''} Institutional Valuation Dossier`;
+    const sessionMode = session.config?.sessionMode || 'full';
+    let modeTitle = "Institutional Valuation Dossier";
+    if (sessionMode === 'slingshot') {
+      modeTitle = "Slingshot Triage Memo";
+    } else if (sessionMode === 'sentinel') {
+      modeTitle = "Quarterly Sentinel Pulse";
+    }
+    return `${tickerStr} — ${periodStr}${isInterim ? ' (Earnings Release)' : ''} ${modeTitle}`;
   };
 
   const generateExportMarkdown = () => {
@@ -301,8 +308,15 @@ export default function App() {
       const cleanTicker = (ticker || session?.config?.ticker || 'Dossier').toUpperCase();
       const cleanPeriod = (period || session?.config?.period || 'Report').replace(/[^a-zA-Z0-9_\-]/g, '_');
       const modelName = (session?.config?.model || '').replace('models/', '') || 'generic';
+      const sessionMode = session?.config?.sessionMode || 'full';
+      let modeTag = "_Valuation_Dossier_";
+      if (sessionMode === 'slingshot') {
+        modeTag = "_Slingshot_Memo_";
+      } else if (sessionMode === 'sentinel') {
+        modeTag = "_Sentinel_Pulse_";
+      }
       const formattedDate = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }).replace(/\//g, '-');
-      const fallbackFilename = `${cleanTicker} ${cleanPeriod}${releaseTag}_Valuation_Dossier_${modelName}_${formattedDate}.html`;
+      const fallbackFilename = `${cleanTicker} ${cleanPeriod}${releaseTag}${modeTag}${modelName}_${formattedDate}.html`;
 
       // 1. First attempt to fetch the authoritative server-compiled HTML dossier
       try {
@@ -5084,10 +5098,18 @@ export default function App() {
                     onClick={handleExportHtml}
                     disabled={htmlExporting || !session || session.history.length === 0}
                     className="px-3 py-2.5 bg-[#1e2536] text-slate-300 hover:text-white hover:bg-cyan-950/50 hover:border-cyan-700/80 rounded-xl text-xs font-semibold border border-slate-800 transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Export self-contained, interactive HTML dossier with visual charts"
+                    title={session?.config?.sessionMode === 'slingshot' ? "Export self-contained, interactive HTML Slingshot triage memo" : session?.config?.sessionMode === 'sentinel' ? "Export self-contained, interactive HTML Quarterly Sentinel pulse" : "Export self-contained, interactive HTML dossier with visual charts"}
                   >
                     <FileText className="w-4 h-4 text-cyan-400" />
-                    <span className="hidden sm:inline">{htmlExporting ? "Exporting HTML..." : "Export HTML Dossier"}</span>
+                    <span className="hidden sm:inline">
+                      {htmlExporting 
+                        ? "Exporting HTML..." 
+                        : session?.config?.sessionMode === 'slingshot' 
+                          ? "Export HTML Memo" 
+                          : session?.config?.sessionMode === 'sentinel' 
+                            ? "Export Sentinel Pulse" 
+                            : "Export HTML Dossier"}
+                    </span>
                   </button>
 
                   {/* On-Demand Forensic Crosscheck Trigger */}

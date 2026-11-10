@@ -317,8 +317,8 @@ export function getTableChartType(headers: string[], rows: string[][]): ChartTyp
     return null;
   }
   
-  // 3. Valuation Spectrum (Graham-Buffett-Greenwald Triad)
-  if ((headerStr.includes('methodology') || headerStr.includes('valuation tier')) && (headerStr.includes('share') || headerStr.includes('value'))) {
+  // 3. Valuation Spectrum (Forensic Triad & DCF Scenario Spectrum)
+  if ((headerStr.includes('methodology') || headerStr.includes('valuation tier') || headerStr.includes('valuation scenario')) && (headerStr.includes('share') || headerStr.includes('value'))) {
     return 'val';
   }
 

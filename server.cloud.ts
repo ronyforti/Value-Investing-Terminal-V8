@@ -401,9 +401,9 @@ function buildPromptRequest(promptIndex: number, currentStep: StepOutput) {
       ? `USER PORTFOLIO CONTEXT: The user ALREADY HOLDS an existing position in ${state.config?.ticker || "this company"}.
 - Entry Price / Cost Basis: $${state.config?.portfolio?.entryPrice ?? "N/A"}
 - Portfolio Weight: ${state.config?.portfolio?.currentWeight ?? "N/A"}%
-- Mandatory Verdict Rule: Because the user is an EXISTING HOLDER, the final portfolio action directive MUST strictly be HOLD, ACCUMULATE, or LIQUIDATE. Under our Never-Trim Compounding Doctrine, we NEVER trim positions simply because they grow large or trade at elevated multiples.`
+- Mandatory Verdict Rule: Because the user is an EXISTING HOLDER, the final portfolio action directive in Section 1 MUST strictly be HOLD, ACCUMULATE, or LIQUIDATE. Under our Never-Trim Compounding Doctrine, we NEVER trim positions simply because they grow large or trade at elevated multiples.`
       : `USER PORTFOLIO CONTEXT: Prospective NEW POSITION (zero existing holdings).
-- Mandatory Verdict Rule: The suggested action in Section 6 MUST strictly be one of:
+- Mandatory Verdict Rule: The suggested action in Section 1 MUST strictly be one of:
   - SUGGESTED ACTION: INVEST (if MoS >= 30%, clean forensic audit, and durable moat)
   - SUGGESTED ACTION: PASS (if structurally impaired, aggressive non-GAAP dilution, or overvalued)
   - SUGGESTED ACTION: ESCALATE TO FULL MODE (if intriguing qualitative moat, dynamic R&D capitalization divergence, complex multi-segment inflection, or close to hurdle requiring full 11-step deep-dive investigation)`;
@@ -412,10 +412,17 @@ function buildPromptRequest(promptIndex: number, currentStep: StepOutput) {
       ? `CUSTOM USER NOTES / STRATEGIC DIRECTIVES (MUST ENFORCE):\n"${state.config.notes}"\n` 
       : "";
 
+    const slingshotVoicePrompt = `CRITICAL VOICE DIRECTIVE — ASD-STE100 FORENSIC & UNDERWRITING VOICE (80% ASD-STE100):
+- Active voice only: Eliminate passive voice constructions.
+- One primary verb per sentence: Keep sentences short, punchy, and declarative (maximum 15-20 words).
+- Zero corporate euphemisms: Strictly ban 'headwinds', 'tailwinds', 'softness', 'synergies', 'navigating', 'dynamic environment'. State empirical operational facts and exact dollar figures.
+- Strict metric-to-finding assertions: [Metric] is [Value]. [Desk Standard / Benchmark] was [Threshold]. [Finding: PASS / FLAG / BREACH].
+- High-density bullet format: Output exactly 2-3 high-impact declarative bullet points per subsection. Zero multi-paragraph narrative essays.`;
+
     return `CRITICAL INSTRUCTIONS: The financial filings, macro reports, and CSV spreadsheets are attached to this context under reference files.
 Do NOT ask the user to provide them again, and do NOT pretend they are absent.
 
-${getVoiceArchitecturePrompt(0, false)}
+${slingshotVoicePrompt}
 
 Ticker Context: ${state.config?.ticker}
 Reporting Period: ${state.config?.period}
@@ -3937,7 +3944,14 @@ app.get("/api/session/export", async (req: Request, res: Response) => {
   
   const isInterim = isInterimEarningsReleaseSession();
   const releaseTag = isInterim ? "_Earnings_Release" : "";
-  const outputFilename = `${tickerStr} ${periodStr}${releaseTag}_Complete Doc_${modelName}_${formattedDate}.md`;
+  const sessionMode = state.config?.sessionMode || 'full';
+  let modeTag = "_Complete Doc_";
+  if (sessionMode === 'slingshot') {
+    modeTag = "_Slingshot_Memo_";
+  } else if (sessionMode === 'sentinel') {
+    modeTag = "_Sentinel_Pulse_";
+  }
+  const outputFilename = `${tickerStr} ${periodStr}${releaseTag}${modeTag}${modelName}_${formattedDate}.md`;
 
   res.setHeader('Content-disposition', `attachment; filename="${outputFilename}"`);
   res.setHeader('Content-type', 'text/markdown; charset=utf-8');
@@ -3958,8 +3972,18 @@ app.get("/api/session/export-html", async (req: Request, res: Response) => {
   
   const isInterim = isInterimEarningsReleaseSession();
   const releaseTag = isInterim ? "_Earnings_Release" : "";
-  const outputFilename = `${tickerStr} ${periodStr}${releaseTag}_Valuation_Dossier_${modelName}_${formattedDate}.html`;
-  const docTitle = `${tickerStr} - ${periodStr}${isInterim ? ' (Earnings Release)' : ''} Deep Valuation Dossier (${modelName})`;
+  const sessionMode = state.config?.sessionMode || 'full';
+  let modeTag = "_Valuation_Dossier_";
+  let docTitleMode = "Deep Valuation Dossier";
+  if (sessionMode === 'slingshot') {
+    modeTag = "_Slingshot_Memo_";
+    docTitleMode = "Slingshot Triage Memo";
+  } else if (sessionMode === 'sentinel') {
+    modeTag = "_Sentinel_Pulse_";
+    docTitleMode = "Quarterly Sentinel Pulse";
+  }
+  const outputFilename = `${tickerStr} ${periodStr}${releaseTag}${modeTag}${modelName}_${formattedDate}.html`;
+  const docTitle = `${tickerStr} - ${periodStr}${isInterim ? ' (Earnings Release)' : ''} ${docTitleMode} (${modelName})`;
   const htmlContent = convertMarkdownToHtml(formattedMd, docTitle, tickerStr);
 
   res.setHeader('Content-disposition', `attachment; filename="${outputFilename}"`);
