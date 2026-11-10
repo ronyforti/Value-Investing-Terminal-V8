@@ -26,13 +26,16 @@ The terminal supports 3 specialized operating modes configured via `sessionMode`
    - 100% tool-free closed-universe pipeline preserving byte-for-byte KV prefix cache invariance.
    - Out-of-band Python valuation stream executed asynchronously and synthesized double-blind.
 3. **Mode 3 — Quarterly Position Sentinel (`sessionMode: 'sentinel'`):**
-   - 90-day holding pulse monitoring active positions.
-   - 4-Way Prior Dossier ingestion triad (discovers previous complete dossier or Slingshot memo).
-   - 40Q historical financials refreshed with latest quarter; YoY and Q/Q operational delta extraction.
-   - Grades the 5 monitoring metrics defined in Part 11 of the Prior Dossier.
-   - Enforces Universal Transitory vs. Structural Standard (Snowstorm Protocol) and Deliberate Strategic Reinvestment Protocol (MELI Doctrine).
-   - Evaluates 4 Isolation Gates: 1. Moat Breach, 2. Capital Allocation Malpractice, 3. Deteriorating Runway / Disruption, 4. Chronic Value Destruction.
-   - Suggested Action Directive: strictly `HOLD / ACCUMULATE / LIQUIDATE`.
+   - 90-day holding pulse monitoring active positions (`holdsPosition: true`).
+   - **Visual Primacy & Bento-Box Architecture:** High-density, scannable Bento-Box hierarchy designed for rapid risk audit (< 60 seconds reading time).
+   - **80% ASD-STE100 Forensic & Risk Sentinel Voice Mandate:** Active voice only, one primary verb per sentence (max 15–20 words), zero corporate euphemisms ('headwinds', 'tailwinds', 'softness', 'synergies', 'navigating', 'dynamic environment', 'solid execution'), and strict metric-to-finding assertions (`[Metric] is [Value]. [Prior Baseline / Hurdle] was [Threshold]. [Finding: PASS / FLAG / BREACH]` or `[🟢 INTACT / 🟡 TRANSITORY DRIFT / 🔴 BREACHED]`). Max 2–3 punchy bullet points per subsection.
+   - **BLUF (Bottom Line Up Front) Information Architecture:** Section 1 is strictly the **Authoritative Decision Verdict & Executive Cockpit Table** (Tape Price, User Cost Basis & Weight, Prior IV ➔ Refreshed Expected DCF Intrinsic Value, Refreshed Margin of Safety, EPV Floor Benchmark, Trajectory, and `HOLD / ACCUMULATE / LIQUIDATE` directive).
+   - **Style 1 Two-Lane Valuation Spectrum:** Probabilistic DCF scenarios (Bear 25% / Base 50% / Bull 25% / Expected DCF / EPV Floor / Tape) with the elevated Tape needle in the Top Lane and DCF targets in the Bottom Lane.
+   - **Traffic-Light Prior Dossier Part 11 Monitoring Dashboard:** High-density table objectively grading the 5 thesis-breaker metrics (`🟢 INTACT / 🟡 TRANSITORY DRIFT / 🔴 BREACHED`).
+   - **40Q Operational Momentum Deltas (Q/Q & YoY ex-seasonal):** High-density table tracking Revenue, GAAP Gross Margin, Operating Margin, OCF, SBC dilution, and Diluted Share count with direct findings (`BEAT / IN-LINE / MISS`).
+   - **Defensive 4-Gate Isolation Diagnostic:** Evaluates the 4 Isolation Gates (Moat Breach, Balance Sheet Solvency, Management Predation, Opportunity Cost) with binary `PASS / BREACH`.
+   - **Universal Transitory vs. Structural Standard (Snowstorm Protocol) & MELI Doctrine:** 2 punchy bullets verifying whether margin compression is deliberate strategic reinvestment / seasonal noise or structural decay.
+   - Suggested Action Directive: strictly `HOLD / ACCUMULATE / LIQUIDATE` (`TRIM` permanently banned).
 
 ## Core Valuation Engine & Bolsa 6.0 10-Yr Cash Multiple
 - **Universal Trailing 3-Year Baseline (`OE_0`):** Every forward DCF and Bolsa valuation in all modes anchors starting owner earnings to the trailing 3-year average (`(OE_{t-2} + OE_{t-1} + OE_t) / 3`) with 100% of SBC expensed as cash and 2-step empirical Maintenance CapEx applied.

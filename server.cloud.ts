@@ -440,17 +440,24 @@ ${currentStep.prompt}`;
     const sentinelDirective = `USER PORTFOLIO CONTEXT: Active Position Monitoring.
 - Entry Price / Cost Basis: $${state.config?.portfolio?.entryPrice ?? "N/A"}
 - Portfolio Weight: ${state.config?.portfolio?.currentWeight ?? "N/A"}%
-- Mandatory Verdict Rule: The final portfolio action directive MUST strictly be HOLD, ACCUMULATE, or LIQUIDATE. (TRIM is permanently banned under our Never-Trim Compounding Doctrine).
+- Mandatory Verdict Rule: The final portfolio action directive in Section 1 MUST strictly be HOLD, ACCUMULATE, or LIQUIDATE. (TRIM is permanently banned under our Never-Trim Compounding Doctrine).
 - Isolation Gates: Evaluate the 4 Isolation Gates (1. Moat Breach, 2. Capital Allocation Malpractice, 3. Deteriorating Runway / Disruption, 4. Chronic Value Destruction) before rendering your verdict.`;
 
     const customNotesText = state.config?.notes 
       ? `CUSTOM USER NOTES / STRATEGIC DIRECTIVES (MUST ENFORCE):\n"${state.config.notes}"\n` 
       : "";
 
+    const sentinelVoicePrompt = `CRITICAL VOICE DIRECTIVE — ASD-STE100 FORENSIC & RISK SENTINEL VOICE (80% ASD-STE100):
+- Active voice only: Eliminate passive voice constructions.
+- One primary verb per sentence: Keep sentences short, punchy, and declarative (maximum 15-20 words).
+- Zero corporate euphemisms: Strictly ban 'headwinds', 'tailwinds', 'softness', 'synergies', 'navigating', 'dynamic environment', 'solid execution'. State empirical operational facts, exact dollar figures, percentages, and accounting entries directly.
+- Strict metric-to-finding assertions: [Metric] is [Value]. [Prior Baseline / Hurdle] was [Threshold]. [Finding: PASS / FLAG / BREACH] (or [🟢 INTACT / 🟡 TRANSITORY DRIFT / 🔴 BREACHED]).
+- High-density bullet format: Output exactly 2-3 high-impact declarative bullet points per subsection. Zero multi-paragraph narrative essays.`;
+
     return `CRITICAL INSTRUCTIONS: The financial filings, macro reports, refreshed 40Q financial CSV, and Prior Dossier are attached to this context under reference files.
 Do NOT ask the user to provide them again, and do NOT pretend they are absent.
 
-${getVoiceArchitecturePrompt(0, false)}
+${sentinelVoicePrompt}
 
 Ticker Context: ${state.config?.ticker}
 Reporting Period: ${state.config?.period}
@@ -3454,6 +3461,7 @@ function extractFrontmatter(
 
   const p11Match = text.match(/^##?\s+\[?Part\s+11:/im);
   const p12Match = text.match(/^##?\s+\[?Part\s+12:/im);
+  const cockpitMatch = text.match(/^###?\s+\[?(?:(?:Section\s+|Pillar\s+)?1\.?\s+)?Authoritative\s+Decision\s+Verdict/im);
   const m1Match = text.match(/^###?\s+\[?(?:(?:Pillar\s+)?6\.?\s+)?Decision-Support\s+Triage\s+Directive/im);
   const m3Match = text.match(/^###?\s+\[?(?:(?:Part\s+)?(?:5\.?\s+)?)(?:The\s+4\s+)?Isolation\s+Gates/im);
   let verdictText = '';
@@ -3466,6 +3474,8 @@ function extractFrontmatter(
     }
   } else if (p12Match && p12Match.index !== undefined) {
     verdictText = text.slice(p12Match.index);
+  } else if (cockpitMatch && cockpitMatch.index !== undefined) {
+    verdictText = text.slice(cockpitMatch.index);
   } else if (m1Match && m1Match.index !== undefined) {
     verdictText = text.slice(m1Match.index);
   } else if (m3Match && m3Match.index !== undefined) {
