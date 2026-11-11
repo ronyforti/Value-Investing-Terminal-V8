@@ -124,10 +124,11 @@ export function synthesizeDoubleBlindSection(
   const curSymbolPattern = "(?:[\\$\\€\\¥\\£]|CA\\$|R\\$|MX\\$|CHF|USD)?\\s*";
   const curSymbolPatternStrict = "(?:[\\$\\€\\¥\\£]|CA\\$|R\\$|MX\\$|CHF|USD)\\s*";
 
-  // Extract Argon Intrinsic Value from verdict block first, then fallback to full text
-  const ivMatch = searchTarget.match(new RegExp(`(?:\\|\\s*)?[\\\`*]{0,3}(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^$\\d\\n|]{0,50}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, "i")) ||
-                  searchTarget.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?!%)`, "i")) ||
-                  argonDossierMd.match(new RegExp(`(?:Synthesized Final Intrinsic Value Per Share|Synthesized Final Intrinsic Value|Synthesized Intrinsic Value|Authoritative Intrinsic Value)[^$\\d\\n]{0,40}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, "i"));
+  // Extract Argon Intrinsic Value from verdict block first (prioritizing canonical GFM table), then fallback to full text
+  const ivMatch = searchTarget.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, "i")) ||
+                  searchTarget.match(new RegExp(`(?:^|[\\r\\n]|\\*)\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[\\\`*]{0,3}\\s*(?:[:=]|\\s+is|\\s+of)\\s*[\\\`*]{0,3}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, "i")) ||
+                  searchTarget.match(new RegExp(`(?:[\\\`*]{0,3})(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n$|]{0,25}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, "i")) ||
+                  argonDossierMd.match(new RegExp(`(?:Synthesized Final Intrinsic Value Per Share|Synthesized Final Intrinsic Value|Synthesized Intrinsic Value|Authoritative Intrinsic Value)[^$\\d\\n]{0,40}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, "i"));
   const argonIv = ivMatch ? parseFloat(ivMatch[1].replace(/,/g, "")) : null;
 
   // Extract Argon EPV Floor: check verdict table first, then Gate 3 crosscheck, then authoritative table, guarding against enterprise [MB]

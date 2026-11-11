@@ -3492,34 +3492,34 @@ function extractFrontmatter(
   const curSymbolPatternStrict = "(?:[\\$\\€\\¥\\£]|CA\\$|R\\$|MX\\$|CHF|USD)\\s*";
   let iv: string | null = null;
   const verdictIvMatch = verdictText ? (
-    verdictText.match(new RegExp(`(?:\\|\\s*)?[\\\`*]{0,3}(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^$\\d\\n|]{0,50}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i')) ||
-    verdictText.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?!%)`, 'i')) ||
-    verdictText.match(new RegExp(`(?:\\|\\s*)?(?:[\\\`*]{0,3})?(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n$|]*?[:=|\\s]\\s*[\\\`*]{0,3}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'))
+    verdictText.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i')) ||
+    verdictText.match(new RegExp(`(?:^|[\\r\\n]|\\*)\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[\\\`*]{0,3}\\s*(?:[:=]|\\s+is|\\s+of)\\s*[\\\`*]{0,3}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i')) ||
+    verdictText.match(new RegExp(`(?:[\\\`*]{0,3})(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n$|]{0,25}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i'))
   ) : null;
   if (verdictIvMatch) {
     iv = verdictIvMatch[1];
   } else {
-    const synthMatch = text.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized |Sovereign )*(?:Sovereign )?Intrinsic Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?!%)`, 'i')) ||
-                       text.match(new RegExp(`\\*\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized |Sovereign )*(?:Sovereign )?Intrinsic Value[^\\n]*?[:=][^\\n$]*?${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i')) ||
-                       text.match(new RegExp(`(?:synthesized sovereign intrinsic value|synthesized intrinsic value|final intrinsic value)[^\\n$]*?${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'));
+    const synthMatch = text.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized |Sovereign )*(?:Sovereign )?Intrinsic Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i')) ||
+                       text.match(new RegExp(`\\*\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized |Sovereign )*(?:Sovereign )?Intrinsic Value[^\\n]*?[:=][^\\n$]*?${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i')) ||
+                       text.match(new RegExp(`(?:synthesized sovereign intrinsic value|synthesized intrinsic value|final intrinsic value)[^\\n$]*?${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i'));
     if (synthMatch) {
       iv = synthMatch[1];
     } else {
-      const tableMatch = text.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized )?Intrinsic Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'));
+      const tableMatch = text.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized )?Intrinsic Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i'));
       if (tableMatch) {
         iv = tableMatch[1];
       } else {
-        const bulletMatch = text.match(new RegExp(`\\*\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized )?Intrinsic Value[^\\n]*?[:=]\\s*[\\\`*]{0,3}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'));
+        const bulletMatch = text.match(new RegExp(`\\*\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Final |Synthesized )?Intrinsic Value[^\\n]*?[:=]\\s*[\\\`*]{0,3}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i'));
         if (bulletMatch) {
           iv = bulletMatch[1];
         } else {
-          const proseMatch = text.match(new RegExp(`(?:synthesized intrinsic value|final intrinsic value)[^\\n$]*?${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'));
+          const proseMatch = text.match(new RegExp(`(?:synthesized intrinsic value|final intrinsic value)[^\\n$]*?${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i'));
           if (proseMatch) {
             iv = proseMatch[1];
           } else {
-            const fallback = text.match(new RegExp(`(?:Synthesized Final Intrinsic Value Per Share|Synthesized Final Intrinsic Value|Synthesized Intrinsic Value)[^$\\d\\n]{0,40}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i')) ||
+            const fallback = text.match(new RegExp(`(?:Synthesized Final Intrinsic Value Per Share|Synthesized Final Intrinsic Value|Synthesized Intrinsic Value)[^$\\d\\n]{0,40}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i')) ||
                              text.match(new RegExp(`(?:Final Synthesized Intrinsic Value:?\\s*${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*))(?!%)`, 'i')) ||
-                             text.match(new RegExp(`(?:Intrinsic Value Per Share)[^$\\d\\n]{0,30}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?!%)`, 'i'));
+                             text.match(new RegExp(`(?:Intrinsic Value Per Share)[^$\\d\\n]{0,30}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, 'i'));
             if (fallback) iv = fallback[1];
           }
         }

@@ -674,27 +674,27 @@ function extractExecutiveCockpit(markdown: string): ExecutiveCockpitData {
         : markdown.slice(part12Idx);
     }
     const verdictIvMatch = verdictText ? (
-      verdictText.match(/\|\s*\*{0,2}(?:Final\s+|Synthesized\s+|Sovereign\s+|Probability-Weighted\s+|Expected\s+)*Intrinsic\s+Value[^\n|]*\*{0,2}\s*\|\s*[:\s]*\*{0,2}\$([0-9,]+\.?[0-9]*)/i) ||
-      verdictText.match(/(?:\|\s*)?(?:\*{0,2})?(?:Mandate\s+|Final\s+|Synthesized\s+|Sovereign\s+|Probability-Weighted\s+|Expected\s+)*Intrinsic\s+Value[^\n$|]*?[:=|]\s*\*{0,2}\$([0-9,]+\.?[0-9]*)/i)
+      verdictText.match(/\|\s*\*{0,2}(?:Final\s+|Synthesized\s+|Sovereign\s+|Probability-Weighted\s+|Expected\s+)*Intrinsic\s+Value[^\n|]*\*{0,2}\s*\|\s*[:\s]*\*{0,2}\$([0-9,]+\.?[0-9]*)(?![0-9.,]*[MB]\b)/i) ||
+      verdictText.match(/(?:\|\s*)?(?:\*{0,2})?(?:Mandate\s+|Final\s+|Synthesized\s+|Sovereign\s+|Probability-Weighted\s+|Expected\s+)*Intrinsic\s+Value[^\n$|]*?[:=|]\s*\*{0,2}\$([0-9,]+\.?[0-9]*)(?![0-9.,]*[MB]\b)/i)
     ) : null;
     if (verdictIvMatch) {
       ivStr = verdictIvMatch[1];
     } else {
-      const tableMatch = markdown.match(/\|\s*\*{0,2}(?:Final |Synthesized )?Intrinsic Value[^\n|]*\*{0,2}\s*\|\s*[:\s]*\*{0,2}\$([0-9,]+\.?[0-9]*)/i);
+      const tableMatch = markdown.match(/\|\s*\*{0,2}(?:Final |Synthesized )?Intrinsic Value[^\n|]*\*{0,2}\s*\|\s*[:\s]*\*{0,2}\$([0-9,]+\.?[0-9]*)(?![0-9.,]*[MB]\b)/i);
       if (tableMatch) {
         ivStr = tableMatch[1];
       } else {
-        const bulletMatch = markdown.match(/\*\s*\*{0,2}(?:Final |Synthesized )?Intrinsic Value[^\n]*?[:=]\s*\*{0,2}\$([0-9,]+\.?[0-9]*)/i);
+        const bulletMatch = markdown.match(/\*\s*\*{0,2}(?:Final |Synthesized )?Intrinsic Value[^\n]*?[:=]\s*\*{0,2}\$([0-9,]+\.?[0-9]*)(?![0-9.,]*[MB]\b)/i);
         if (bulletMatch) {
           ivStr = bulletMatch[1];
         } else {
-          const proseIvMatch = markdown.match(/(?:Primary Synthesized Intrinsic Value|Final Synthesized Intrinsic Value|Synthesized Intrinsic Value)[^\n]*?(?:=\s*)?\$([0-9,]+\.?[0-9]*)(?:\s*per share|\*{0,2})/i);
+          const proseIvMatch = markdown.match(/(?:Primary Synthesized Intrinsic Value|Final Synthesized Intrinsic Value|Synthesized Intrinsic Value)[^\n]*?(?:=\s*)?\$([0-9,]+\.?[0-9]*)(?![0-9.,]*[MB]\b)(?:\s*per share|\*{0,2})/i);
           if (proseIvMatch) {
             ivStr = proseIvMatch[1];
           } else {
-            const fallback = markdown.match(/(?:Synthesized Final Intrinsic Value Per Share|Synthesized Final Intrinsic Value|Synthesized Intrinsic Value)[^$]*?\$([0-9,]+\.?[0-9]*)/i) ||
+            const fallback = markdown.match(/(?:Synthesized Final Intrinsic Value Per Share|Synthesized Final Intrinsic Value|Synthesized Intrinsic Value)[^$]*?\$([0-9,]+\.?[0-9]*)(?![0-9.,]*[MB]\b)/i) ||
                              markdown.match(/(?:Final Synthesized Intrinsic Value:?\s*\$([0-9,]+\.?[0-9]*))/i) ||
-                             markdown.match(/(?:Intrinsic Value Per Share).*?\$([0-9,]+\.?[0-9]*)/i);
+                             markdown.match(/(?:Intrinsic Value Per Share).*?\$([0-9,]+\.?[0-9]*)(?![0-9.,]*[MB]\b)/i);
             if (fallback) ivStr = fallback[1];
           }
         }
