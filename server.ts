@@ -4313,7 +4313,7 @@ function extractFrontmatter(
     verdictText = text.slice(m3Match.index);
   }
 
-  const dbMatch = verdictText.match(/^##\s+Quantitative Double-Blind/im);
+  const dbMatch = verdictText.match(/^##\s+(?:Part\s+13:\s+)?Quantitative Double-Blind/im);
   if (dbMatch && dbMatch.index !== undefined) {
     verdictText = verdictText.slice(0, dbMatch.index);
   }
@@ -4621,7 +4621,7 @@ async function updateCompiledReportFile(): Promise<string> {
         }
       }
     }
-    if (state.pythonValuation && !bodyMd.includes("## Part 13: Double-Blind Dual-Valuation Synthesis")) {
+    if (state.pythonValuation && !bodyMd.includes("Quantitative Double-Blind")) {
       const doubleBlindMd = synthesizeDoubleBlindSection(state.pythonValuation, bodyMd, sessionMode, state.config);
       if (doubleBlindMd) {
         bodyMd += `\n\n${doubleBlindMd}\n\n`;

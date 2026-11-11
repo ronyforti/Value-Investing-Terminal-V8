@@ -115,7 +115,7 @@ export function synthesizeDoubleBlindSection(
     verdictText = argonDossierMd.slice(m3Match.index);
   }
 
-  const dbMatch = verdictText.match(/^##\s+Quantitative Double-Blind/im);
+  const dbMatch = verdictText.match(/^##\s+(?:Part\s+13:\s+)?Quantitative Double-Blind/im);
   if (dbMatch && dbMatch.index !== undefined) {
     verdictText = verdictText.slice(0, dbMatch.index);
   }
@@ -124,31 +124,45 @@ export function synthesizeDoubleBlindSection(
   const curSymbolPattern = "(?:[\\$\\€\\¥\\£]|CA\\$|R\\$|MX\\$|CHF|USD)?\\s*";
   const curSymbolPatternStrict = "(?:[\\$\\€\\¥\\£]|CA\\$|R\\$|MX\\$|CHF|USD)\\s*";
 
-  // Extract Argon Intrinsic Value from verdict block first (prioritizing canonical GFM table), then fallback to full text
+  // Extract Stream 2 Intrinsic Value from verdict block first (prioritizing canonical GFM table), then fallback to full text
   const ivMatch = searchTarget.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, "i")) ||
                   searchTarget.match(new RegExp(`(?:^|[\\r\\n]|\\*)\\s*[\\\`*]{0,3}(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[\\\`*]{0,3}\\s*(?:[:=]|\\s+is|\\s+of)\\s*[\\\`*]{0,3}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, "i")) ||
                   searchTarget.match(new RegExp(`(?:[\\\`*]{0,3})(?:Refreshed\\s+|Mandate\\s+|Final\\s+|Synthesized\\s+|Sovereign\\s+|Probability-Weighted\\s+|Expected\\s+)*Intrinsic\\s+Value[^\\n$|]{0,25}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, "i")) ||
                   argonDossierMd.match(new RegExp(`(?:Synthesized Final Intrinsic Value Per Share|Synthesized Final Intrinsic Value|Synthesized Intrinsic Value|Authoritative Intrinsic Value)[^$\\d\\n]{0,40}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)(?!%)`, "i"));
   const argonIv = ivMatch ? parseFloat(ivMatch[1].replace(/,/g, "")) : null;
 
-  // Extract Argon EPV Floor: check verdict table first, then Gate 3 crosscheck, then authoritative table, guarding against enterprise [MB]
+  // Extract Stream 2 EPV Floor: check verdict table first, then Gate 3 crosscheck, then Part 8 table, then Part 6 table (col 3), guarding against enterprise aggregate [MB]
   let argonEpv: number | null = null;
-  const tableEpvMatch = verdictText ? verdictText.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Authoritative\\s+|Primary\\s+|Baseline\\s+|Zero-Growth\\s+)*EPV(?:\\s+Floor)?(?:\\s+Benchmark)?[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)`, "i")) : null;
+  const tableEpvMatch = verdictText ? verdictText.match(new RegExp(`\\|\\s*[\\\`*]{0,3}(?:Authoritative\\s+|Primary\\s+|Baseline\\s+|Zero-Growth\\s+)*EPV(?:\\s+Floor)?(?:\\s+Benchmark)?[^\\n|]*[\\\`*]{0,3}\\s*\\|\\s*[:\\s]*[\\\`*]{0,3}${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)`, "i")) : null;
   if (tableEpvMatch) {
     argonEpv = parseFloat(tableEpvMatch[1].replace(/,/g, ""));
   } else {
-    const gate3Match = argonDossierMd.match(new RegExp(`Gate\\s+3[^\\n]*?${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)\\s+(?:Zero-Growth\\s+)?EPV\\s+Floor`, "i"));
+    // Gate 3 in Part 12 (Forensic Audit Crosscheck)
+    const gate3Match = argonDossierMd.match(new RegExp(`Gate\\s+3[^\\n]*?(?:Zero-Growth\\s+)?EPV(?:(?:\\s+Floor)?(?:\\s+Benchmark)?)?[^\\n\\d]{1,30}${curSymbolPattern}[\\\`*]?([0-9,]+\\.?[0-9]*)[\\\`*]?`, "i")) ||
+                       argonDossierMd.match(new RegExp(`Gate\\s+3[^\\n]*?${curSymbolPattern}[\\\`*]?([0-9,]+\\.?[0-9]*)[\\\`*]?\\s*(?:Zero-Growth\\s+)?EPV`, "i"));
     if (gate3Match) {
       argonEpv = parseFloat(gate3Match[1].replace(/,/g, ""));
     } else {
-      const authEpvMatch = argonDossierMd.match(new RegExp(`(?:Authoritative Primary EPV Floor|Authoritative Zero-Growth EPV Floor(?: Per Diluted Share)?|Primary Authoritative EPV Floor)[^$\\d\\n|]{0,60}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)`, "i"));
-      if (authEpvMatch) {
-        argonEpv = parseFloat(authEpvMatch[1].replace(/,/g, ""));
+      // Part 8 Synthesis Tables (Step 1 and Step 2 Valuation Comparison tables)
+      const p8TableMatch = argonDossierMd.match(new RegExp(`\\|\\s*[*\\\`]{0,3}(?:Zero-Growth\\s+)?(?:Earnings\\s+Power\\s+Value|EPV)(?:\\s+Floor)?[^*\\\`|\\n]*[*\\\`]{0,3}\\s*\\|(?:[^|\\n]*\\|)?\\s*[:*\\\`]*${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)`, "i"));
+      if (p8TableMatch) {
+        argonEpv = parseFloat(p8TableMatch[1].replace(/,/g, ""));
       } else {
-        const epvMatch = searchTarget.match(new RegExp(`(?:Zero-Growth\\s+EPV\\s+Floor(?:\\s+of)?|EPV\\s+Floor(?:\\s+of)?)[^$\\d\\n|]{0,25}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)`, "i")) ||
-                         argonDossierMd.match(new RegExp(`(?:Zero-Growth EPV Floor Benchmark Per Share|Zero-Growth EPV Floor Per Share|EPV Floor Benchmark Per Share|EPV Floor Per Share)[^$\\d\\n]{0,50}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)`, "i")) ||
-                         argonDossierMd.match(new RegExp(`(?:Zero-Growth EPV Floor|EPV Floor|Earnings Power Value)[^$\\d\\n]{0,50}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)`, "i"));
-        argonEpv = epvMatch ? parseFloat(epvMatch[1].replace(/,/g, "")) : null;
+        // Part 6 Table: Column 3 (Per Diluted Share), explicitly skipping Column 2 (Total Equity $M)
+        const p6TableMatch = argonDossierMd.match(new RegExp(`\\|\\s*[*\\\`]{0,3}(?:Authoritative\\s+)?(?:Zero-Growth\\s+)?(?:Equity\\s+)?EPV\\s+Floor[^*\\\`|\\n]*[*\\\`]{0,3}\\s*\\|\\s*[^|\\n]*\\|\\s*[:*\\\`]*${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)`, "i"));
+        if (p6TableMatch) {
+          argonEpv = parseFloat(p6TableMatch[1].replace(/,/g, ""));
+        } else {
+          // Part 6 explicit per-share prose:
+          const p6Prose = argonDossierMd.match(new RegExp(`(?:Authoritative\\s+)?(?:Zero-Growth\\s+)?EPV(?:Floor)?(?:Benchmark)?(?:Per\\s+Share)?[^\\n]{0,80}?${curSymbolPattern}[\\\`*]{0,3}([0-9,]+\\.?[0-9]*)[\\\`*]{0,3}(?![0-9.,]*[MB]\\b)\\s*(?:per\\s+share|/share|/sh)`, "i"));
+          if (p6Prose) {
+            argonEpv = parseFloat(p6Prose[1].replace(/,/g, ""));
+          } else {
+            const fallbackMatch = argonDossierMd.match(new RegExp(`(?:Zero-Growth\\s+)?EPV(?:Floor)?[^\\n]{0,50}?${curSymbolPattern}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)[^\\n]{0,25}?(?:per\\s+share|/share|/sh)`, "i")) ||
+                                  argonDossierMd.match(new RegExp(`(?:Zero-Growth EPV Floor Benchmark Per Share|Zero-Growth EPV Floor Per Share|EPV Floor Benchmark Per Share|EPV Floor Per Share)[^$\\d\\n]{0,50}${curSymbolPatternStrict}([0-9,]+\\.?[0-9]*)(?![0-9.,]*[MB]\\b)`, "i"));
+            argonEpv = fallbackMatch ? parseFloat(fallbackMatch[1].replace(/,/g, "")) : null;
+          }
+        }
       }
     }
   }
@@ -163,7 +177,7 @@ export function synthesizeDoubleBlindSection(
                    argonDossierMd.match(/(?:Final Portfolio Action Directive|Audited Portfolio Verdict|Suggested Action|Action Directive)[^a-zA-Z\n]{1,40}\b(INVEST|PASS|ESCALATE|HOLD|ACCUMULATE|LIQUIDATE)\b/i);
   const argonVerdict = decMatch ? decMatch[1].toUpperCase() : "EVALUATED";
 
-  // Calculate divergence between Stream 1 (Python Expected DCF) and Stream 2 (Argon Synthesized IV)
+  // Calculate divergence between Stream 1 (Python Expected DCF) and Stream 2 (Stream 2 Synthesized IV)
   let divergenceStatus = "N/A";
   let divergenceSpreadPct = "N/A";
   if (argonIv && argonIv > 0 && pythonVal.dcf_expected > 0) {
@@ -179,16 +193,21 @@ export function synthesizeDoubleBlindSection(
     }
   }
 
+  const rawModel = (config?.model || "").replace(/^models\//, "");
+  const modelLabel = rawModel
+    ? rawModel.split("-").map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(" ")
+    : "Gemini";
+
   const lines: string[] = [
     "---",
     "",
-    "## Quantitative Double-Blind Cross-Examination (Stream 1 Mechanical vs. Stream 2 Institutional)",
+    "## Part 13: Quantitative Double-Blind Dual-Valuation Synthesis (Stream 1 vs. Stream 2)",
     "",
     "> [!NOTE]",
-    "> **Double-Blind Architecture Safeguard:** Stream 1 (Python 40Q mechanical engine) and Stream 2 (Gemini 4 Argon deep filings underwriting) were executed completely independently. Neither stream had access to the other's valuation numbers or recommendations, ensuring zero anchoring bias.",
+    `> **Double-Blind Architecture Safeguard:** Stream 1 (Python 40Q mechanical engine) and Stream 2 (${modelLabel} deep filings underwriting) were executed completely independently. Neither stream had access to the other's valuation numbers or recommendations, ensuring zero anchoring bias.`,
     "",
     "### 1. Dual-Stream Valuation Synthesis & Divergence Matrix",
-    "| Valuation Parameter | Stream 1: Python Mechanical Engine | Stream 2: Gemini 4 Argon Underwriting | Desk Cross-Examination |",
+    `| Valuation Parameter | Stream 1: Python Mechanical Engine | Stream 2: ${modelLabel} Underwriting | Desk Cross-Examination |`,
     "| :--- | :---: | :---: | :--- |",
     `| **Authoritative Intrinsic Value** | **$${pythonVal.dcf_expected.toFixed(2)}** | **${argonIv ? `$${argonIv.toFixed(2)}` : "Evaluated"}** | **${divergenceStatus}** |`,
     `| **Zero-Growth EPV Floor** | $${pythonVal.epv_per_share.toFixed(2)} | ${argonEpv ? `$${argonEpv.toFixed(2)}` : "Evaluated"} | Sustainable no-growth balance sheet & cash flow floor |`,
@@ -214,7 +233,7 @@ export function synthesizeDoubleBlindSection(
   lines.push(`### 3. Bolsa 6.0 Quantitative OKR Scorecard (${pythonVal.okr_passed_count}/13 Passed)`);
   lines.push("| OKR Key | Metric Description | Audited Value | Target Hurdle | Result |");
   lines.push("| :--- | :--- | :---: | :---: | :---: |");
-  for (const okr of pythonVal.okr_scorecard) {
+  for (const okr of pythonVal.okr_scorecard || []) {
     const badge = okr.passed ? "PASS" : "FAIL";
     lines.push(`| **${okr.id}** | ${okr.name} | ${okr.value} | ${okr.target} | **${badge}** |`);
   }
@@ -223,12 +242,12 @@ export function synthesizeDoubleBlindSection(
   lines.push("### 4. 4-Vector Buy-Side Cash Integrity Audit");
   lines.push("| Forensic Cash Vector | Audited 3-Year Metric | Desk Standard | Audit Finding |");
   lines.push("| :--- | :---: | :---: | :---: |");
-  for (const v of pythonVal.forensic_4vectors) {
+  for (const v of pythonVal.forensic_4vectors || []) {
     lines.push(`| **${v.vector}** | ${v.metric} | ${v.threshold} | **${v.finding}** |`);
   }
   lines.push("");
 
-  if (sessionMode === "sentinel" && Object.keys(pythonVal.qoq_deltas).length > 0) {
+  if (sessionMode === "sentinel" && pythonVal.qoq_deltas && Object.keys(pythonVal.qoq_deltas).length > 0) {
     lines.push("### 5. Mode 3 Quarterly Operational Momentum Deltas (40Q Extracted)");
     lines.push("| Metric Operational Vector | Same-Quarter YoY Delta (Q0 vs Q4) | Sequential Q/Q Delta (Q0 vs Q1) |");
     lines.push("| :--- | :---: | :---: |");
