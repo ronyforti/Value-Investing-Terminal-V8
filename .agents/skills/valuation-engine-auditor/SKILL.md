@@ -346,4 +346,21 @@ To eliminate autoregressive token smoothing and hallucinated math certifications
   - `_normalize_row_key` must discard any line containing `:` or `segment`/`breakdown` as a section header.
   - Parsers must explicitly distinguish `costofrevenue`, `deferredrevenue`, and `operatingincome` from top-line `revenue`.
   - Parsers must enforce a protect-on-overwrite guard: do NOT overwrite an already populated non-zero series in `series_map` with an empty or all-zero row from secondary or tertiary statement blocks.
+- **Cash Flow vs. Balance Sheet Dual Inventory Disambiguation:**
+  - In FMP `Financials-TTM.csv`, `inventory` appears both in the Cash Flow section (negative outflow when acquiring inventory/land) and in the Balance Sheet section (positive inventory asset).
+  - Parsers must separate them into `cf_inventory` (Cash Flow) and `bs_inventory` (Balance Sheet) to prevent Balance Sheet positive values from overwriting Cash Flow land-acquisition outflows, which would corrupt Land-Adjusted OCF.
+
+### 9.14 Two-Pillar Solvency Architecture & Industry Archetype Routing
+To prevent false-insolvency alarms on cash-rich compounders and asset-heavy balance sheets without compromising forensic defense:
+1. **Pillar 1: Universal Operating Company Solvency Standard (KR-3 & Vector 4):**
+   - **Balance Sheet Leverage:** Pass if `Long-Term Debt / Equity <= 0.50x` (classic Lynch) **OR** `Net Debt / Equity <= 0.50x` (cash-rich compounder where excess cash covers over 50% of debt), guarded by `Goodwill / Total Assets < 35.0%`.
+   - **Cash-Flow Payback & Coverage:** `Net Debt / 3Y OE_0 <= 2.5x–3.5x` AND `Operating Income / Interest Expense >= 6.0x` (or strictly Net Cash).
+   - **Share-Cannibal Treasury Stock Override:** For compounders with negative or near-zero GAAP book equity resulting from disciplined share buybacks (`BKNG`, `HRB`), evaluate solvency strictly via `Net Debt / 3Y OE_0 <= 2.5x` and `Interest Coverage >= 6.0x`.
+   - **Embedded Fintech Warehouse Debt Isolation:** For operating companies with expanding fintech/lending arms (`MELI`), isolate self-liquidating loan warehouse debt (`<= 85%` of short-term receivables when `Receivables / Revenue >= 20%` and `Gross Margin >= 40%`) from corporate operating debt.
+2. **Pillar 2: Asset-Heavy & Regulated Industry Archetype Caps:**
+   - **Fortress Homebuilders (Residential Construction):** GAAP capitalizes land acquisitions into Operating Cash Flow (Change in Inventory). When passing Pillar 2 caps (`Net Debt / Equity <= 0.35x`, `LT Debt / Equity <= 0.50x`, and `Net Debt / 3Y OE_0 <= 1.50x`), compute **Land-Adjusted OCF** (`GAAP OCF + |Inventory Outflow|`) for Vector 1 (>= 80% Cash Conversion) and Starting `OE_0`.
+   - **Fortress Cyclical Compounders:** Net-cash consolidators (`Total Debt <= 0.5x Cash` and `Net Debt <= 0`, `3Y Avg ROIC >= 20%`, `3Y Avg Operating Margin >= 12%`, positive trough earnings, and trough-to-trough revenue escalation) are protected through cyclical commodity price troughs. Starting `OE_0` is anchored to 5-to-10 year full-cycle normalized earning power.
+   - **Specialty P&C Insurers:** Evaluated on Float-Normalized Levered NOPAT (`Net Income - SBC - Maintenance CapEx`), `Combined Ratio <= 85.0%`, `3Y Avg ROE >= 20.0%`, and `Total Debt / Equity <= 0.30x`. Policyholder reserve fixed-income investments must NEVER be double-counted as free corporate Net Cash in the equity bridge (`net_cash = min(0.0, Cash - Debt)`).
+   - **High-ROE Digital Fintech Compounders:** Evaluated on Levered Owner Earnings when `3Y Avg ROE >= 22.0%`, `Equity / Assets >= 12.0%`, and `3Y Revenue CAGR >= 20.0%`.
+
 

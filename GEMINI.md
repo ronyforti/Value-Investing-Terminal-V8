@@ -48,6 +48,16 @@ The terminal supports 3 specialized operating modes configured via `sessionMode`
 - **Negative-WC Float Model:** Companies operating with customer float and negative working capital credit the structural float advantage without penalizing short-term liquidity ratios.
 - **Multi-Statement CSV Normalization & Protection Invariant (`scripts/valuation_engine.py`):**
   Financial CSV files from FMP and SEC aggregate Cash Flow, Income Statement, Balance Sheet, and Segment tables. When parsing keys, `_normalize_row_key` must discard lines containing `:` or `segment`/`breakdown`, explicitly distinguish `costofrevenue` and `deferredrevenue` from top-line `revenue`, and protect already populated non-zero series in `series_map` from being overwritten by subsequent blank or all-zero rows.
+  - *Cash Flow vs. Balance Sheet Dual Inventory Disambiguation:* FMP CSVs contain an `inventory` row in the Cash Flow section (negative outflow when acquiring inventory/land) and an `inventory` row in the Balance Sheet section (positive inventory asset). The parser explicitly tags them as `cf_inventory` and `bs_inventory` so the Balance Sheet row never overwrites the Cash Flow row, ensuring Land-Adjusted OCF can be computed accurately.
+- **Two-Pillar Solvency Architecture & Industry Archetype Routing:**
+  - *Pillar 1 (Universal Operating Company Gate):* Pass if `Long-Term Debt / Equity <= 0.50x` (classic Lynch) OR `Net Debt / Equity <= 0.50x` (cash-rich compounder with excess cash covering over 50% of debt), subject to `Goodwill / Total Assets < 35.0%`. Cash-flow payback must satisfy `Net Debt / 3Y OE_0 <= 2.5x–3.5x` with `Operating Income / Interest Expense >= 6.0x`.
+  - *Share-Cannibal Treasury Stock Override:* Compounders with negative book equity due to disciplined cumulative buybacks (`BKNG`, `HRB`) pass via `Net Debt / 3Y OE_0 <= 2.5x` and `Interest Coverage >= 6.0x`.
+  - *Embedded Fintech Warehouse Debt Isolation:* Self-liquidating loan warehouse debt (`<= 85%` of receivables when `Receivables / Revenue >= 20%` and `Gross Margin >= 40%`) is isolated from corporate operating debt (`MELI`).
+  - *Pillar 2 (Industry Archetype Caps):*
+    - *Fortress Homebuilders:* Enforce `Net Debt / Equity <= 0.35x`, `LT Debt / Equity <= 0.50x`, and `Net Debt / 3Y OE_0 <= 1.50x`. Compute **Land-Adjusted OCF** (`GAAP OCF + |Inventory Outflow|`) for cash conversion (>= 80%) and `OE_0`.
+    - *Fortress Cyclical Compounders:* Net-cash consolidators (`Total Debt <= 0.5x Cash`, `Net Debt <= 0`, `3Y ROIC >= 20%`, `3Y Operating Margin >= 12%`, positive trough earnings, and trough-to-trough revenue escalation) are protected through commodity price troughs with 5Y–10Y full-cycle normalized `OE_0`.
+    - *Specialty P&C Insurers:* Evaluated on Float-Normalized Levered NOPAT (`Net Income - SBC - Maintenance CapEx`), `Combined Ratio <= 85.0%`, `ROE >= 20.0%`, and `Total Debt / Equity <= 0.30x`. Policyholder reserve investments must NEVER be double-counted as free corporate Net Cash (`net_cash = min(0.0, Cash - Debt)`).
+    - *High-ROE Digital Fintech Compounders:* Evaluated on Levered Owner Earnings when `3Y ROE >= 22.0%`, `Equity / Assets >= 12.0%`, and `3Y Rev CAGR >= 20.0%`.
 
 ## Service Tier Governance & Google Gemini Flex Saturation Protocol
 - **Gemini Flex Tier Saturation & Context-Size Boundary:**
