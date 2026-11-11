@@ -67,9 +67,11 @@ Prioritize the 10-Q data if it is more recent than the 10-K for qualitative upda
      2. Charlie Munger Zero-EBITDA & Non-GAAP Add-Back Rejection (Vector 2): Audit management's non-GAAP adjustments. Strip out recurring add-backs for Stock-Based Compensation (SBC), restructuring charges, acquisition integration costs, and ongoing litigation. Flag if management relies on aggressive non-GAAP / "Adjusted EBITDA" add-backs to disguise underlying GAAP operating losses or if Stock-Based Compensation exceeds 10% of Operating Cash Flow (or > 5% of Total Revenue) without being deducted from executive performance targets.
      3. Aggressive Expense Capitalization & Revenue Pull-Forward (Vector 3): Audit capitalized software, capitalized development costs, unbilled contract assets, and intangible asset reclassifications. Flag if capitalized operating costs grow at > 2.0x revenue growth, if finite-life intangibles are reclassified to indefinite life to artificially lower quarterly amortization expense, or if unbilled contract assets/receivables chronically expand while deferred revenue declines over a multi-year period.
      4. Balance Sheet Asset & Working Capital Integrity (Vector 4): Audit balance sheet asset growth versus underlying cash generation, explicitly separating productive capital deployment from non-cash accounting inflation. Benchmark: Cash-funded acquisitions of physical plant, property, equipment (PP&E), and proven operating businesses, as well as temporary income tax receivables/refunds from the IRS, represent productive cash conversion and MUST NOT be flagged as accounting accrual manipulation. Flag only if operating assets inflate via uncollectible customer receivables, inventory obsolescence, or unamortized deferred costs without corresponding cash collections.
-   * [CRITICAL INDUSTRY-SPECIFIC BYPASS ROUTING FOR FORENSIC ACCOUNTING AUDIT]:
-     - For Banks, Financial Institutions & Embedded Fintech Lenders: Skip standard inventory and software capitalization tests. Instead, execute the Credit Quality Forensic Check: compare Provision for Credit Losses against historical through-the-cycle Net Charge-Offs (flag aggressive reserve releases used to artificially boost net interest income) and audit CET1 / Non-Performing Loan (NPL) formation rates. In growing fintech/lending operations under CECL (ASC 326), distinguish upfront Day-1 non-cash growth reserve builds from true credit deterioration; do not confuse upfront accounting reserves with permanent operational cash burns.
-     - For Insurers: Inspect the 10-K Loss Reserve Note for Prior-Year Reserve Development (flag favorable reserve releases masking underlying underwriting deterioration) and evaluate the Combined Ratio (< 100%).
+   * [CRITICAL INDUSTRY-SPECIFIC BYPASS ROUTING & TWO-PILLAR SOLVENCY ARCHITECTURE FOR FORENSIC ACCOUNTING AUDIT]:
+     - Two-Pillar Solvency Standard: Evaluate balance sheet solvency across both Pillar 1 (Standard Operating / Asset-Light / Cannibals / Embedded Fintechs: LT Debt / Equity <= 0.50x OR Net Debt / Equity <= 0.50x, paired with Net Debt / 3Y OE_0 <= 2.50x-3.50x and Operating Income / Interest >= 6.0x; Share-Cannibal Treasury Stock override passes when Net Debt / 3Y OE_0 <= 2.50x) and Pillar 2 (Asset-Heavy & Regulated Archetype Caps: Fortress Homebuilders require Net Debt / Equity <= 0.35x, LT Debt / Equity <= 0.50x, and Net Debt / 3Y OE_0 <= 1.50x because GAAP interest capitalization into inventory blinds Interest Coverage; Specialty P&C Insurers require Total Debt / Equity <= 0.30x, Combined Ratio <= 85.0%, and ROE >= 18.0%; Cyclical Trough Compounders require strictly Net Cash where Cash >= Total Debt).
+     - For Fortress Homebuilders & Residential Construction: In Vector 1 (3-Year Cumulative Cash Conversion), GAAP classifies land and lot acquisition spending as an operating cash outflow (Change in Inventory), artificially depressing reported OCF during community expansion. For homebuilders passing the Fortress Solvency Gate (Net Debt / Equity <= 0.35x and LT Debt / Equity <= 0.50x), add back negative Inventory cash outflows (land acquisition) to OCF to evaluate Land-Adjusted Cash Conversion (>= 85%) and treat land acquisition as Growth CapEx reinvestment rather than accrual manipulation.
+     - For Banks, Financial Institutions & Embedded Fintech Lenders: Skip standard inventory and software capitalization tests. Instead, execute the Credit Quality Forensic Check: compare Provision for Credit Losses against historical through-the-cycle Net Charge-Offs (flag aggressive reserve releases used to artificially boost net interest income) and audit CET1 / Non-Performing Loan (NPL) formation rates. In growing fintech/lending operations under CECL (ASC 326), distinguish upfront Day-1 non-cash growth reserve builds from true credit deterioration; do not confuse upfront accounting reserves with permanent operational cash burns, and isolate self-liquidating fintech receivable warehouse funding from corporate debt.
+     - For Insurers: Inspect the 10-K Loss Reserve Note for Prior-Year Reserve Development (flag favorable reserve releases masking underlying underwriting deterioration) and evaluate the Combined Ratio (< 100%, with <= 85% and Total Debt / Equity <= 0.30x for Specialty P&C Compounders). Never double-count policyholder reserve fixed-income cash as free corporate Net Cash in the equity bridge.
      - For REITs: Audit tenant lease expirations, straight-line rent adjustments, same-store tenant creditworthiness, and Net Debt to AFFO (or NOI).
    * Confidence Level:
 * 2.7 Long-Term Debt Analysis & Footnote Debt Equivalents (Footnote Debt Equivalents Protocol):
@@ -880,8 +882,13 @@ Execute a strict 3-year rolling cash integrity audit across the 4 core vectors, 
 | **1. 3-Year Cumulative Cash Conversion** | [3Y Cum OCF / 3Y Cum GAAP NI %] | >= 85.0% | PASS / FLAG / BREACH |
 | **2. Non-GAAP Add-Back & SBC Dilution Audit** | [SBC % of OCF / SBC % of Revenue] | <= 10.0% OCF / 5.0% Rev | PASS / FLAG / BREACH |
 | **3. Aggressive Capitalization & Receivables Pull-Forward** | [Receivables Growth vs Rev Growth] | <= 1.5x Rev Growth | PASS / FLAG / BREACH |
-| **4. Balance Sheet Integrity & Solvency** | [Net Cash or Net Debt / 3Y OE_0] | Net Cash or Net Debt/OE <= 2.5x | PASS / FLAG / BREACH |
+| **4. Balance Sheet Integrity & Two-Pillar Solvency** | [LT Debt/Eq or Net Debt/Eq & Net Debt/3Y OE_0] | (LTD/Eq or ND/Eq <= 0.50x) & ND/OE <= 2.5x | PASS / FLAG / BREACH |
 
+- **Industry Archetype & Two-Pillar Solvency Routing Mandate:**
+  - *Two-Pillar Solvency Standard (Vector 4):* Standard operating companies must satisfy Pillar 1: (LT Debt / Equity <= 0.50x OR Net Debt / Equity <= 0.50x) AND Net Debt / 3Y OE_0 <= 2.5x (with Operating Income / Interest >= 6.0x). For Share-Cannibal compounders with negative or compressed book equity from treasury stock repurchases, evaluate via Net Debt / 3Y OE_0 <= 2.5x.
+  - *Fortress Homebuilders (Residential Construction):* GAAP classifies land and lot acquisition outflows inside Operating Cash Flow (Change in Inventory). For homebuilders passing the Pillar 2 Fortress Solvency Gate (Net Debt / Equity <= 0.35x, LT Debt / Equity <= 0.50x, and Net Debt / 3Y OE_0 <= 1.50x, required because GAAP interest capitalization into inventory blinds Interest Coverage), add back negative Inventory cash outflows to OCF before evaluating Vector 1 (>= 85% Cash Conversion) and computing OE_0.
+  - *Fortress Cyclical Trough Compounders:* Net-cash cyclical compounders (Cash >= Total Debt, 3Y ROIC >= 20%, and trough-to-trough revenue/EPS escalation) are protected from single-year post-spike margin penalties; anchor OE_0 to the 3-Year Rolling Average.
+  - *Specialty P&C Insurers & Embedded Fintechs:* Specialty insurers must pass Combined Ratio <= 85.0%, ROE >= 18.0%, and Total Debt / Equity <= 0.30x; anchor OE_0 to Float-Normalized Levered NOPAT (Net Income - SBC - Maintenance CapEx) and never double-count policyholder reserve fixed-income cash as free corporate Net Cash in the equity bridge. For Embedded Fintechs, add back upfront Day-1 CECL growth reserves to OE_0 and isolate self-liquidating loan receivable warehouse debt from corporate debt.
 - STE100 Audit Summary: State 1-2 punchy declarative sentences synthesizing earnings quality and balance-sheet defense.
 
 ### 3. Core Economic Engine & Moat Durability
@@ -893,10 +900,10 @@ Provide exactly 2-3 high-impact declarative bullet points per subsection using A
 
 ### 4. Ground-Up Cash-Flow Sovereign Valuation (Stream 2)
 [PRECISION MANDATE]: Maintain 100% mathematical rigidity. Show plain-text calculations. Zero WACC/Beta (static 10.00% hurdle rate).
-- Universal 3-Year Trailing Average Starting Baseline (OE_0): Calculate Normalized Owner Earnings across trailing 3 fiscal years (deducting 100% of SBC as cash expense and subtracting empirical Maintenance CapEx). State OE_0 = (OE_TTM0 + OE_TTM1 + OE_TTM2) / 3.
+- Universal 3-Year Trailing Average Starting Baseline (OE_0): Calculate Normalized Owner Earnings across trailing 3 fiscal years (deducting 100% of SBC as cash expense and subtracting empirical Maintenance CapEx; apply Homebuilder Land-Adjusted OCF, Specialty Insurer Float-Normalized Levered NOPAT, or Embedded Fintech CECL normalization where applicable). State OE_0 = (OE_TTM0 + OE_TTM1 + OE_TTM2) / 3.
 - Foreign Currency & ADR Dual-Currency Bridge: If reporting in foreign native currency, calculate in native units first, then apply Spot FX rate and ADS ratio to state per-share values in USD per ADS.
 - The Red Queen Test & Tech R&D Capitalization Gate: If verified tech compounder passing gate, dynamically calibrate Growth R&D net of 5-year straight-line amortization drag.
-- Zero-Growth Earnings Power Value (EPV) Floor: Capitalize OE_0 at static 10.00% hurdle, bridge through Net Cash, and compute EPV Per Share.
+- Zero-Growth Earnings Power Value (EPV) Floor: Capitalize OE_0 at static 10.00% hurdle, bridge through Net Cash (excluding insurer policyholder reserve cash and fintech warehouse debt), and compute EPV Per Share.
 - Probabilistic 10-Year Owner Earnings DCF Scenario Spectrum: Project 10-year cash flows discounted at 10.00% across 3 explicit scenarios:
   | Valuation Scenario | Probability Weight | Per Diluted Share Value | Implied MoS vs. Market Tape |
   | :--- | :---: | :---: | :---: |
@@ -970,8 +977,8 @@ Present the authoritative decision-support summary immediately at the top in thi
 
 ### 2. Refreshed Valuation Spectrum & Intrinsic Value Delta
 [PRECISION MANDATE]: Maintain 100% mathematical rigidity. Show plain-text calculations. Zero WACC/Beta (static 10.00% hurdle rate).
-- Universal 3-Year Rolling Average Baseline (OE_0): Recompute the 3-Year Rolling Average Normalized Owner Earnings from the refreshed CSV tables (deducting 100% of SBC as cash expense and subtracting empirical Maintenance CapEx).
-- Zero-Growth Earnings Power Value (EPV) Floor: Capitalize refreshed OE_0 at 10.00% static hurdle rate, bridge through Net Cash, and compute EPV Per Share.
+- Universal 3-Year Rolling Average Baseline (OE_0): Recompute the 3-Year Rolling Average Normalized Owner Earnings from the refreshed CSV tables (deducting 100% of SBC as cash expense and subtracting empirical Maintenance CapEx; apply Homebuilder Land-Adjusted OCF by adding back negative Inventory land outflows, Specialty Insurer Float-Normalized Levered NOPAT, Cyclical Trough 3Y OE_0 protection, or Embedded Fintech CECL normalization where applicable).
+- Zero-Growth Earnings Power Value (EPV) Floor: Capitalize refreshed OE_0 at 10.00% static hurdle rate, bridge through Net Cash (excluding insurer policyholder reserve cash and fintech warehouse debt), and compute EPV Per Share.
 - Probabilistic 10-Year Owner Earnings DCF Scenario Spectrum: Project 10-year cash flows discounted at 10.00% across 3 explicit scenarios:
   | Valuation Scenario | Probability Weight | Per Diluted Share Value | Implied MoS vs. Market Tape |
   | :--- | :---: | :---: | :---: |
@@ -982,7 +989,7 @@ Present the authoritative decision-support summary immediately at the top in thi
   | **Zero-Growth EPV Floor Benchmark** | — | **$XX.XX** | **XX.XX%** |
 - Intrinsic Value & Margin of Safety Delta Table:
   | Valuation Anchor | Prior Dossier Baseline | Refreshed Sentinel Value | Variance ($ / %) | Audit Direction |
-  | :--- | :---: | :---: | :---: | :---: |
+  | :--- | :---: | :---: | :---: | :--- |
   | **Market Tape Price** | $[XX.XX] | $[XX.XX] | [+$X.XX / +X.X%] | Market Tape Delta |
   | **Zero-Growth EPV Floor** | $[XX.XX] | $[XX.XX] | [+$X.XX / +X.X%] | Floor Delta |
   | **Expected Intrinsic Value** | $[XX.XX] | $[XX.XX] | [+$X.XX / +X.X%] | Compounding Trajectory |
@@ -1018,10 +1025,11 @@ Evaluate the 4 Isolation Gates for existing holdings:
 | Isolation Gate | Audited Quarterly Evidence | Benchmark Standard | Audit Finding (PASS / BREACH) |
 | :--- | :--- | :--- | :---: |
 | **Gate 1: Structural Moat Impairment** | [Market share, customer defection, pricing power] | Zero permanent competitive loss | PASS / BREACH |
-| **Gate 2: Balance Sheet Solvency Threat** | [Net cash, debt maturities, interest coverage] | Operating Income / Interest >= 6.0x | PASS / BREACH |
+| **Gate 2: Balance Sheet & Two-Pillar Solvency** | [LT Debt/Eq or Net Debt/Eq, Net Debt/OE_0, Interest Coverage] | (LTD/Eq or ND/Eq <= 0.50x) & ND/OE <= 2.5x; IntCov >= 6.0x | PASS / BREACH |
 | **Gate 3: Management Predation & Capital Destruction** | [M&A diworseification, SBC dilution, buyback timing] | Passed $1 Test / Zero out-of-moat M&A | PASS / BREACH |
 | **Gate 4: Superior Capital Allocation Opportunity** | [Actionable alternative at 0% tax friction] | Compounding runway intact | PASS / BREACH |
 
+- *Gate 2 Industry Archetype Solvency Routing:* Standard operating holdings pass Gate 2 via (LT Debt / Equity <= 0.50x OR Net Debt / Equity <= 0.50x) AND Net Debt / 3Y OE_0 <= 2.5x-3.5x with Operating Income / Interest >= 6.0x (Share Cannibals pass via Net Debt / 3Y OE_0 <= 2.5x; Embedded Fintechs isolate self-liquidating loan warehouse debt). Enforce Pillar 2 Balance-Sheet Caps for asset-heavy/regulated holdings: Fortress Homebuilders require Net Debt / Equity <= 0.35x, LT Debt / Equity <= 0.50x, and Net Debt / 3Y OE_0 <= 1.50x; Specialty P&C Insurers require Total Debt / Equity <= 0.30x and Combined Ratio <= 85.0%; Cyclical Trough Compounders require Net Cash (Cash >= Total Debt).
 - STE100 Diagnostic Finding: Output 1-2 punchy declarative sentences synthesizing whether any gate was breached.
 
 ### 6. Universal Transitory vs. Structural Standard (Snowstorm Protocol) & MELI Doctrine

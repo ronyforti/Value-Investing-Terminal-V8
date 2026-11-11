@@ -69,6 +69,16 @@ class ValuationEngineV8:
             for c in row[1:len(periods) + 1]:
                 vals.append(cls._parse_number(c))
             
+            # Distinguish Cash Flow inventory outflows from Balance Sheet inventory balances
+            if norm_key in ("changeininventory", "inventorychange", "inventorycashflow"):
+                series_map["cf_inventory"] = vals
+                continue
+            if norm_key == "inventory":
+                if "cf_inventory" not in series_map and ("operatingcashflow" not in series_map or any(v < 0.0 for v in vals)):
+                    series_map["cf_inventory"] = vals
+                else:
+                    series_map["bs_inventory"] = vals
+
             # Protect existing non-zero series from being overwritten by empty/zero rows or secondary tables
             if norm_key in series_map and any(v != 0.0 for v in series_map[norm_key]) and (len(vals) == 0 or not any(v != 0.0 for v in vals)):
                 continue
@@ -127,6 +137,12 @@ class ValuationEngineV8:
             return "stockbasedcompensation"
         if "changeinworkingcapital" in s or "workingcapitalchange" in s:
             return "changeinworkingcapital"
+        if "changeininventory" in s or "inventorychange" in s or "inventorycashflow" in s:
+            return "changeininventory"
+        if s == "inventory" or s == "inventories":
+            return "inventory"
+        if "interestexpense" in s and "net" not in s:
+            return "interestexpense"
         if "researchanddevelopment" in s or "rdexpense" in s:
             return "researchanddevelopment"
         if "cashandshortterminvestments" in s or "cashandcashequivalents" in s:
@@ -195,6 +211,8 @@ class ValuationEngineV8:
         capex = series.get("capitalexpenditure", [])
         sbc = series.get("stockbasedcompensation", [])
         wc_chg = series.get("changeinworkingcapital", [])
+        cf_inv = series.get("cf_inventory", [])
+        bs_inv = series.get("bs_inventory", series.get("inventory", []))
         rd = series.get("researchanddevelopment", [])
         cash = series.get("cashandshortterminvestments", [0.0])
         debt = series.get("totaldebt", [0.0])
@@ -246,13 +264,39 @@ class ValuationEngineV8:
         slices_da = [abs(da[i]) if i < len(da) else 0.0 for i in slice_indices]
         slices_sbc = [max(0.0, sbc[i]) if i < len(sbc) else 0.0 for i in slice_indices]
         slices_wc = [wc_chg[i] if i < len(wc_chg) else 0.0 for i in slice_indices]
+        slices_cf_inv = [cf_inv[i] if i < len(cf_inv) else 0.0 for i in slice_indices]
         slices_rd = [max(0.0, rd[i]) if i < len(rd) else 0.0 for i in slice_indices]
+
+        # Industry Archetype Detection (Homebuilder & Specialty Insurer)
+        sec_ind = f"{sector} {industry}".lower()
+        eq_0_init = equity[0] if equity else 0.0
+        debt_0_init = debt[0] if debt else 0.0
+        lt_debt_0_init = lt_debt[0] if lt_debt else debt_0_init
+        cash_0_init = cash[0] if cash else 0.0
+        nd_eq_init = (max(0.0, debt_0_init - cash_0_init) / eq_0_init) if eq_0_init > 0 else 999.0
+        ltd_eq_init = (lt_debt_0_init / eq_0_init) if eq_0_init > 0 else 999.0
+        td_eq_init = (debt_0_init / eq_0_init) if eq_0_init > 0 else 999.0
+
+        inv_asset_ratio = (bs_inv[0] / assets[0]) if (bs_inv and assets and assets[0] > 0) else 0.0
+        capex_rev_ratio = (slices_capex[0] / slices_rev[0]) if (slices_capex and slices_rev and slices_rev[0] > 0) else 0.0
+        has_land_outflows = any(v < 0.0 for v in slices_cf_inv[:min(3, len(slices_cf_inv))])
+        is_hb_industry = any(k in sec_ind for k in ("residential construction", "homebuilder", "homebuilding", "home construction")) or (
+            inv_asset_ratio >= 0.50 and capex_rev_ratio <= 0.03 and has_land_outflows
+        )
+        is_fortress_homebuilder = bool(is_hb_industry and eq_0_init > 0 and nd_eq_init <= 0.35 and ltd_eq_init <= 0.50)
+
+        is_ins_industry = any(k in sec_ind for k in ("insurance", "insurer", "reinsurance", "underwriting"))
+        roe_init = (slices_ni[0] / eq_0_init) if (slices_ni and eq_0_init > 0) else 0.0
+        op_m_init = (slices_ebit[0] / slices_rev[0]) if (slices_ebit and slices_rev and slices_rev[0] > 0) else 0.0
+        is_specialty_insurer = bool(is_ins_industry and eq_0_init > 0 and td_eq_init <= 0.30 and roe_init >= 0.15 and op_m_init >= 0.15)
 
         # Calculate Normalized Owner Earnings per slice (with 100% SBC and Maint CapEx deducted)
         slices_oe: List[float] = []
+        slices_ocf_effective: List[float] = []
         for i in range(len(slices_rev)):
             r_i = slices_rev[i]
             e_i = slices_ebit[i] if i < len(slices_ebit) else 0.0
+            ni_i = slices_ni[i] if i < len(slices_ni) else 0.0
             ebt_i = ebt[slice_indices[i]] if (slice_indices[i] < len(ebt)) else e_i
             tax_i = tax[slice_indices[i]] if (slice_indices[i] < len(tax)) else 0.0
             eff_tax = max(0.15, min(0.30, tax_i / ebt_i)) if (ebt_i > 0 and tax_i >= 0) else 0.21
@@ -263,22 +307,36 @@ class ValuationEngineV8:
             sbc_i = slices_sbc[i]
             wc_i = slices_wc[i]
             ocf_i = slices_ocf[i] if i < len(slices_ocf) else 0.0
+            cf_inv_i = slices_cf_inv[i] if i < len(slices_cf_inv) else 0.0
 
             # Sustainable NOPAT ex-SBC (EBIT already expenses SBC, do not subtract twice)
             amort_excess = max(0.0, min(da_i * 0.35, da_i - maint_c_i))
             nopat_i = (e_i + amort_excess) * (1.0 - eff_tax)
 
-            # Cash Owner Earnings ex-Working Capital float
-            excess_wc = max(0.0, wc_i - r_i * 0.05) if r_i > 0 else 0.0
-            clean_ocf_i = ocf_i - excess_wc
-            cash_oe_i = clean_ocf_i - sbc_i - maint_c_i
-
-            if nopat_i > 0 and cash_oe_i > 0:
-                oe_i = 0.60 * nopat_i + 0.40 * cash_oe_i
-            elif nopat_i < 0 or cash_oe_i < 0:
-                oe_i = min(nopat_i, cash_oe_i)
+            if is_specialty_insurer:
+                # Specialty Insurer Float-Normalized Levered NOPAT
+                oe_i = max(0.0, ni_i - sbc_i - maint_c_i) if ni_i > 0 else (nopat_i - sbc_i)
+                slices_ocf_effective.append(ocf_i)
+            elif is_fortress_homebuilder:
+                # Fortress Homebuilder Land-Adjusted OCF (add back negative inventory land outflows)
+                land_outflow_i = abs(min(0.0, cf_inv_i))
+                ocf_land_adj_i = ocf_i + land_outflow_i
+                slices_ocf_effective.append(ocf_land_adj_i)
+                cash_oe_i = ocf_land_adj_i - sbc_i - maint_c_i
+                oe_i = (0.60 * nopat_i + 0.40 * cash_oe_i) if (nopat_i > 0 and cash_oe_i > 0) else max(nopat_i, cash_oe_i)
             else:
-                oe_i = 0.50 * nopat_i + 0.50 * cash_oe_i
+                # Standard Cash Owner Earnings ex-Working Capital float
+                slices_ocf_effective.append(ocf_i)
+                excess_wc = max(0.0, wc_i - r_i * 0.05) if r_i > 0 else 0.0
+                clean_ocf_i = ocf_i - excess_wc
+                cash_oe_i = clean_ocf_i - sbc_i - maint_c_i
+
+                if nopat_i > 0 and cash_oe_i > 0:
+                    oe_i = 0.60 * nopat_i + 0.40 * cash_oe_i
+                elif nopat_i < 0 or cash_oe_i < 0:
+                    oe_i = min(nopat_i, cash_oe_i)
+                else:
+                    oe_i = 0.50 * nopat_i + 0.50 * cash_oe_i
 
             slices_oe.append(oe_i)
 
@@ -309,7 +367,7 @@ class ValuationEngineV8:
             eq_val = equity[idx] if idx < len(equity) else equity[0]
             d_val = debt[idx] if idx < len(debt) else debt[0]
             c_val = cash[idx] if idx < len(cash) else cash[0]
-            inv_cap = max(1.0, eq_val + d_val - c_val)
+            inv_cap = max(1.0, eq_val + d_val) if is_specialty_insurer else max(1.0, eq_val + d_val - c_val)
             eff_t = 0.21
             nopat_val = slices_ebit[i] * (1.0 - eff_t)
             roic_list.append(nopat_val / inv_cap)
@@ -404,7 +462,8 @@ class ValuationEngineV8:
         # 4. Zero-Growth EPV Floor Engine (Sovereign Cash-Flow Basis)
         raw_cash = cash[0] if cash else 0.0
         raw_debt = debt[0] if debt else 0.0
-        net_cash = raw_cash - raw_debt
+        # For Specialty Insurers, short-term fixed-income cash backs policyholder reserves and its investment yield is already inside Net Income
+        net_cash = min(0.0, raw_cash - raw_debt) if is_specialty_insurer else (raw_cash - raw_debt)
         epv_ops = max(0.0, oe_0 / cls.STATIC_HURDLE)
         epv_equity = max(0.0, epv_ops + net_cash)
         epv_per_share = (epv_equity / diluted_shs) if diluted_shs > 0 else 0.0
@@ -475,16 +534,29 @@ class ValuationEngineV8:
         okr2_val = okr1_val
         okr2_pass = (okr2_val >= 12.0)
 
-        # OKR 3: Long-Term Debt / Equity <= 0.50x (or Net Debt / OE_0 <= 2.50x for Share Cannibals)
+        # OKR 3: Two-Pillar Solvency Architecture
+        net_debt_val = max(0.0, raw_debt - raw_cash)
+        nd_oe_val = (net_debt_val / oe_0) if oe_0 > 0 else 999.0
+        ltd_eq_val = (lt_debt_0 / eq_val_0) if eq_val_0 > 0 else 999.0
+        nd_eq_val = (net_debt_val / eq_val_0) if eq_val_0 > 0 else 999.0
+        td_eq_val = (raw_debt / eq_val_0) if eq_val_0 > 0 else 999.0
+
         if is_share_cannibal:
-            net_debt_val = max(0.0, raw_debt - raw_cash)
-            okr3_val = (net_debt_val / oe_0) if oe_0 > 0 else 999.0
+            okr3_val = nd_oe_val
             okr3_pass = (okr3_val <= 2.50)
             okr3_desc = f"Net Debt/OE: {okr3_val:.2f}x (Share-Cannibal Adjusted)"
+        elif is_fortress_homebuilder:
+            okr3_val = nd_eq_val
+            okr3_pass = (nd_eq_val <= 0.35 and ltd_eq_val <= 0.50 and nd_oe_val <= 1.50)
+            okr3_desc = f"ND/Eq: {nd_eq_val:.2f}x | LTD/Eq: {ltd_eq_val:.2f}x | ND/OE: {nd_oe_val:.2f}x (Homebuilder)"
+        elif is_specialty_insurer:
+            okr3_val = td_eq_val
+            okr3_pass = (td_eq_val <= 0.30)
+            okr3_desc = f"Debt/Eq: {td_eq_val:.2f}x (Specialty Insurer <= 0.30x)"
         else:
-            okr3_val = (lt_debt_0 / eq_val_0) if eq_val_0 > 0 else 999.0
-            okr3_pass = (okr3_val <= 0.50)
-            okr3_desc = f"LT Debt/Equity: {okr3_val:.2f}x"
+            okr3_val = min(ltd_eq_val, nd_eq_val)
+            okr3_pass = ((ltd_eq_val <= 0.50 or nd_eq_val <= 0.50) and nd_oe_val <= 3.50)
+            okr3_desc = f"LT Debt/Equity: {ltd_eq_val:.2f}x | Net Debt/Equity: {nd_eq_val:.2f}x | ND/OE: {nd_oe_val:.2f}x"
 
         # OKR 4: P / OE_0 < 15.0x
         p_oe = (calc_mcap / oe_0) if oe_0 > 0 else 999.0
@@ -527,7 +599,7 @@ class ValuationEngineV8:
         okr_scorecard = [
             {"id": "KR-1", "name": "OE / Net Tangible Equity >= 20%", "value": f"{okr1_val:.1f}%", "passed": okr1_pass, "target": ">= 20.0%"},
             {"id": "KR-2", "name": "OE / Stockholders' Equity >= 12%", "value": f"{okr2_val:.1f}%", "passed": okr2_pass, "target": ">= 12.0%"},
-            {"id": "KR-3", "name": "Solvency (Debt / Equity <= 0.50x)", "value": okr3_desc, "passed": okr3_pass, "target": "<= 0.50x"},
+            {"id": "KR-3", "name": "Two-Pillar Solvency (Debt / Equity & Debt / OE)", "value": okr3_desc, "passed": okr3_pass, "target": "<= 0.50x & ND/OE <= 3.5x"},
             {"id": "KR-4", "name": "Valuation (P / OE_0 < 15.0x)", "value": f"{p_oe:.1f}x", "passed": okr4_pass, "target": "< 15.0x"},
             {"id": "KR-5", "name": "Bolsa 6.0 10-Yr Cash Multiple <= 0.70x", "value": f"{bolsa_multiple:.2f}x", "passed": okr5_pass, "target": "<= 0.70x"},
             {"id": "KR-6", "name": "Tri-Horizon OE Growth Average >= 15.0%", "value": f"{g_bolsa_raw * 100.0:.1f}%", "passed": okr6_pass, "target": ">= 15.0%"},
@@ -542,15 +614,15 @@ class ValuationEngineV8:
         okr_passed_count = sum(1 for o in okr_scorecard if o["passed"])
 
         # 7. 4-Vector Buy-Side Cash Integrity Audit (3-Year Rolling Window)
-        # Vector 1: 3-Year Cumulative Cash Conversion (OCF / NI >= 85%-100%)
-        cum_ocf_3y = sum(slices_ocf[:min(3, len(slices_ocf))])
+        # Vector 1: 3-Year Cumulative Cash Conversion (OCF / NI >= 85%-100%, using Land-Adjusted OCF for Fortress Homebuilders)
+        cum_ocf_3y = sum(slices_ocf_effective[:min(3, len(slices_ocf_effective))])
         cum_ni_3y = sum(slices_ni[:min(3, len(slices_ni))])
         conversion_3y = (cum_ocf_3y / cum_ni_3y) * 100.0 if cum_ni_3y > 0 else 0.0
         v1_status = "PASS" if conversion_3y >= 85.0 else ("FLAG" if conversion_3y >= 70.0 else "BREACH")
 
         # Vector 2: Non-GAAP Add-Back & SBC Dilution Audit (SBC < 10% OCF and < 5% Revenue)
         sbc_0 = slices_sbc[0] if slices_sbc else 0.0
-        ocf_0 = slices_ocf[0] if slices_ocf else 1.0
+        ocf_0 = slices_ocf_effective[0] if slices_ocf_effective else 1.0
         rev_0 = slices_rev[0] if slices_rev else 1.0
         sbc_ocf_pct = (sbc_0 / ocf_0) * 100.0 if ocf_0 > 0 else 0.0
         sbc_rev_pct = (sbc_0 / rev_0) * 100.0 if rev_0 > 0 else 0.0
@@ -562,15 +634,15 @@ class ValuationEngineV8:
         rec_growth = (rec_0 / rec_4) - 1.0 if rec_4 > 0 else 0.0
         v3_status = "PASS" if rec_growth <= (rev_cagr_3y * 1.5) else ("FLAG" if rec_growth <= (rev_cagr_3y * 2.0) else "BREACH")
 
-        # Vector 4: Balance Sheet Integrity & Solvency
-        net_cash_trend = "NET CASH" if raw_cash >= raw_debt else f"NET DEBT (${(raw_debt - raw_cash):.1f}M)"
-        v4_status = "PASS" if (raw_cash >= raw_debt or (raw_debt - raw_cash) / max(1.0, oe_0) <= 2.5) else "FLAG"
+        # Vector 4: Balance Sheet Integrity & Two-Pillar Solvency
+        net_cash_trend = "NET CASH" if raw_cash >= raw_debt else f"NET DEBT (${(raw_debt - raw_cash):.1f}M | {okr3_desc})"
+        v4_status = "PASS" if (okr3_pass and (raw_cash >= raw_debt or nd_oe_val <= 2.50)) else ("FLAG" if okr3_pass else "BREACH")
 
         forensic_4vectors = [
             {"vector": "1. 3-Year Cumulative Cash Conversion", "metric": f"{conversion_3y:.1f}% (3Y Cum OCF / GAAP NI)", "finding": v1_status, "threshold": ">= 85.0%"},
             {"vector": "2. Non-GAAP Add-Back & SBC Dilution Audit", "metric": f"SBC {sbc_ocf_pct:.1f}% OCF / {sbc_rev_pct:.1f}% Rev", "finding": v2_status, "threshold": "<= 10% OCF / 5% Rev"},
             {"vector": "3. Aggressive Capitalization & Receivables Pull-Forward", "metric": f"Receivables Growth: {rec_growth * 100.0:.1f}% vs Rev: {rev_cagr_3y * 100.0:.1f}%", "finding": v3_status, "threshold": "<= 1.5x Rev Growth"},
-            {"vector": "4. Balance Sheet Integrity & Solvency", "metric": f"{net_cash_trend}", "finding": v4_status, "threshold": "Net Cash or Net Debt/OE <= 2.5x"}
+            {"vector": "4. Balance Sheet Integrity & Two-Pillar Solvency", "metric": f"{net_cash_trend}", "finding": v4_status, "threshold": "(LTD/Eq or ND/Eq <= 0.50x) & ND/OE <= 2.5x"}
         ]
 
         # 8. Mode 3 40Q Same-Quarter YoY & Sequential Q/Q Operational Deltas

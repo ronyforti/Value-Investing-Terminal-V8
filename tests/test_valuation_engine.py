@@ -262,7 +262,111 @@ class TestValuationEngineV8(unittest.TestCase):
         self.assertGreater(res['epv_per_share'], 50.0)
         self.assertGreater(res['dcf_expected'], 100.0)
 
+    def test_fortress_homebuilder_land_adjusted_ocf_and_solvency(self):
+        """Verifies Fortress Homebuilder Land-Adjusted OCF, dual CF/BS inventory parsing, and 0.35x Net Debt/Eq cap."""
+        hb_csv = os.path.join(self.temp_dir.name, "HOMEBUILDER.csv")
+        headers = ["Line Item", "Q3 2026", "Q3 2025", "Q3 2024", "Q3 2023"]
+        rows = [
+            headers,
+            ["inventory", "-143.28", "-246.46", "-158.02", "-61.18"],  # CF Inventory outflow (land acquisition)
+            ["Operating Cash Flow", "195.88", "126.95", "181.20", "306.87"],
+            ["Capital Expenditure", "-1.15", "-3.13", "-2.58", "-1.49"],
+            ["Stock Based Compensation", "7.38", "6.92", "5.54", "5.37"],
+            ["Depreciation and Amortization", "2.75", "2.48", "2.43", "2.51"],
+            ["Revenue", "2108.45", "2118.42", "1831.76", "1786.38"],
+            ["Operating Income", "413.11", "511.21", "445.01", "389.03"],
+            ["Income Before Tax", "424.94", "520.99", "447.34", "396.42"],
+            ["Income Tax Expense", "93.92", "114.66", "98.00", "90.69"],
+            ["Net Income", "331.02", "406.33", "349.34", "305.73"],
+            ["Cash and Short Term Investments", "154.63", "141.61", "183.75", "174.16"],
+            ["inventory", "2329.88", "2005.13", "1699.49", "1482.58"],  # BS Inventory balance
+            ["Total Assets", "2585.07", "2239.00", "1986.88", "1761.00"],
+            ["Total Debt", "344.28", "345.02", "362.55", "384.60"],
+            ["Long Term Debt", "270.48", "288.24", "311.33", "337.98"],
+            ["Total Stockholders Equity", "1920.92", "1645.10", "1346.44", "1177.22"],
+            ["Weighted Average Shs Out Dil", "44.65", "45.60", "45.80", "46.50"]
+        ]
+        with open(hb_csv, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(rows)
+
+        parsed = ValuationEngineV8.parse_csv(hb_csv)
+        res = ValuationEngineV8.compute(
+            parsed,
+            ticker="HB_FORTRESS",
+            price=67.0,
+            sector="Consumer Cyclical",
+            industry="Residential Construction"
+        )
+        # Land-Adjusted 3Y OCF > 100% of 3Y NI -> Vector 1 PASS
+        v_map = {v['vector']: v for v in res['forensic_4vectors']}
+        self.assertEqual(v_map['1. 3-Year Cumulative Cash Conversion']['finding'], "PASS")
+        # OE_0 incorporates Land-Adjusted OCF (~345M+)
+        self.assertGreater(res['oe_0'], 300.0)
+        # KR-3 passes Homebuilder solvency cap (ND/Eq = 0.10x <= 0.35x)
+        okr_map = {o['id']: o for o in res['okr_scorecard']}
+        self.assertTrue(okr_map['KR-3']['passed'])
+        self.assertIn("Homebuilder", okr_map['KR-3']['value'])
+
+    def test_specialty_insurer_float_normalized_oe_and_no_cash_double_count(self):
+        """Verifies Specialty Insurer Float-Normalized OE, Debt/Eq <= 0.30x cap, and zero reserve cash double-count."""
+        ins_csv = os.path.join(self.temp_dir.name, "INSURER.csv")
+        headers = ["Line Item", "Q3 2026", "Q3 2025", "Q3 2024", "Q3 2023"]
+        rows = [
+            headers,
+            ["Revenue", "1894.57", "1589.64", "1283.39", "887.58"],
+            ["Operating Income", "636.68", "523.70", "403.50", "223.82"],
+            ["Income Before Tax", "629.50", "515.10", "394.60", "218.00"],
+            ["Income Tax Expense", "125.98", "100.32", "79.96", "41.80"],
+            ["Net Income", "503.52", "414.78", "314.64", "176.20"],
+            ["Operating Cash Flow", "905.33", "966.22", "828.94", "659.78"],
+            ["Capital Expenditure", "-12.00", "-10.00", "-8.00", "-6.00"],
+            ["Stock Based Compensation", "15.00", "13.00", "11.00", "9.00"],
+            ["Depreciation and Amortization", "10.00", "9.00", "8.00", "7.00"],
+            ["Cash and Short Term Investments", "1500.00", "1200.00", "900.00", "700.00"],  # Policyholder reserve investments
+            ["Total Debt", "200.51", "200.00", "200.00", "200.00"],
+            ["Long Term Debt", "185.00", "185.00", "185.00", "185.00"],
+            ["Total Stockholders Equity", "1958.95", "1465.00", "1085.00", "799.00"],
+            ["Weighted Average Shs Out Dil", "23.30", "23.30", "23.30", "23.20"]
+        ]
+        with open(ins_csv, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(rows)
+
+        parsed = ValuationEngineV8.parse_csv(ins_csv)
+        res = ValuationEngineV8.compute(
+            parsed,
+            ticker="INS_SPEC",
+            price=350.0,
+            sector="Financial Services",
+            industry="Insurance - Property & Casualty"
+        )
+        # OE_0 anchored to Float-Normalized Levered NOPAT (~400M), not raw float inflow (900M)
+        self.assertLess(res['oe_0'], 520.0)
+        self.assertGreater(res['oe_0'], 350.0)
+        # EPV does NOT add $1,300M of policyholder reserve cash on top of oe_0 / 0.10
+        self.assertAlmostEqual(res['epv_per_share'], (res['oe_0'] / 0.10) / 23.30, places=0)
+        okr_map = {o['id']: o for o in res['okr_scorecard']}
+        self.assertTrue(okr_map['KR-3']['passed'])
+        self.assertIn("Specialty Insurer", okr_map['KR-3']['value'])
+
+    def test_two_pillar_solvency_net_debt_equity_bridge(self):
+        """Verifies Pillar 1 Solvency passes when LT Debt/Eq > 0.50x but Net Debt/Eq <= 0.50x and ND/OE <= 3.50x."""
+        parsed = ValuationEngineV8.parse_csv(self.csv_path)
+        # Set LT Debt = 4500 on Equity = 8000 (LT Debt/Eq = 0.56x > 0.50x), Cash = 3500 -> Net Debt = 1000 (ND/Eq = 0.125x <= 0.50x)
+        parsed['series']['totaldebt'] = [4500.0] * 12
+        parsed['series']['longtermdebt'] = [4500.0] * 12
+        parsed['series']['cashandshortterminvestments'] = [3500.0] * 12
+        res = ValuationEngineV8.compute(parsed, ticker="CASH_RICHD", price=150.0, mcap=15000.0)
+        okr_map = {o['id']: o for o in res['okr_scorecard']}
+        self.assertTrue(okr_map['KR-3']['passed'])
+
+        # Now set Cash = 100 -> Net Debt = 4400 (ND/Eq = 0.55x > 0.50x and LTD/Eq = 0.56x > 0.50x) -> FAIL
+        parsed['series']['cashandshortterminvestments'] = [100.0] * 12
+        res_fail = ValuationEngineV8.compute(parsed, ticker="OVER_DEBT", price=150.0, mcap=15000.0)
+        okr_map_fail = {o['id']: o for o in res_fail['okr_scorecard']}
+        self.assertFalse(okr_map_fail['KR-3']['passed'])
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
