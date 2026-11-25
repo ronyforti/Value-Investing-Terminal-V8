@@ -59,7 +59,7 @@ This skill governs the visual presentation, document architecture, and export fi
   user_cost_basis: 112.77
   user_portfolio_weight: "7.71%"
   date: 2026-10-04
-  ai_model: gemini-3.8-flash
+  ai_model: gemini-4-carbon
   tags:
     - value-investing
     - valuation-dossier
@@ -197,7 +197,7 @@ This skill governs the visual presentation, document architecture, and export fi
 - **Frontmatter Ground Truth Isolation:** Frontmatter extraction must strictly parse the active evaluated company and Part 12 portfolio directives, stripping any legacy draft frontmatter to prevent circular verdict defaults.
 
 ### 13. Synchronized Filename Convention & Multi-Model Provenance Mandate
-- **The Multi-Model Collision Trap:** When the same company and fiscal period are evaluated across different frontier AI models (e.g. comparing `gemini-4-argon` vs. `gemini-3.8-flash`) on the same trading day, output files must never collide or overwrite each other.
+- **The Multi-Model Collision Trap:** When the same company and fiscal period are evaluated across different frontier AI models (e.g. comparing `gemini-4-carbon` vs. `gemini-4-argon` or `gemini-4-hydrogen`) on the same trading day, output files must never collide or overwrite each other.
 - **Harmonized Filename Schemas:**
   - **Obsidian Markdown (`.md`):** `${tickerStr} ${periodStr}_Complete Doc_${modelName}_${formattedDate}.md`  
     *(e.g., `MELI Q2-26_Complete Doc_gemini-4-argon_10-15-26.md`)*

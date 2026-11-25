@@ -4,39 +4,47 @@ import { probeFlexTierAvailability, getFlexWatcherState } from "../src/services/
 async function runFlexProbeTests() {
   console.log("=== Testing Gemini Flex Tier Canary Probe & Service ===");
 
-  // 1. Initial Watcher State
+  // 1. Initial Watcher State & Missing Model Guard
   const initialWatcher = getFlexWatcherState();
   console.log("Initial Watcher State:", initialWatcher);
   if (initialWatcher.isWaiting !== false) {
     throw new Error("Initial watcher isWaiting should be false");
   }
 
-  // 2. Canary Probe on Gemini 4 Argon
-  console.log("\nProbing Flex tier for models/gemini-4-argon...");
+  const missingModelRes = await probeFlexTierAvailability("", undefined, true);
+  if (missingModelRes.available || missingModelRes.status !== 400) {
+    throw new Error("Blank model probe must reject with status 400 rather than silently falling back");
+  }
+
+  const modelArg = process.argv.find(a => a.startsWith("--model="))?.replace("--model=", "") || "models/gemini-4-carbon";
+  const targetModel = modelArg.startsWith("models/") ? modelArg : `models/${modelArg}`;
+
+  // 2. Canary Probe on target Gemini 4 model
+  console.log(`\nProbing Flex tier for ${targetModel}...`);
   const t0 = Date.now();
-  const probeArgon = await probeFlexTierAvailability("models/gemini-4-argon", undefined, true);
-  console.log(`Argon Probe Result (${Date.now() - t0}ms):`, {
-    available: probeArgon.available,
-    status: probeArgon.status,
-    reason: probeArgon.reason,
-    latencyMs: probeArgon.latencyMs,
-    message: probeArgon.message.slice(0, 80) + "..."
+  const probeRes = await probeFlexTierAvailability(targetModel, undefined, true);
+  console.log(`Probe Result (${Date.now() - t0}ms):`, {
+    available: probeRes.available,
+    status: probeRes.status,
+    reason: probeRes.reason,
+    latencyMs: probeRes.latencyMs,
+    message: probeRes.message.slice(0, 80) + "..."
   });
 
-  if (typeof probeArgon.available !== "boolean" || typeof probeArgon.status !== "number") {
+  if (typeof probeRes.available !== "boolean" || typeof probeRes.status !== "number") {
     throw new Error("Probe result does not match FlexProbeResult schema");
   }
 
   // 3. Cache Invariance Verification
   console.log("\nTesting 20-second probe cache...");
   const tCacheStart = Date.now();
-  const cachedProbe = await probeFlexTierAvailability("models/gemini-4-argon", undefined, false);
+  const cachedProbe = await probeFlexTierAvailability(targetModel, undefined, false);
   const cacheElapsed = Date.now() - tCacheStart;
   console.log(`Cache Read Elapsed: ${cacheElapsed}ms (Must be < 15ms)`);
   if (cacheElapsed > 15) {
     throw new Error(`Cached probe took too long (${cacheElapsed}ms); expected instant RAM return`);
   }
-  if (cachedProbe.timestamp !== probeArgon.timestamp) {
+  if (cachedProbe.timestamp !== probeRes.timestamp) {
     throw new Error("Cached probe timestamp does not match original probe");
   }
 

@@ -2,9 +2,21 @@ import fs from "fs";
 import path from "path";
 
 async function exportDossiers() {
-  const modelName = "gemini-4-argon";
-  const ticker = "CALM";
-  const period = "Q1-27";
+  const cliModel = process.argv.find(a => a.startsWith("--model="))?.replace("--model=", "");
+  const cliTicker = process.argv.find(a => a.startsWith("--ticker="))?.replace("--ticker=", "");
+  const cliPeriod = process.argv.find(a => a.startsWith("--period="))?.replace("--period=", "");
+
+  const sessionRes = await fetch("http://localhost:3000/api/session");
+  const sessionData = sessionRes.ok ? (await sessionRes.json() as any) : null;
+  const cfg = sessionData?.state?.config;
+
+  const modelName = (cliModel || cfg?.model || "").replace(/^models\//, "");
+  const ticker = cliTicker || cfg?.ticker;
+  const period = cliPeriod || cfg?.period;
+
+  if (!modelName || !ticker || !period) {
+    throw new Error("Missing active session or --ticker/--period/--model flags.");
+  }
 
   console.log(`Fetching export for ${ticker} ${period} (${modelName})...`);
   const mdRes = await fetch(`http://localhost:3000/api/session/export?ticker=${ticker}&period=${period}&model=${modelName}`);

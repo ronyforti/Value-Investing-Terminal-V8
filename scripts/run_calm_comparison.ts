@@ -273,22 +273,30 @@ async function runModelValuation(targetModel: string): Promise<ValuationRunResul
 }
 
 async function main() {
-  const modelArg = process.argv.find(a => a.startsWith("--model="))?.replace("--model=", "");
-  
-  if (modelArg) {
-    await runModelValuation(modelArg);
-  } else {
-    console.log("No specific model passed. Running full comparison sequence (Argon then Flash)...");
-    const argonResult = await runModelValuation("models/gemini-4-argon");
-    console.log("\nResting 5 seconds between runs...\n");
-    await new Promise(r => setTimeout(r, 5000));
-    const flashResult = await runModelValuation("models/gemini-3.8-flash");
+  const modelArg = process.argv.find(a => a.startsWith("--model="))?.replace("--model=", "").trim();
+  const modelsArg = process.argv.find(a => a.startsWith("--models="))?.replace("--models=", "").trim();
 
+  if (modelArg) {
+    const normalized = modelArg.startsWith("models/") ? modelArg : `models/${modelArg}`;
+    await runModelValuation(normalized);
+  } else if (modelsArg) {
+    const list = modelsArg.split(",").map(s => s.trim()).filter(Boolean).map(m => m.startsWith("models/") ? m : `models/${m}`);
+    const results: ValuationRunResult[] = [];
+    for (let idx = 0; idx < list.length; idx++) {
+      results.push(await runModelValuation(list[idx]));
+      if (idx < list.length - 1) {
+        console.log("\nResting 5 seconds between runs...\n");
+        await new Promise(r => setTimeout(r, 5000));
+      }
+    }
     console.log("\n======================================================================");
-    console.log("  DUAL MODEL EVALUATION COMPLETE!");
-    console.log(`  Argon Total Duration: ${Math.floor(argonResult.totalDurationSeconds / 60)}m ${argonResult.totalDurationSeconds % 60}s`);
-    console.log(`  Flash Total Duration: ${Math.floor(flashResult.totalDurationSeconds / 60)}m ${flashResult.totalDurationSeconds % 60}s`);
+    console.log("  MULTI-MODEL EVALUATION COMPLETE!");
+    for (const r of results) {
+      console.log(`  ${r.model}: ${Math.floor(r.totalDurationSeconds / 60)}m ${r.totalDurationSeconds % 60}s`);
+    }
     console.log("======================================================================\n");
+  } else {
+    throw new Error("Execution blocked: Explicit model selection required (--model=<m> or --models=<m1>,<m2>).");
   }
 }
 

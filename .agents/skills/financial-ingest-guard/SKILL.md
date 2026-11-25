@@ -102,8 +102,8 @@ Every valuation run must execute in a pristine, fully isolated environment. Data
    - All audit functions (`auditFileIntegrity`, `auditDocumentIntegrity`, `auditFinancialCsv`) must handle optional or undefined `targetPeriod` and `targetTicker` parameters defensively without throwing runtime exceptions (e.g. `TypeError: Cannot read properties of undefined (reading 'toUpperCase')`). All period and ticker variables must be guarded with safe fallbacks (`safePeriod = (targetPeriod || "").trim()`, `safeTicker = (ticker || "").trim().toUpperCase()`) before executing case normalizations or substring checks.
 7. **Native Context Cache Prefix Invariant:**
    - Ingested financial files, SEC filings, transcripts, and CSV datasets are formatted as an immutable user prefix at the beginning of the prompt turn.
-   - Leverages Google's automatic implicit prefix caching for all Gemini 2.5+ models above 4,096 tokens (2,048 on 2.5).
-   - Eliminates explicit cache lifecycle management, preventing model rejection and pipeline pauses across all models including `gemini-4-argon`.
+   - Leverages Google's automatic implicit prefix caching for all Gemini 4+ models above 4,096 tokens.
+   - Eliminates explicit cache lifecycle management, preventing model rejection and pipeline pauses across all curated Gemini 4 models (`gemini-4-carbon`, `gemini-4-argon`, `gemini-4-neon`, `gemini-4-hydrogen`).
 8. **Form 20-F / FPI Audited Statement Protection & Supplementary Retention:**
    - Under SEC Form 20-F rules for Foreign Private Issuers, **Item 18 contains the Audited Consolidated Financial Statements and Footnotes**.
    - Boilerplate truncation filters in `cleanSecHtmlToMarkdown()` must NEVER truncate at `ITEM 18.` on Form 20-F/40-F filings. Truncation must be restricted strictly to `ITEM 19.` or `SIGNATURES`.

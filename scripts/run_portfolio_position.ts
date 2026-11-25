@@ -391,8 +391,13 @@ function findStagedFiles(ticker: string): Array<{ name: string; filePath: string
   return unique;
 }
 
-export async function runPortfolioValuation(target: PortfolioTarget, modelArg = "models/gemini-4-argon") {
-  const modelShortName = modelArg.replace("models/", "");
+export async function runPortfolioValuation(target: PortfolioTarget, modelArg: string) {
+  const cleanModel = (modelArg || "").trim();
+  if (!cleanModel) {
+    throw new Error(`Execution blocked on ${target.ticker}: Explicit model selection required (--model=<model>).`);
+  }
+  const normalizedModel = cleanModel.startsWith("models/") ? cleanModel : `models/${cleanModel}`;
+  const modelShortName = normalizedModel.replace("models/", "");
 
   console.log("\n======================================================================");
   console.log(`  LAUNCHING EVALUATION: ${target.ticker} (${target.name})`);
@@ -444,7 +449,7 @@ export async function runPortfolioValuation(target: PortfolioTarget, modelArg = 
     ticker: target.ticker,
     period: target.period,
     price: target.price,
-    model: modelArg,
+    model: normalizedModel,
     pipelineMode: "single",
     serviceTier: "flex", // 50% Flex Tier discount
     executionMode: 3, // Full Auto
@@ -674,7 +679,7 @@ export async function runPortfolioValuation(target: PortfolioTarget, modelArg = 
   console.log(`\nValuation for ${target.ticker} completed successfully!`);
 }
 
-async function runBatchQueue(targets: PortfolioTarget[]) {
+async function runBatchQueue(targets: PortfolioTarget[], modelArg: string) {
   const queue = [...targets];
   const completed: string[] = [];
   const quarantined: Array<{ ticker: string; period: string; reason: string }> = [];
@@ -682,7 +687,7 @@ async function runBatchQueue(targets: PortfolioTarget[]) {
   const MAX_DEFERRED_RETRIES = 1;
 
   console.log(`\n======================================================================`);
-  console.log(`  STARTING ASYNCHRONOUS OVERNIGHT BATCH: ${queue.length} TARGETS`);
+  console.log(`  STARTING ASYNCHRONOUS OVERNIGHT BATCH: ${queue.length} TARGETS (${modelArg})`);
   console.log(`  Queue: ${queue.map(t => t.ticker).join(", ")}`);
   console.log(`======================================================================\n`);
 
@@ -692,7 +697,7 @@ async function runBatchQueue(targets: PortfolioTarget[]) {
     console.log(`\n>>> Processing [${target.ticker}] (${remainingInQueue} remaining in queue) <<<`);
 
     try {
-      await runPortfolioValuation(target);
+      await runPortfolioValuation(target, modelArg);
       completed.push(target.ticker);
       console.log(`\n[Queue Progress] Successfully completed ${target.ticker}. Total completed: ${completed.length}/${targets.length}`);
     } catch (err: any) {
@@ -729,21 +734,44 @@ async function runBatchQueue(targets: PortfolioTarget[]) {
   console.log(`======================================================================\n`);
 }
 
+function requireCliModel(targetArg: string): string {
+  const raw = process.argv.find(a => a.startsWith("--model="))?.replace("--model=", "").trim();
+  if (!raw) {
+    const { execFileSync } = require("child_process");
+    const alertScript = path.resolve("scripts/send_telegram_alert.py");
+    if (fs.existsSync(alertScript)) {
+      try {
+        execFileSync("python3", [
+          alertScript,
+          "--title", `Action Required: Portfolio Model Selection (${targetArg})`,
+          "--message", `run_portfolio_position.ts requires --model=<gemini-4-carbon|gemini-4-argon|gemini-4-neon|gemini-4-hydrogen>.`
+        ], { stdio: "ignore" });
+      } catch {}
+    }
+    throw new Error("Execution blocked: Explicit model selection required (--model=<model>). No model specified.");
+  }
+  return raw.startsWith("models/") ? raw : `models/${raw}`;
+}
+
 async function main() {
   const arg = process.argv[2]?.toUpperCase();
   if (arg && PORTFOLIO_TARGETS[arg]) {
-    await runPortfolioValuation(PORTFOLIO_TARGETS[arg]);
+    const modelArg = requireCliModel(arg);
+    await runPortfolioValuation(PORTFOLIO_TARGETS[arg], modelArg);
   } else if (arg === "--ALL") {
+    const modelArg = requireCliModel("ALL");
     const tickers = ["GOOGL", "KNSL", "ADBE", "UBER", "COF", "GRBK", "CALM", "STRL"];
-    await runBatchQueue(tickers.map(t => PORTFOLIO_TARGETS[t]));
+    await runBatchQueue(tickers.map(t => PORTFOLIO_TARGETS[t]), modelArg);
   } else if (arg === "--REMAINING") {
+    const modelArg = requireCliModel("REMAINING");
     const tickers = ["KNSL", "ADBE", "UBER", "COF", "GRBK", "CALM", "STRL"];
-    await runBatchQueue(tickers.map(t => PORTFOLIO_TARGETS[t]));
+    await runBatchQueue(tickers.map(t => PORTFOLIO_TARGETS[t]), modelArg);
   } else if (arg === "--AUDIT-RERUN") {
+    const modelArg = requireCliModel("AUDIT-RERUN");
     const tickers = ["KNSL", "CALM"];
-    await runBatchQueue(tickers.map(t => PORTFOLIO_TARGETS[t]));
+    await runBatchQueue(tickers.map(t => PORTFOLIO_TARGETS[t]), modelArg);
   } else {
-    console.log("Usage: npx tsx scripts/run_portfolio_position.ts <TICKER | --all | --remaining | --audit-rerun>");
+    console.log("Usage: npx tsx scripts/run_portfolio_position.ts <TICKER | --all | --remaining | --audit-rerun> --model=<model>");
     console.log("Available targets:", Object.keys(PORTFOLIO_TARGETS).join(", "));
   }
 }

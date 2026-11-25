@@ -3,7 +3,7 @@ export interface MasterPrompt {
   title: string;
   category: string;
   defaultTemp: number;
-  defaultThinkingLevel?: 'low' | 'medium' | 'high';
+  defaultThinkingLevel?: 'low' | 'medium' | 'high' | 'xhigh';
   text: string;
 }
 
@@ -18,7 +18,7 @@ export const MASTER_PROMPTS: MasterPrompt[] = [
     title: "Part 1: Financial Forensics & Capital Allocation Discipline",
     category: "Forensics & Capital Allocation",
     defaultTemp: 0.2,
-    defaultThinkingLevel: "high",
+    defaultThinkingLevel: "xhigh",
     text: `VOICE & REASONING ARCHITECTURE:
 - Strategic & Moat Voice (Sections 2.1 - 2.5, 2.8): Deep, nuanced, institutional economic reasoning reflecting our firm's audited valuation framework.
 - Forensic & Defense Voice (Sections 2.6 Forensic Accounting Audit, 2.7 Debt Equivalents, 2.9 Governance & Capital Allocation): 80% ASD-STE100. Active voice only. One verb per sentence. Zero corporate euphemisms. Strict metric-to-finding assertions.
@@ -182,7 +182,7 @@ CRITICAL FORMATTING DIRECTIVE: You are strictly forbidden from outputting typewr
     title: "Part 3: Normalized Owner Earnings & Cash Flow Integrity",
     category: "Cash Flow & Owner Earnings",
     defaultTemp: 0.2,
-    defaultThinkingLevel: "high",
+    defaultThinkingLevel: "xhigh",
     text: `VOICE DIRECTIVE — FORENSIC & DEFENSE VOICE (80% ASD-STE100):
 Execute this analysis using strict Forensic & Defense Voice (80% ASD-STE100):
 - Active voice only. Eliminate passive voice constructions.
@@ -345,7 +345,7 @@ Followed by exactly 4 rows for each vector (1. Management & Executive Stability,
     title: "Part 6: Valuation Floor: Zero-Growth Earnings Power Value (EPV)",
     category: "Detailed Valuation - No-Growth Floor",
     defaultTemp: 0.0,
-    defaultThinkingLevel: "high",
+    defaultThinkingLevel: "xhigh",
     text: `VOICE DIRECTIVE — STRATEGIC & MOAT VOICE:
 Apply deep, nuanced, institutional economic reasoning reflecting our desk's audited valuation framework. Establish the sustainable zero-growth cash baseline and evaluate the zero-growth intrinsic value floor with institutional precision.
 
@@ -401,7 +401,7 @@ CRITICAL FORMATTING DIRECTIVE: You are strictly forbidden from outputting typewr
     title: "Part 7: Valuation Engine: Probabilistic Owner Earnings DCF & Reverse DCF",
     category: "Detailed Valuation - Engine",
     defaultTemp: 0.0,
-    defaultThinkingLevel: "high",
+    defaultThinkingLevel: "xhigh",
     text: `VOICE DIRECTIVE — STRATEGIC & MOAT VOICE:
 Apply deep, nuanced, institutional economic reasoning reflecting our desk's audited multi-stage valuation framework. Balance mathematical rigor with institutional expectations analysis. Invert market expectations against historical base rates and evaluate the structural economic value of profitable growth.
 
@@ -631,7 +631,7 @@ Your Task: A Five-Step Teardown:
     title: "Part 11: Definitive Verdict, Resolution & Monitoring Dashboard",
     category: "The Final Gauntlet - Resolution",
     defaultTemp: 0.5,
-    defaultThinkingLevel: "high",
+    defaultThinkingLevel: "xhigh",
     text: `VOICE DIRECTIVE — STRATEGIC & MOAT VOICE:
 Return to the Strategic & Moat Voice of the Senior Value Investor. Apply deep, nuanced, institutional economic reasoning reflecting our desk's audited cash-flow sovereign valuation framework. Weigh the bull thesis against the forensic attack, evaluate whether operational competitive advantages refute short arguments, and render an authoritative capital allocation decision. (Note: Step 6 Monitoring Dashboard table retains strict metric-to-breaker assertions).
 
@@ -704,7 +704,7 @@ export const CROSSCHECK_PROMPT: MasterPrompt = {
   title: "Part 12: Forensic Audit & Fact-Check Crosscheck",
   category: "Forensic Audit & Fact-Check",
   defaultTemp: 0.0,
-  defaultThinkingLevel: "high",
+  defaultThinkingLevel: "xhigh",
   text: `VOICE DIRECTIVE — FORENSIC & DEFENSE VOICE (80% ASD-STE100):
 Execute this independent forensic audit strictly adhering to Forensic & Defense Voice (80% ASD-STE100):
 - Active voice only. Eliminate passive constructions (e.g. Write "Report miscalculated Net Debt", "Filings prove $45M Capex", not "Net debt was miscalculated").
@@ -829,7 +829,7 @@ export const SLINGSHOT_PROMPT: MasterPrompt = {
   title: "Mode 1: Slingshot Underwriting Triage Memo",
   category: "Slingshot Triage",
   defaultTemp: 0.1,
-  defaultThinkingLevel: "high",
+  defaultThinkingLevel: "xhigh",
   text: `CRITICAL FORMATTING DIRECTIVE:
 You are strictly forbidden from outputting raw LaTeX math notation ($$, \\frac, \\mathbf, \\text, \\times) or backslashed dollar signs (\\$). Present all formulas and calculations as clean plain-text equations. You are strictly forbidden from outputting typewriter-style ASCII text boxes, Unicode box characters (│, ┌, ┐, └, ┘, ─, ═), typewriter sliders, or monospace code fences around narrative sections. ALL tables MUST be clean, standard GitHub-Flavored Markdown pipe tables (| Col 1 | Col 2 |).
 
@@ -929,7 +929,7 @@ export const SENTINEL_PROMPT: MasterPrompt = {
   title: "Mode 3: Quarterly Position Sentinel (90-Day Position Pulse)",
   category: "Position Sentinel",
   defaultTemp: 0.1,
-  defaultThinkingLevel: "high",
+  defaultThinkingLevel: "xhigh",
   text: `CRITICAL FORMATTING DIRECTIVE:
 You are strictly forbidden from outputting raw LaTeX math notation ($$, \\frac, \\mathbf, \\text, \\times) or backslashed dollar signs (\\$). Present all formulas and calculations as clean plain-text equations. You are strictly forbidden from outputting typewriter-style ASCII text boxes, Unicode box characters (│, ┌, ┐, └, ┘, ─, ═), typewriter sliders, or monospace code fences around narrative sections. ALL tables MUST be clean, standard GitHub-Flavored Markdown pipe tables (| Col 1 | Col 2 |).
 

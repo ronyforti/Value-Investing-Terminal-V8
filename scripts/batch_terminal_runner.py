@@ -36,14 +36,16 @@ class AutomatedBatchTerminalRunner:
                  vault_dossier_dir: str = r"G:\My Drive\Company Data\GTD_Investing_Journal\GTD_Investment_Latticework_Organized\02 AI_Terminal",
                  prompts_path: str = None,
                  system_instruction_path: str = None,
-                 model_name: str = "gemini-3.8-flash"):
+                 model_name: str = ""):
+        if not model_name or not str(model_name).strip():
+            raise ValueError("Execution blocked: Explicit model selection required. Pass --model=<gemini-4-carbon|gemini-4-argon|gemini-4-neon|gemini-4-hydrogen>.")
         self.repo_root = REPO_ROOT
         self.staging_dir = staging_dir
         self.cache_dir = cache_dir
         self.vault_dossier_dir = vault_dossier_dir
         self.prompts_path = prompts_path or os.path.join(self.repo_root, "prompts.json")
         self.system_instruction_path = system_instruction_path or os.path.join(self.repo_root, "system_instructions.txt")
-        self.model_name = model_name
+        self.model_name = str(model_name).strip()
         self.client = genai.Client(api_key=api_key, http_options={'timeout': 600000})
         self.prompts = self.load_prompts()
         self.system_instruction = self.load_system_instruction()
@@ -62,14 +64,14 @@ class AutomatedBatchTerminalRunner:
         else:
             raise FileNotFoundError(f"Prompts file not found at: {self.prompts_path}")
 
-    def get_dynamic_temp(self, prompt_index: int) -> float:
-        if 0 <= prompt_index <= 6:
-            return 0.2
-        elif 7 <= prompt_index <= 11:
-            return 0.0
-        elif 12 <= prompt_index <= 15:
-            return 0.5
-        return 0.2
+    def resolve_thinking_level(self, prompt_index: int) -> str:
+        xhigh_indices = {0, 2, 5, 6, 10, 11}
+        desired = "xhigh" if prompt_index in xhigh_indices else "high"
+        lower = self.model_name.lower()
+        supports_xhigh = ("neon" in lower) or ("hydrogen" in lower)
+        if desired == "xhigh" and not supports_xhigh:
+            return "high"
+        return desired
 
     def sanitize_terminal_csv(self, csv_path: str, symbol: str, currency_action: str = "harmonize") -> str:
         """
@@ -221,8 +223,8 @@ class AutomatedBatchTerminalRunner:
         start_time = time.time()
         for idx, prompt_text in enumerate(self.prompts):
             step_title = f"Step {idx+1}/{len(self.prompts)}"
-            temp = self.get_dynamic_temp(idx)
-            print(f"\n  [{step_title}] Generating analysis (Temp: {temp})...")
+            thinking_lvl = self.resolve_thinking_level(idx)
+            print(f"\n  [{step_title}] Generating analysis (Model: {self.model_name}, Thinking: {thinking_lvl})...")
 
             # First prompt includes the file handles in contents
             if idx == 0:
@@ -237,8 +239,8 @@ class AutomatedBatchTerminalRunner:
                     response = chat.send_message(
                         message=contents,
                         config=types.GenerateContentConfig(
-                            thinking_config=types.ThinkingConfig(thinking_level="high"),
-                            max_output_tokens=8192
+                            thinking_config=types.ThinkingConfig(thinking_level=thinking_lvl),
+                            max_output_tokens=65536
                         )
                     )
                     step_resp_text = response.text.strip()
@@ -350,8 +352,24 @@ def main():
     parser = argparse.ArgumentParser(description="Automated Value Investing Terminal Batch Runner")
     parser.add_argument("--tickers", type=str, help="Comma-separated list of tickers (e.g. DXC,WLKP,FMX)")
     parser.add_argument("--shortlist-csv", type=str, help="Path to Gemma 4 Triage Shortlist CSV file")
-    parser.add_argument("--model", type=str, default="gemini-3.8-flash", help="Gemini model to use (default: gemini-3.8-flash)")
+    parser.add_argument("--model", type=str, default="", help="Explicit Gemini 4 model ID (required: gemini-4-carbon, gemini-4-argon, gemini-4-neon, or gemini-4-hydrogen)")
     args = parser.parse_args()
+
+    if not args.model or not args.model.strip():
+        import subprocess
+        alert_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "send_telegram_alert.py")
+        msg = (
+            f"Batch runner invoked for {args.tickers or args.shortlist_csv or 'queue'}, but no --model was provided.\n\n"
+            "Available Gemini 4 models:\n"
+            "• models/gemini-4-carbon\n"
+            "• models/gemini-4-argon\n"
+            "• models/gemini-4-neon\n"
+            "• models/gemini-4-hydrogen"
+        )
+        if os.path.exists(alert_script):
+            subprocess.run([sys.executable, alert_script, "--title", "Action Required: Batch Model Selection", "--message", msg], check=False)
+        print("Execution blocked: Explicit model selection required (--model). No model specified.")
+        sys.exit(1)
 
     ticker_list = []
     if args.tickers:
@@ -368,7 +386,7 @@ def main():
         print("Please provide either --tickers or --shortlist-csv")
         return
 
-    runner = AutomatedBatchTerminalRunner(model_name=args.model)
+    runner = AutomatedBatchTerminalRunner(model_name=args.model.strip())
     runner.run_batch_queue(ticker_list)
 
 if __name__ == "__main__":

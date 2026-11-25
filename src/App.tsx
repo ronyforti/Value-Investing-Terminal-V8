@@ -657,9 +657,12 @@ export default function App() {
 
   // --- Gemini Flex Tier Canary Probe & Gatekeeper Handlers ---
   const fetchFlexStatus = useCallback(async (force: boolean = false) => {
+    const targetModel = session?.config?.model || (selectedModel === "custom" ? customModelId.trim() : selectedModel);
+    if (!targetModel) {
+      return;
+    }
     try {
       setProbingFlex(true);
-      const targetModel = session?.config?.model || (selectedModel === "custom" ? customModelId.trim() : selectedModel) || "models/gemini-4-argon";
       const res = await authFetch(`/api/flex/status?model=${encodeURIComponent(targetModel)}${force ? '&force=true' : ''}`);
       const data = await res.json();
       if (data.success && data.probe) {
@@ -1493,10 +1496,10 @@ export default function App() {
 
   // Dynamic models retrieval state
   const [modelOptions, setModelOptions] = useState<Array<{ name: string; displayName: string }>>([
-    { name: "models/gemini-3.8-flash", displayName: "Gemini 3.8 Flash (Default Flagship Fast & Smart)" },
-    { name: "models/gemini-4-argon", displayName: "Gemini 4 Argon (Frontier Deep Reasoning)" },
-    { name: "models/gemini-3.5-flash-lite", displayName: "Gemini 3.5 Flash-Lite (Fast & Cost-Efficient)" },
-    { name: "models/gemini-3.1-pro-preview", displayName: "Gemini 3.1 Pro Preview (Heavy Reasoning)" }
+    { name: "models/gemini-4-carbon", displayName: "Gemini 4 Carbon (Frontier Deepest Verification)" },
+    { name: "models/gemini-4-argon", displayName: "Gemini 4 Argon (Frontier Lowest-Hallucination Reasoning)" },
+    { name: "models/gemini-4-neon", displayName: "Gemini 4 Neon (Frontier High-Speed Reasoning • xhigh)" },
+    { name: "models/gemini-4-hydrogen", displayName: "Gemini 4 Hydrogen (Fast Gemini 4 Workhorse • xhigh)" }
   ]);
   const [loadingModels, setLoadingModels] = useState<boolean>(false);
 
@@ -2513,7 +2516,7 @@ export default function App() {
   };
 
   // Adjust default parameters
-  const adjustThinkingLevel = async (stepIndex: number, newLevel: 'low' | 'medium' | 'high') => {
+  const adjustThinkingLevel = async (stepIndex: number, newLevel: 'low' | 'medium' | 'high' | 'xhigh') => {
     try {
       const res = await authFetch("/api/session/step/thinking-level", {
         method: "POST",
@@ -3221,7 +3224,7 @@ export default function App() {
                       type="text"
                       value={customModelId}
                       onChange={(e) => setCustomModelId(e.target.value)}
-                      placeholder="e.g. gemini-4-argon"
+                      placeholder="e.g. gemini-4-carbon"
                       className="w-full bg-[#0a0d14] border border-slate-700 focus:border-[#10B981] focus:outline-none rounded-xl px-3.5 py-2 text-xs font-mono text-white placeholder-slate-500"
                     />
                     <span className="text-[9px] text-slate-400 mt-1 block">Specify any model ID from Google's catalog when new releases launch.</span>
@@ -3395,7 +3398,7 @@ export default function App() {
                           type="text"
                           value={customCrosscheckModelId}
                           onChange={(e) => setCustomCrosscheckModelId(e.target.value)}
-                          placeholder="e.g. gemini-3.1-pro-preview"
+                          placeholder="e.g. gemini-4-argon"
                           className="w-full bg-[#0a0d14] border border-slate-700 focus:border-[#10B981] focus:outline-none rounded-xl px-3.5 py-1.5 text-xs font-mono text-white placeholder-slate-500"
                         />
                       </div>
@@ -4983,15 +4986,16 @@ export default function App() {
                               🧠 {st.thinkingLevel || "high"}
                             </button>
 
-                            {tempDropdownOpen === st.index && (
-                              <div className="absolute bottom-6 right-0 bg-[#1e2536] border border-slate-700 rounded-lg shadow-xl py-1 z-50 w-28">
-                                {(["high", "medium", "low"] as const).map(lvl => (
+                              {tempDropdownOpen === st.index && (
+                              <div className="absolute bottom-6 right-0 bg-[#1e2536] border border-slate-700 rounded-lg shadow-xl py-1 z-50 w-32">
+                                {(["xhigh", "high", "medium", "low"] as const).map(lvl => (
                                   <button
                                     key={lvl}
                                     onClick={() => adjustThinkingLevel(st.index, lvl)}
+                                    title={lvl === "xhigh" ? "X-High (Supported natively on Neon & Hydrogen; auto-clamped to High on Carbon & Argon)" : undefined}
                                     className="block w-full text-left px-2 py-1 text-[10px] font-mono text-slate-300 hover:bg-[#10B981] hover:text-[#0d0f14]"
                                   >
-                                    {lvl === "high" ? "High (Deep)" : lvl === "medium" ? "Med (Standard)" : "Low (Fast)"}
+                                    {lvl === "xhigh" ? "X-High (Max)" : lvl === "high" ? "High (Deep)" : lvl === "medium" ? "Med (Standard)" : "Low (Fast)"}
                                   </button>
                                 ))}
                               </div>

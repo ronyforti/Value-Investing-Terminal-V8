@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 
+import { execFileSync } from "child_process";
+
 const SERVER_URL = "http://localhost:3000";
 const STAGING_DIR = path.resolve("staging/CALM");
 const DIST_DOSSIER_DIR = path.resolve("dist/dossiers");
@@ -20,9 +22,22 @@ function getMimeType(filePath: string): string {
   return "text/plain";
 }
 
+function requireCliModel(ticker: string): string {
+  const raw = process.argv.find(a => a.startsWith("--model="))?.replace("--model=", "").trim();
+  if (!raw) {
+    const alertScript = path.resolve("scripts/send_telegram_alert.py");
+    if (fs.existsSync(alertScript)) {
+      try {
+        execFileSync("python3", [alertScript, "--title", `Action Required: Model Selection (${ticker})`, "--message", `Runner for ${ticker} requires --model=<gemini-4-carbon|gemini-4-argon|gemini-4-neon|gemini-4-hydrogen>.`], { stdio: "ignore" });
+      } catch {}
+    }
+    throw new Error(`Execution blocked: Explicit model selection required (--model=<model>). No model specified for ${ticker}.`);
+  }
+  return raw.startsWith("models/") ? raw : `models/${raw}`;
+}
+
 async function runCALMValuation() {
-  const modelArg = process.argv.find(a => a.startsWith("--model="))?.replace("--model=", "") || "models/gemini-4-argon";
-  const targetModel = modelArg.startsWith("models/") ? modelArg : `models/${modelArg}`;
+  const targetModel = requireCliModel("CALM");
   const modelShortName = targetModel.replace("models/", "");
 
   console.log("======================================================================");

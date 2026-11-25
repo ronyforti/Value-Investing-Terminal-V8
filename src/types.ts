@@ -149,6 +149,8 @@ export interface DocumentIntegrityReport {
   fileAudits: Record<string, DocumentIntegrityAudit>;
 }
 
+export type ThinkingLevel = 'low' | 'medium' | 'high' | 'xhigh';
+
 export interface StepOutput {
   index: number;
   title: string;
@@ -156,7 +158,7 @@ export interface StepOutput {
   prompt: string;
   response?: string;
   temperature?: number;
-  thinkingLevel?: 'low' | 'medium' | 'high';
+  thinkingLevel?: ThinkingLevel;
   isCrosscheck?: boolean;
   model?: string;
   fallback?: {

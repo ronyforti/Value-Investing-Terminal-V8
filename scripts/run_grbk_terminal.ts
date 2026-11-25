@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 
+import { execFileSync } from "child_process";
+
 const SERVER_URL = "http://localhost:3000";
 const STAGING_GRBK_DIR = path.resolve("staging/GRBK");
 const DIST_DOSSIER_DIR = path.resolve("dist/dossiers");
@@ -20,10 +22,27 @@ function getMimeType(filePath: string): string {
   return "text/plain";
 }
 
+function requireCliModel(ticker: string): string {
+  const raw = process.argv.find(a => a.startsWith("--model="))?.replace("--model=", "").trim();
+  if (!raw) {
+    const alertScript = path.resolve("scripts/send_telegram_alert.py");
+    if (fs.existsSync(alertScript)) {
+      try {
+        execFileSync("python3", [alertScript, "--title", `Action Required: Model Selection (${ticker})`, "--message", `Runner for ${ticker} requires --model=<gemini-4-carbon|gemini-4-argon|gemini-4-neon|gemini-4-hydrogen>.`], { stdio: "ignore" });
+      } catch {}
+    }
+    throw new Error(`Execution blocked: Explicit model selection required (--model=<model>). No model specified for ${ticker}.`);
+  }
+  return raw.startsWith("models/") ? raw : `models/${raw}`;
+}
+
 async function runGRBKValuation() {
+  const targetModel = requireCliModel("GRBK");
+  const modelShortName = targetModel.replace("models/", "");
+
   console.log("======================================================================");
   console.log("  LAUNCHING FULL GRBK (GREEN BRICK PARTNERS) VALUATION RUN");
-  console.log("  Target: GRBK | Period: Q2-26 | Price: $68.79 | Model: gemini-3.8-flash");
+  console.log(`  Target: GRBK | Period: Q2-26 | Price: $68.79 | Model: ${modelShortName}`);
   console.log("  Framework: 12 Unified Institutional Chapters + Step 13 Crosscheck");
   console.log("======================================================================\n");
 
@@ -70,12 +89,12 @@ async function runGRBKValuation() {
     ticker: "GRBK",
     period: "Q2-26",
     price: "68.79",
-    model: "gemini-3.8-flash",
+    model: targetModel,
     executionMode: 3, // Full Auto
     enableCrosscheck: true,
     crosscheckModel: "default",
     portfolio: { holdsPosition: false },
-    notes: "Green Brick Partners Q2-26 comprehensive 10-K/10-Q audit run. Homebuilder / land developer: apply industry-specific adjustments (add back land inventory to growth capex in Owner Earnings, evaluate self-development land moat, enforce physical compounder exemption on Gurley gross margins, and assess cyclicality vs structural transformation)."
+    notes: ""
   };
 
   const initRes = await fetch(`${SERVER_URL}/api/session/init`, {
@@ -87,7 +106,7 @@ async function runGRBKValuation() {
   if (!initRes.ok) {
     throw new Error(`Session init failed: ${await initRes.text()}`);
   }
-  console.log("  Session initialized: GRBK Q2-26 ($68.79), Model: gemini-3.8-flash, Crosscheck: ON.");
+  console.log(`  Session initialized: GRBK Q2-26 ($68.79), Model: ${modelShortName}, Crosscheck: ON.`);
 
   // 4. Upload Files
   console.log(`\n[Stage 4/5] Uploading documents to Terminal Engine...`);
@@ -205,12 +224,12 @@ async function runGRBKValuation() {
 
   // Export Markdown
   console.log("Fetching compiled institutional Markdown dossier...");
-  const exportMdRes = await fetch(`${SERVER_URL}/api/session/export?ticker=GRBK&period=Q2-26&model=gemini-3.8-flash`);
+  const exportMdRes = await fetch(`${SERVER_URL}/api/session/export?ticker=GRBK&period=Q2-26&model=${encodeURIComponent(modelShortName)}`);
   const rawMd = await exportMdRes.text();
 
   // Export HTML
   console.log("Fetching compiled standalone HTML dossier...");
-  const exportHtmlRes = await fetch(`${SERVER_URL}/api/session/export-html?ticker=GRBK&period=Q2-26&model=gemini-3.8-flash`);
+  const exportHtmlRes = await fetch(`${SERVER_URL}/api/session/export-html?ticker=GRBK&period=Q2-26&model=${encodeURIComponent(modelShortName)}`);
   const rawHtml = await exportHtmlRes.text();
 
   const mdFilename = `GRBK_Q2-26_Valuation_Dossier.md`;

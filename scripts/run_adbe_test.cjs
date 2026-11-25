@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+const { execFileSync } = require('child_process');
+
 const BASE_URL = 'http://localhost:3000';
 const tempDir = path.join(os.tmpdir(), 'invest_terminal_downloads');
 
@@ -15,10 +17,22 @@ const filesToUpload = [
 ];
 
 async function main() {
+  const modelArg = process.argv.find(a => a.startsWith('--model='))?.replace('--model=', '').trim();
+  if (!modelArg) {
+    const alertScript = path.resolve('scripts/send_telegram_alert.py');
+    if (fs.existsSync(alertScript)) {
+      try {
+        execFileSync('python3', [alertScript, '--title', 'Action Required: Model Selection (ADBE)', '--message', 'run_adbe_test.cjs requires --model=<gemini-4-carbon|gemini-4-argon|gemini-4-neon|gemini-4-hydrogen>.'], { stdio: 'ignore' });
+      } catch {}
+    }
+    throw new Error('Execution blocked: Explicit model selection required (--model=<model>).');
+  }
+  const targetModel = modelArg.startsWith('models/') ? modelArg : `models/${modelArg}`;
+
   console.log('=== ADBE Autonomous End-to-End Terminal Test ===');
 
-  // 1. Initialize session with Gemini 4 Argon
-  console.log('[1/5] Initializing ADBE session on port 3000 with Gemini 4 Argon...');
+  // 1. Initialize session
+  console.log(`[1/5] Initializing ADBE session on port 3000 with ${targetModel}...`);
   const initRes = await fetch(`${BASE_URL}/api/session/init`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -26,10 +40,10 @@ async function main() {
       ticker: 'ADBE',
       period: 'Q3-26',
       price: '236.28',
-      model: 'models/gemini-4-argon',
+      model: targetModel,
       executionMode: 0, // FullAuto
       portfolio: { holdsPosition: false },
-      notes: 'Testing end-to-end institutional refactoring with ADBE Q3-26, SaaS disruption thesis, and Gemini 4 Argon.',
+      notes: '',
       enableCrosscheck: true,
       crosscheckModel: 'default',
       clearFiles: false

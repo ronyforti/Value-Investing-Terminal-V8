@@ -123,11 +123,12 @@ Every code change must pass all four verification gates before being declared co
 
 ### Gate 3.5: Engine Verification & Offline Format Regression Suite
 - Run `npm run test:engine` (`npx tsx scripts/test_engine_prompts.ts`).
-  - Must pass all 14 verification gates, including:
+  - Must pass all 15 verification gates, including:
     - Gate 11: Bimodal Voice Architecture across all parts.
     - Gate 12: Dossier Format Guard (Static Prompt Directives, Zero LaTeX, Zero Unicode box characters `│`, Zero typewriter sliders, Zero piped bullets, GFM table normalization, and Buy-Side Desk Nomenclature scrubbing).
     - Gate 13: Visualizer Chart Disambiguation & Single Cardinality Guard.
     - Gate 14: Hardcore Anti-Anchoring Firewall & Multi-Mode Prompt Integrity.
+    - Gate 15: Gemini 4 Model Currency, Explicit Model Selection & Selective `xhigh`/`high` Thinking Floor.
 - Run `npm run test:format` (`npx tsx scripts/test_format_regression.ts`).
   - Must pass all offline Golden Snapshot assertions in < 50ms (Zero LaTeX, Zero typewriter sliders, rogue code fence unwrap, GFM table schemas, HTML standalone integrity).
 
@@ -137,7 +138,7 @@ Every code change must pass all four verification gates before being declared co
 - **Live Server Background Process & RAM Invalidation Mandate:** `npm run dev` (`tsx server.ts`) does not automatically hot-reload backend Express routes or module imports when files are modified on disk. Whenever diagnosing runtime server errors or delivering backend patches, inspect whether a running Node.js / `tsx` background process is holding stale code in RAM on port 3000 (`Get-NetTCPConnection -LocalPort 3000`). If a stale process exists, terminate it (`Stop-Process`) and verify the patch against the restarted live server to guarantee browser requests execute updated code.
 - **Defensive Route Parameter & Payload Propagation:** Route handlers accepting optional query or body parameters (e.g. `period`, `ticker`, `fmpApiKey`) must provide safe default fallbacks and pass them explicitly down the call graph. Never invoke guard functions or data scrapers with unvalidated, missing parameters that can trigger runtime `TypeError: undefined` crashes.
 - **Export Endpoint Parity:** Verify that both `/api/session/export` (Obsidian Markdown) and `/api/session/export-html` (Standalone HTML) dynamically reflect interim earnings release tags (`_Earnings_Release`) and frontmatter banners.
-- **Strict Model Retention:** Verify that frontier model payloads (`gemini-4-argon`, `pro`) never downgrade in-flight to Flash during cluster saturation, routing transient delays to the 45-minute Auto-Resume cooldown queue.
+- **Strict Model Retention:** Verify that curated Gemini 4 payloads (`gemini-4-carbon`, `gemini-4-argon`, `gemini-4-neon`, `gemini-4-hydrogen`) never downgrade in-flight to legacy models during cluster saturation, routing transient delays to the 45-minute Auto-Resume cooldown queue.
 
 ---
 
@@ -209,9 +210,9 @@ In strict compliance with the **Core Terminal Directive** in [`GEMINI.md`](file:
 
 ---
 
-## 6. Phase 5: Gemini 4 Argon & Long-Context Preview Model Protocol
+## 6. Phase 5: Gemini 4 Curated Roster & Long-Context Model Protocol
 
-When running high-capacity preview reasoning models (e.g., `models/gemini-4-argon`, `models/gemini-2.5-pro`) across heavy 150k+ token SEC filing contexts:
+When running curated Gemini 4 models (`models/gemini-4-carbon`, `models/gemini-4-argon`, `models/gemini-4-neon`, `models/gemini-4-hydrogen`) across heavy 150k+ token SEC filing contexts:
 
 ### 6.1 HTTP/2 Streaming Heartbeat Keep-Alive
 - **The Undici 300s Timeout Trap:** Node.js native `fetch` / Undici enforces a strict 300-second (5-minute) HTTP/2 idle stream socket timeout (`UND_ERR_INFO: stream timeout after 300000`).
@@ -220,21 +221,21 @@ When running high-capacity preview reasoning models (e.g., `models/gemini-4-argo
 - **Thought Separation:** Chunks where `(part as any).thought === true` must NOT be appended to final dossier text; only non-thought content text is concatenated into `responseText`.
 
 ### 6.2 Two-Stage Ingestion Protocol & Tool-Free Closed-Universe Pipeline
-- **Two-Stage Protocol:** `googleSearch` is strictly isolated to Pre-Flight Competitor Radar Harvesting (`/api/competitors/generate` on `gemini-3.8-flash`).
+- **Two-Stage Protocol:** `googleSearch` is strictly isolated to Pre-Flight Competitor Radar Harvesting (`/api/competitors/generate` on `models/gemini-4-hydrogen` with `thinkingLevel: "high"`).
 - **Tool-Free Pipeline Invariance:** All 12 main sequential pipeline steps run completely tool-free (`toolsConfig = undefined`) against staged filings, transcript, financials CSV, and pre-harvested `[TICKER]_Competitor_Radar.md`.
 - **Cache Invariance Rationale:** Eliminating tool declarations guarantees the 300K+ token filing prefix hash remains 100% byte-for-byte invariant across all turns, securing the 80% cache discount and preventing socket close timeouts.
 
 ### 6.3 Adaptive Retry Degradation & Strict Model Retention
-- If an `argon` or `pro` preview model encounters a transient error (`UND_ERR_INFO`, stream timeout, or `503 UNAVAILABLE`):
-  - **Attempt 1:** Automatically step down `thinkingLevel` from `high` to `medium` and strip optional tools for in-flight recovery.
-  - **Attempt 2+ (Strict Model Retention - Zero Flash Downgrade):** Under zero-compromise institutional execution, strictly prohibit falling back to `models/gemini-3.8-flash`. Escalate transient cluster saturation to the outer Auto-Resume cooldown queue (45s pacing for up to 45 minutes).
+- If a curated Gemini 4 model encounters a transient error (`UND_ERR_INFO`, stream timeout, or `503 UNAVAILABLE`):
+  - **Attempt 1:** On `xhigh`-capable models (`gemini-4-neon`, `gemini-4-hydrogen`), automatically step down `thinkingLevel` strictly from `xhigh` to `high` and strip optional tools for in-flight recovery. Never drop below `high` (`medium` retries permanently banned).
+  - **Attempt 2+ (Strict Model Retention - Zero Downgrade):** Under zero-compromise institutional execution, strictly prohibit falling back or swapping models on `404`/`403` or congestion. Escalate transient cluster saturation to the outer Auto-Resume cooldown queue (45s pacing for up to 45 minutes).
   - **Pre-Cache-Eviction Cutoff (45 Minutes):** If the cluster remains saturated for 45 minutes, halt execution before server-side context cache eviction and dispatch immediate multi-channel Telegram + Email alerts.
 
 ---
 
 ## 7. Native Implicit Prefix Caching & Model-Agnostic Execution Protocol
-- **Implicit Cache Hit Optimization:** Structure all SEC filings, transcripts, and CSV datasets as an immutable prefix at the head of the request. All Gemini 2.5+ models automatically cache prefixes >= 4,096 tokens.
-- **Prohibition on Forced Explicit Caching:** Never call `ai.caches.create` or block the pipeline awaiting cache confirmation. Preview models like `gemini-4-argon` reject explicit caching with HTTP 400.
+- **Implicit Cache Hit Optimization:** Structure all SEC filings, transcripts, and CSV datasets as an immutable prefix at the head of the request. All Gemini 4+ models automatically cache prefixes >= 4,096 tokens.
+- **Prohibition on Forced Explicit Caching:** Never call `ai.caches.create` or block the pipeline awaiting cache confirmation. Curated Gemini 4 models reject explicit caching when unneeded and implicit caching works natively.
 - **Telemetry Invariance:** Track `usageMetadata.cachedContentTokenCount` to display verified implicit cache hits in terminal telemetry.
 - **Weekly Documentation Currency:** Execute `npm run check:gemini-docs` weekly to audit live Gemini API model capabilities, supported actions, and caching policies.
 - **Deterministic Source Document Manifest (`prepareFileContextParts`):** Because `fileData: { fileUri, mimeType }` parts do not expose local filenames (`f.name`) to the LLM, `prepareFileContextParts` prepends a deterministic `### Source Documents` manifest at index 0 listing exact staged filenames and categories so Step 1 Roll Calls never hallucinate filenames while keeping the prefix 100% invariant across all 12 steps. Verify `attachedFilesCount === expectedFiles.length` for the Zero-Drop Context Invariant.
@@ -247,7 +248,7 @@ When running high-capacity preview reasoning models (e.g., `models/gemini-4-argo
 When implementing or modifying features interacting with Google Gemini Flex Tier (`serviceTier: "flex"`):
 
 1. **Micro-Token Cost & Pacing Law:**
-   - Probes must strictly be 1 input token (`"ping"`) and 1 output token (`maxOutputTokens: 1`) on the target model, costing `<$0.000001`.
+   - Probes must strictly be 1 input token (`"ping"`) and 1 output token (`maxOutputTokens: 1`, `thinkingLevel: "low"`) on the target model, costing `<$0.000001`.
    - Never send large prompts or multi-token context payloads for health/readiness checks.
 
 2. **12-Second Timeout Circuit Breaker:**
@@ -263,8 +264,8 @@ When implementing or modifying features interacting with Google Gemini Flex Tier
    - The moment HTTP 200 clearance is verified on the target model, the Gatekeeper automatically dispatches execution (`runStepProcessor` for single-company or `batchManager.start()` for autonomous batch queue).
    - Dispatches instant multi-channel alerts (`flex_gatekeeper_launched`) to Telegram and Email upon clearance.
 
-5. **Strict Model Retention Invariant (Zero Flash Downgrades):**
-   - Never downgrade from `gemini-4-argon` to Flash or lower preview models during canary probes or execution retries.
+5. **Strict Model Retention Invariant (Zero Downgrades):**
+   - Never downgrade from the user's explicitly selected Gemini 4 model during canary probes or execution retries.
    - The target model configured by the user must be strictly preserved across all probe attempts and pipeline steps.
 
 6. **Non-Blocking Watcher Startup & Async Canary Probe:**

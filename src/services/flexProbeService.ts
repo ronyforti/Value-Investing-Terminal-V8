@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { sanitizeApiKey } from "../utils/apiKeyUtils.js";
 
 export interface FlexProbeResult {
@@ -32,7 +32,7 @@ let watcherTimer: NodeJS.Timeout | null = null;
 let watcherState: FlexWatcherState = {
   isWaiting: false,
   target: "single",
-  model: "models/gemini-4-argon",
+  model: "",
   startedAt: null,
   lastCheckedAt: null,
   nextCheckInSeconds: 0,
@@ -47,11 +47,23 @@ let watcherState: FlexWatcherState = {
  * Consumes exactly 1 input token (cost < $0.000001) and returns within ~1 second.
  */
 export async function probeFlexTierAvailability(
-  modelName: string = "models/gemini-4-argon",
+  modelName: string,
   apiKey?: string,
   bypassCache: boolean = false
 ): Promise<FlexProbeResult> {
-  const normalizedModel = modelName.startsWith("models/") ? modelName : `models/${modelName}`;
+  const cleanRequested = (modelName || "").trim();
+  if (!cleanRequested) {
+    return {
+      available: false,
+      status: 400,
+      reason: "error",
+      message: "Explicit model selection required before probing Flex tier.",
+      latencyMs: 0,
+      timestamp: new Date().toISOString(),
+      model: ""
+    };
+  }
+  const normalizedModel = cleanRequested.startsWith("models/") ? cleanRequested : `models/${cleanRequested}`;
   const now = Date.now();
 
   if (!bypassCache && cachedProbeResult && (now - lastProbeTime < PROBE_CACHE_TTL_MS) && cachedProbeResult.model === normalizedModel) {
@@ -83,6 +95,7 @@ export async function probeFlexTierAvailability(
       contents: [{ role: "user", parts: [{ text: "ping" }] }],
       config: {
         maxOutputTokens: 1,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         // @ts-ignore - Google SDK accepts serviceTier
         serviceTier: "flex"
       }

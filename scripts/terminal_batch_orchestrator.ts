@@ -140,10 +140,30 @@ async function waitForServer(): Promise<boolean> {
   return false;
 }
 
-async function runCompanyOnTerminal(target: CompanyTarget): Promise<any> {
+function requireCliModel(): string {
+  const raw = process.argv.find(a => a.startsWith("--model="))?.replace("--model=", "").trim();
+  if (!raw) {
+    const { execFileSync } = require("child_process");
+    const alertScript = path.resolve("scripts/send_telegram_alert.py");
+    if (fs.existsSync(alertScript)) {
+      try {
+        execFileSync("python3", [
+          alertScript,
+          "--title", "Action Required: Batch Orchestrator Model Selection",
+          "--message", "terminal_batch_orchestrator.ts requires --model=<gemini-4-carbon|gemini-4-argon|gemini-4-neon|gemini-4-hydrogen>."
+        ], { stdio: "ignore" });
+      } catch {}
+    }
+    throw new Error("Execution blocked: Explicit model selection required (--model=<model>). No model specified.");
+  }
+  return raw.startsWith("models/") ? raw : `models/${raw}`;
+}
+
+async function runCompanyOnTerminal(target: CompanyTarget, targetModel: string): Promise<any> {
   const { ticker, price, period } = target;
+  const modelShortName = targetModel.replace("models/", "");
   console.log(`\n======================================================================`);
-  console.log(`  ENGAGING TERMINAL ENGINE FOR: ${ticker} ($${price} | Period: ${period})`);
+  console.log(`  ENGAGING TERMINAL ENGINE FOR: ${ticker} ($${price} | Period: ${period} | Model: ${modelShortName})`);
   console.log(`======================================================================`);
 
   console.log(`  [1/5] Performing complete session hard-reset (purging all previous company files)...`);
@@ -167,7 +187,7 @@ async function runCompanyOnTerminal(target: CompanyTarget): Promise<any> {
     ticker,
     period,
     price,
-    model: "gemini-3.8-flash",
+    model: targetModel,
     executionMode: 3,
     enableCrosscheck: true,
     portfolio: { holdsPosition: false },
@@ -296,7 +316,7 @@ async function runCompanyOnTerminal(target: CompanyTarget): Promise<any> {
   }
 
   console.log(`  Fetching compiled institutional dossier from Terminal...`);
-  const exportRes = await fetch(`${SERVER_URL}/api/session/export?ticker=${ticker}&period=${period}&model=gemini-3.8-flash`);
+  const exportRes = await fetch(`${SERVER_URL}/api/session/export?ticker=${ticker}&period=${period}&model=${encodeURIComponent(modelShortName)}`);
   let rawMd = await exportRes.text();
 
   const cleanMd = sanitizeLatex(rawMd);
@@ -318,6 +338,9 @@ async function runCompanyOnTerminal(target: CompanyTarget): Promise<any> {
 }
 
 async function main() {
+  const targetModel = requireCliModel();
+  const modelShortName = targetModel.replace("models/", "");
+
   const online = await waitForServer();
   if (!online) {
     console.error("Could not connect to Value Investing Terminal server on port 3000.");
@@ -334,7 +357,7 @@ async function main() {
   console.log(`\n======================================================================`);
   console.log(`  TERMINAL BATCH PIPELINE ENGAGED FOR ${tickers.length} FRANCHISES`);
   console.log(`  Queue: ${tickers.join(", ")}`);
-  console.log(`  Model: gemini-3.8-flash | Grounding: Google Search Enabled`);
+  console.log(`  Model: ${modelShortName}`);
   console.log(`======================================================================`);
 
   const results: any[] = [];
@@ -343,7 +366,7 @@ async function main() {
   for (const tkr of tickers) {
     const target = TARGET_COMPANIES.find(c => c.ticker === tkr)!;
     try {
-      const res = await runCompanyOnTerminal(target);
+      const res = await runCompanyOnTerminal(target, targetModel);
       results.push(res);
     } catch (err: any) {
       console.error(`  [FAILED for ${tkr}]:`, err?.message || err);

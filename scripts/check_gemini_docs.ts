@@ -13,14 +13,10 @@ interface ModelCapabilityReport {
 }
 
 const KNOWN_IMPLICIT_CACHE_LIMITS: Record<string, number> = {
-  "gemini-3.8-flash": 4096,
-  "gemini-3.7-flash": 4096,
-  "gemini-3.6-flash": 4096,
-  "gemini-3.5-flash": 4096,
-  "gemini-3.1-pro-preview": 4096,
+  "gemini-4-carbon": 4096,
   "gemini-4-argon": 4096,
-  "gemini-2.5-flash": 2048,
-  "gemini-2.5-pro": 2048
+  "gemini-4-neon": 4096,
+  "gemini-4-hydrogen": 4096
 };
 
 export async function checkGeminiDocsAndModels(): Promise<{
@@ -62,11 +58,10 @@ export async function checkGeminiDocsAndModels(): Promise<{
   }
 
   const targetModels = [
+    "gemini-4-carbon",
     "gemini-4-argon",
-    "gemini-3.8-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-3.1-pro-preview",
-    "gemini-2.5-pro"
+    "gemini-4-neon",
+    "gemini-4-hydrogen"
   ];
 
   const monitored: ModelCapabilityReport[] = [];
@@ -87,8 +82,8 @@ export async function checkGeminiDocsAndModels(): Promise<{
     const minTokens = KNOWN_IMPLICIT_CACHE_LIMITS[cleanName] || 4096;
 
     // Baseline capability shift detection
-    if (cleanName === "gemini-4-argon" && supportsExplicitCache) {
-      warnings.push("Capability shift: 'gemini-4-argon' now supports explicit caching (createCachedContent). Review caching strategy.");
+    if (cleanName.startsWith("gemini-4-") && supportsExplicitCache) {
+      warnings.push(`Capability shift: '${cleanName}' now supports explicit caching (createCachedContent). Review caching strategy.`);
     }
 
     monitored.push({
@@ -97,7 +92,7 @@ export async function checkGeminiDocsAndModels(): Promise<{
       supportsGenerateContent: supportsGenerate,
       supportsCreateCachedContent: supportsExplicitCache,
       supportsStreaming: supportsGenerate,
-      supportsGoogleSearch: cleanName.includes("flash") || cleanName.includes("pro"),
+      supportsGoogleSearch: cleanName.startsWith("gemini-4-") || cleanName.includes("flash") || cleanName.includes("pro"),
       minImplicitCacheTokens: minTokens
     });
   }
@@ -129,8 +124,8 @@ export async function checkGeminiDocsAndModels(): Promise<{
   }
 
   console.log(`\n--- Ground Truth Verification ---`);
-  console.log(`✓ Implicit Prefix Caching: Native and active on all Gemini 2.5+ models (min 4,096 tokens).`);
-  console.log(`✓ Zero Explicit Cache Forcing: Frontier preview models (gemini-4-argon) execute without explicit cache errors.`);
+  console.log(`✓ Implicit Prefix Caching: Native and active on all Gemini 4 models (min 4,096 tokens).`);
+  console.log(`✓ Zero Explicit Cache Forcing: Gemini 4 models (Carbon, Argon, Neon, Hydrogen) execute without explicit cache errors.`);
   console.log(`✓ Immutable Prefix Invariant: Files attached at head of prompt trigger server-side KV cache reuse.\n`);
 
   // Write to GitHub Step Summary if running in GitHub Actions

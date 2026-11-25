@@ -578,6 +578,121 @@ if (!slingshotValid || !sentinelValid || !zeroPythonInPrompts) {
   process.exit(1);
 }
 
-console.log("\n=== ALL 14 VERIFICATION GATES PASSED PERFECTLY ===");
+// 15. Verify Gemini 4 Model Currency, Explicit Model Governance & Thinking Floor (Gate 15)
+console.log("\n--- Gate 15: Gemini 4 Model Currency, Explicit Selection & Thinking Floor ---");
+import {
+  supportsXHighThinking,
+  resolveEffectiveThinkingLevel,
+  isFrontierModel,
+  CURATED_GEMINI4_MODELS
+} from "../src/utils/modelGovernance.js";
+
+const rosterValid =
+  CURATED_GEMINI4_MODELS.length === 4 &&
+  CURATED_GEMINI4_MODELS.some(m => m.name === "models/gemini-4-carbon") &&
+  CURATED_GEMINI4_MODELS.some(m => m.name === "models/gemini-4-argon") &&
+  CURATED_GEMINI4_MODELS.some(m => m.name === "models/gemini-4-neon") &&
+  CURATED_GEMINI4_MODELS.some(m => m.name === "models/gemini-4-hydrogen");
+
+const clampingValid =
+  supportsXHighThinking("models/gemini-4-neon") === true &&
+  supportsXHighThinking("models/gemini-4-hydrogen") === true &&
+  supportsXHighThinking("models/gemini-4-carbon") === false &&
+  supportsXHighThinking("models/gemini-4-argon") === false &&
+  resolveEffectiveThinkingLevel("models/gemini-4-carbon", "xhigh") === "high" &&
+  resolveEffectiveThinkingLevel("models/gemini-4-argon", "xhigh") === "high" &&
+  resolveEffectiveThinkingLevel("models/gemini-4-neon", "xhigh") === "xhigh" &&
+  resolveEffectiveThinkingLevel("models/gemini-4-hydrogen", "xhigh") === "xhigh" &&
+  isFrontierModel("models/gemini-4-carbon") === true &&
+  isFrontierModel("models/gemini-4-hydrogen") === true;
+
+const xhighParts = new Set([1, 3, 6, 7, 11]);
+const highParts = new Set([2, 4, 5, 8, 9, 10]);
+const selectiveThinkingValid =
+  MASTER_PROMPTS.every(p =>
+    xhighParts.has(p.id)
+      ? p.defaultThinkingLevel === "xhigh"
+      : highParts.has(p.id)
+        ? p.defaultThinkingLevel === "high"
+        : false
+  ) &&
+  CROSSCHECK_PROMPT.defaultThinkingLevel === "xhigh" &&
+  SLINGSHOT_PROMPT.defaultThinkingLevel === "xhigh" &&
+  SENTINEL_PROMPT.defaultThinkingLevel === "xhigh";
+
+// Scan active runtime source files for stale 2.5/3.x models, medium retries, or silent valuation model fallbacks
+const collectActiveFiles = (dir: string): string[] => {
+  const results: string[] = [];
+  if (!fs.existsSync(dir)) return results;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...collectActiveFiles(full));
+    } else if (/\.(ts|tsx|js|cjs|py)$/.test(entry.name)) {
+      const rel = path.relative(process.cwd(), full).replace(/\\/g, "/");
+      if (rel.startsWith("scripts/reprocess_") || rel === "scripts/test_engine_prompts.ts") {
+        continue;
+      }
+      results.push(full);
+    }
+  }
+  return results;
+};
+
+const activeFiles = [
+  path.join(process.cwd(), "server.ts"),
+  path.join(process.cwd(), "server.cloud.ts"),
+  ...collectActiveFiles(path.join(process.cwd(), "src")),
+  ...collectActiveFiles(path.join(process.cwd(), "scripts"))
+];
+
+const legacyModelRegex = /gemini-(?:3\.8|3\.5|3\.1|2\.5)/i;
+const mediumRetryRegex = /thinkingLevel:\s*["']medium["']/i;
+const silentExecutionFallbackRegex = /state\.config\?\.model\s*\|\|\s*["']models\/gemini-4-(?:carbon|argon|neon)["']/;
+const modelSwitchFallbackRegex = /Switching model from .*gemini-3|fallbackModel:\s*["']models\/gemini-3/i;
+
+const legacyHits: string[] = [];
+const mediumHits: string[] = [];
+const silentFallbackHits: string[] = [];
+const switchFallbackHits: string[] = [];
+
+for (const filePath of activeFiles) {
+  const rel = path.relative(process.cwd(), filePath).replace(/\\/g, "/");
+  const content = fs.readFileSync(filePath, "utf8");
+  if (legacyModelRegex.test(content)) legacyHits.push(rel);
+  if (mediumRetryRegex.test(content)) mediumHits.push(rel);
+  if (silentExecutionFallbackRegex.test(content)) silentFallbackHits.push(rel);
+  if (modelSwitchFallbackRegex.test(content)) switchFallbackHits.push(rel);
+}
+
+const serverCloudCode = fs.readFileSync(path.join(process.cwd(), "server.cloud.ts"), "utf8");
+const initExplicitCheckPassed =
+  serverCode.includes("Explicit model selection is required") &&
+  serverCloudCode.includes("Explicit model selection is required");
+
+const gate15Passed =
+  rosterValid &&
+  clampingValid &&
+  selectiveThinkingValid &&
+  legacyHits.length === 0 &&
+  mediumHits.length === 0 &&
+  silentFallbackHits.length === 0 &&
+  switchFallbackHits.length === 0 &&
+  initExplicitCheckPassed;
+
+console.log(`Curated Gemini 4 Roster (Carbon/Argon/Neon/Hydrogen): ${rosterValid ? "PASS" : "FAIL"}`);
+console.log(`X-High Capability Clamping (Carbon/Argon -> high, Neon/Hydrogen -> xhigh): ${clampingValid ? "PASS" : "FAIL"}`);
+console.log(`Selective X-High Prompt Tiering (Parts 1,3,6,7,11,12,Slingshot,Sentinel = xhigh; others = high): ${selectiveThinkingValid ? "PASS" : "FAIL"}`);
+console.log(`Zero Outdated Gemini 2.5/3.x Model Strings in Active Code: ${legacyHits.length === 0 ? "PASS" : `FAIL (${legacyHits.join(", ")})`}`);
+console.log(`Zero Medium Thinking Floor Violations: ${mediumHits.length === 0 ? "PASS" : `FAIL (${mediumHits.join(", ")})`}`);
+console.log(`Zero Silent Execution Fallbacks & Zero 404/403 Switch Blocks: ${(silentFallbackHits.length === 0 && switchFallbackHits.length === 0) ? "PASS" : `FAIL (${[...silentFallbackHits, ...switchFallbackHits].join(", ")})`}`);
+console.log(`Explicit Model Selection Enforced on /api/session/init (Local & Cloud): ${initExplicitCheckPassed ? "PASS" : "FAIL"}`);
+
+if (!gate15Passed) {
+  console.error("FAIL: Gate 15 Gemini 4 Model Currency & Explicit Model Governance failed!");
+  process.exit(1);
+}
+
+console.log("\n=== ALL 15 VERIFICATION GATES PASSED PERFECTLY ===");
 
 

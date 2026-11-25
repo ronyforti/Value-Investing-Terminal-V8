@@ -38,7 +38,7 @@ GEMINI_API_KEY = get_env_var("GEMINI_API_KEY")
 class MoatTriageEngine:
     """
     Stage 2: AI Moat & Red Flag Triage Engine.
-    Supports either local Gemma 4 (via Ollama) or Gemini 3.8 Flash (via Google GenAI SDK).
+    Supports either local Gemma 4 (via Ollama) or Gemini 4 Hydrogen (via Google GenAI SDK).
     """
 
     def __init__(self, engine: str = "gemini", model: str = None,
@@ -52,7 +52,7 @@ class MoatTriageEngine:
         self.profile_cache = {}
 
         if self.engine == "gemini":
-            self.model = model if model else "gemini-3.8-flash"
+            self.model = model if model else "gemini-4-hydrogen"
             from google import genai
             from google.genai import types
             self.types = types
@@ -182,7 +182,7 @@ class MoatTriageEngine:
 
     def triage_candidate(self, candidate_data: dict) -> dict:
         """
-        Evaluates a single screened candidate with Gemma 4 or Gemini 3.8 Flash.
+        Evaluates a single screened candidate with Gemma 4 or Gemini 4 Hydrogen.
         """
         symbol = candidate_data.get("Ticker") or candidate_data.get("symbol")
         fpath = candidate_data.get("File Path") or candidate_data.get("file_path")
@@ -410,10 +410,10 @@ def generate_comparison_report(gemma_csv: str, gemini_csv: str, output_dir: str 
     md.append(f"total_candidates: {total}")
     md.append(f"agreement_rate: {agreement_rate}%")
     md.append("---\n")
-    md.append("# ⚖️ AI Triage Benchmark: Local Gemma 4 vs Cloud Gemini 3.8 Flash")
+    md.append("# ⚖️ AI Triage Benchmark: Local Gemma 4 vs Cloud Gemini 4 Hydrogen")
     md.append(f"> **Evaluated Universe:** Top {total} quantitative screener candidates.")
     md.append(f"> **Baseline 1:** Local `gemma4:e4b` (Ollama) | Cost: $0.00.")
-    md.append(f"> **Baseline 2:** Google Cloud `gemini-3.8-flash` | Speed: ~0.5s/call.")
+    md.append(f"> **Baseline 2:** Google Cloud `gemini-4-hydrogen` | High Thinking.")
     md.append(f"> **Overall Decision Agreement Rate:** **{agreement_rate}%** ({agreements}/{total} identical verdicts)\n")
 
     md.append("## 📊 Side-by-Side Verdict Comparison Table\n")
@@ -423,7 +423,7 @@ def generate_comparison_report(gemma_csv: str, gemini_csv: str, output_dir: str 
             return "APPROVED: PROMOTE TO TERMINAL", "🟢"
         return "REJECTED: DISQUALIFIED", "🔴"
 
-    md.append("| Ticker | Company Name | Industry | Price | Gemma 4 Verdict | Gemini 3.8 Flash Verdict | Consensus? |")
+    md.append("| Ticker | Company Name | Industry | Price | Gemma 4 Verdict | Gemini 4 Hydrogen Verdict | Consensus? |")
     md.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- |")
 
     for _, row in merged.iterrows():
@@ -449,11 +449,11 @@ def generate_comparison_report(gemma_csv: str, gemini_csv: str, output_dir: str 
         icon = "🟢" if "APPROVED" in gemma_clean or "APPROVED" in gemini_clean else "🔴"
         md.append(f"### {icon} {sym} ({comp}) — {consensus_label}")
         md.append(f"- **Gemma 4 Decision:** `{gemma_clean}`")
-        md.append(f"- **Gemini 3.8 Flash Decision:** `{gemini_clean}`\n")
+        md.append(f"- **Gemini 4 Hydrogen Decision:** `{gemini_clean}`\n")
         md.append("#### 🧠 Local Gemma 4 Rationale:")
         gemma_quote = "> " + str(row['Rationale_Gemma']).replace("\n", "\n> ")
         md.append(f"{gemma_quote}\n")
-        md.append("#### ⚡ Cloud Gemini 3.8 Flash Rationale:")
+        md.append("#### ⚡ Cloud Gemini 4 Hydrogen Rationale:")
         gemini_quote = "> " + str(row['Rationale_Gemini']).replace("\n", "\n> ")
         md.append(f"{gemini_quote}\n")
         md.append("---\n")
@@ -470,7 +470,7 @@ def main():
     parser.add_argument("--tickers", type=str, default=None, help="Comma-separated list of tickers to triage (e.g. SIG,TTD,EVR)")
     parser.add_argument("--top-n", type=int, default=25, help="Number of top actionable candidates to triage.")
     parser.add_argument("--engine", type=str, default="ollama", choices=["gemini", "ollama"], help="LLM Engine: gemini or ollama (default: ollama)")
-    parser.add_argument("--model", type=str, default=None, help="Specific model name (e.g. gemini-3.8-flash or gemma4:e4b)")
+    parser.add_argument("--model", type=str, default=None, help="Specific model name (e.g. gemini-4-hydrogen or gemma4:e4b)")
     parser.add_argument("--group", type=str, default=None, help="Filter by specific Verdict Group (e.g. 'DCF Green Light')")
     parser.add_argument("--min-roic", type=float, default=None, help="Minimum ROIC TTM pct filter (e.g. 15.0)")
     parser.add_argument("--sort-by", type=str, default=None, help="Sort candidates by column (e.g. 'DCF MoS %%')")

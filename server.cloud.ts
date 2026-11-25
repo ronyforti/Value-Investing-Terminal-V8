@@ -28,7 +28,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { sanitizeApiKey, maskApiKey } from "./src/utils/apiKeyUtils.js";
 import { MASTER_PROMPTS, CROSSCHECK_PROMPT, SLINGSHOT_PROMPT, SENTINEL_PROMPT, STEP_CHAPTER_TITLES } from "./src/prompts.js";
-import { ExecutionMode, SessionMode, SessionState, FileLog, AuditCheck, StepOutput, CustomMessage, PortfolioContext, CurrencyAuditResult, DocumentIntegrityReport, BatchQueueItem, BatchQueueState, NotificationConfig, NotificationPayload, HybridConfig, PythonValuationResult } from "./src/types.js";
+import { ExecutionMode, SessionMode, SessionState, FileLog, AuditCheck, StepOutput, CustomMessage, PortfolioContext, CurrencyAuditResult, DocumentIntegrityReport, BatchQueueItem, BatchQueueState, NotificationConfig, NotificationPayload, HybridConfig, PythonValuationResult, ThinkingLevel } from "./src/types.js";
 import { auditFinancialCsv, harmonizeFinancialCsv } from "./src/currencyGuard.js";
 import { auditDocumentIntegrity, auditFileIntegrity, auditFilesSubstance, checkFileSubstance, parsePeriodString, isSequentialQuarterAhead, isInterimEarningsRelease, detectAuditCategory, runAudit as runAuditCore } from "./src/documentGuard.js";
 import { batchManager } from "./src/batchManager.js";
@@ -39,6 +39,8 @@ import { probeFlexTierAvailability, getFlexWatcherState, startFlexWatcher, cance
 import { parseCrosscheckVerdict } from "./src/utils/dossierFormatGuard.js";
 import { runPythonValuation, synthesizeDoubleBlindSection } from "./src/services/valuationBridge.js";
 import { locatePriorDossier } from "./src/services/priorDossierLocator.js";
+import { supportsXHighThinking, resolveEffectiveThinkingLevel, isFrontierModel } from "./src/utils/modelGovernance.js";
+export { supportsXHighThinking, resolveEffectiveThinkingLevel, isFrontierModel };
 
 // Global Process Crash Shields to prevent transient socket drops / stream hangups from crashing Node
 process.on('unhandledRejection', (reason) => {
@@ -819,17 +821,24 @@ function isTransientError(err: any): boolean {
 async function generateContentWithRetry(ai: any, params: any, maxRetries = 6, initialDelay = 2000) {
   let attempt = 0;
   let currentParams = { ...params };
-  const originalRequestedModel = params.model;
-  let fallbackInfo: { originalModel: string; fallbackModel: string; reason: string } | undefined = undefined;
+  const fallbackInfo: { originalModel: string; fallbackModel: string; reason: string } | undefined = undefined;
 
   while (true) {
     try {
+      const currentThinkingLevel = resolveEffectiveThinkingLevel(
+        currentParams.model,
+        currentParams.config?.thinkingConfig?.thinkingLevel || "high"
+      );
       const hasTools = Array.isArray(currentParams.config?.tools) && currentParams.config.tools.length > 0;
       const effectiveServiceTier = hasTools ? undefined : (currentParams.config?.serviceTier || state.config?.serviceTier || "flex");
       const nonStreamParams = {
         ...currentParams,
         config: {
           ...currentParams.config,
+          thinkingConfig: {
+            ...(currentParams.config?.thinkingConfig || {}),
+            thinkingLevel: currentThinkingLevel
+          },
           ...(effectiveServiceTier ? { serviceTier: effectiveServiceTier } : {})
         }
       };
@@ -861,6 +870,31 @@ async function generateContentWithRetry(ai: any, params: any, maxRetries = 6, in
         continue;
       }
 
+      // Adaptive Retry for Frontier Models: only step xhigh -> high on Attempt 1; NEVER drop below high.
+      if (isFrontierModel(String(currentParams.model || '')) && (isTransient || errMsg.includes("503") || errMsg.includes("timeout"))) {
+        const activeThinking = resolveEffectiveThinkingLevel(
+          currentParams.model,
+          currentParams.config?.thinkingConfig?.thinkingLevel || "high"
+        );
+        if (attempt === 1 && activeThinking === 'xhigh') {
+          console.log(`[Gemini API Adaptive Retry] Stepping down thinkingLevel from 'xhigh' to 'high' on ${currentParams.model}...`);
+          currentParams = {
+            ...currentParams,
+            config: {
+              ...currentParams.config,
+              thinkingConfig: {
+                ...(currentParams.config?.thinkingConfig || {}),
+                thinkingLevel: 'high'
+              },
+              tools: undefined
+            }
+          };
+          continue;
+        } else if (attempt >= 2) {
+          throw err;
+        }
+      }
+
       // Handle 403 PERMISSION_DENIED or search tool permissions
       if (currentParams.config?.tools && (errMsg.includes("403") || errMsg.includes("permission_denied") || errMsg.includes("caller does not have permission") || errMsg.includes("tool") || errMsg.includes("grounding"))) {
         console.log(`[Gemini API Fallback] Disabling googleSearch tool due to 403 permission restriction and retrying...`);
@@ -874,21 +908,10 @@ async function generateContentWithRetry(ai: any, params: any, maxRetries = 6, in
         continue;
       }
 
-      // Handle model not found / model permission restriction
+      // Zero Silent Model Downgrade on 404 / 403 model errors
       if (errMsg.includes("404") || (errMsg.includes("403") && !currentParams.config?.tools)) {
-        if (currentParams.model !== "gemini-3.8-flash" && currentParams.model !== "models/gemini-3.8-flash") {
-          console.log(`[Gemini API Model Fallback] Switching model from ${currentParams.model} to gemini-3.8-flash...`);
-          fallbackInfo = {
-            originalModel: originalRequestedModel,
-            fallbackModel: "gemini-3.8-flash",
-            reason: `Model not found or permission error: ${errMsg.slice(0, 80)}`
-          };
-          currentParams = {
-            ...currentParams,
-            model: "gemini-3.8-flash"
-          };
-          continue;
-        }
+        console.error(`[Gemini API Model Error] Requested model '${currentParams.model}' failed with 404/403. Zero silent downgrade allowed.`);
+        throw err;
       }
 
       if (attempt >= effectiveMaxRetries) {
@@ -929,6 +952,10 @@ async function runStepProcessor(startingIdx: number) {
       break;
     }
 
+    if (!state.config?.model) {
+      throw new Error("Execution blocked: Explicit model selection required. No model specified.");
+    }
+
     state.activeStepIndex = i;
     state.currentPromptIndex = i;
     const step = state.steps[i];
@@ -938,13 +965,13 @@ async function runStepProcessor(startingIdx: number) {
     try {
       const isCrosscheck = step.isCrosscheck || i >= MASTER_PROMPTS.length;
       
-      let modelToUse = state.config?.model || "models/gemini-3.8-flash";
+      let modelToUse = state.config.model;
       if (isCrosscheck && state.config?.crosscheckModel && state.config.crosscheckModel !== "default") {
         modelToUse = state.config.crosscheckModel;
       }
-      console.log(`[Executing Analyst Engine] Step ${i + 1}/${state.steps.length}: ${step.title} | Model: ${modelToUse} | Tier: ${state.config?.serviceTier || 'flex'}`);
       const temperature = isCrosscheck ? 0.0 : (step.temperature ?? 0.2);
-      const thinkingLevel = (step.thinkingLevel || "high") as "low" | "medium" | "high";
+      const thinkingLevel = resolveEffectiveThinkingLevel(modelToUse, step.thinkingLevel || "high");
+      console.log(`[Executing Analyst Engine] Step ${i + 1}/${state.steps.length}: ${step.title} | Model: ${modelToUse} | Thinking: ${thinkingLevel} | Tier: ${state.config?.serviceTier || 'flex'}`);
 
       let responseText = "";
       let promptTokens = 0;
@@ -1309,10 +1336,10 @@ app.get("/api/session", (req: Request, res: Response) => {
 // list dynamic models
 app.get("/api/session/models", async (req: Request, res: Response) => {
   const FALLBACK_MODELS = [
+    { name: "models/gemini-4-carbon", displayName: "Gemini 4 Carbon (Frontier Flagship Reasoning)" },
     { name: "models/gemini-4-argon", displayName: "Gemini 4 Argon (Frontier Deep Reasoning)" },
-    { name: "models/gemini-3.8-flash", displayName: "Gemini 3.8 Flash (Default Flagship Fast & Smart)" },
-    { name: "models/gemini-3.5-flash-lite", displayName: "Gemini 3.5 Flash-Lite (Fast & Cost-Efficient)" },
-    { name: "models/gemini-3.1-pro-preview", displayName: "Gemini 3.1 Pro Preview (Heavy Reasoning)" }
+    { name: "models/gemini-4-neon", displayName: "Gemini 4 Neon (High-Precision Fast Frontier)" },
+    { name: "models/gemini-4-hydrogen", displayName: "Gemini 4 Hydrogen (High-Throughput Frontier)" }
   ];
 
   try {
@@ -1332,32 +1359,47 @@ app.get("/api/session/models", async (req: Request, res: Response) => {
 
     // Define function to extract version and tier weighting for sorting
     const getModelWeight = (modelName: string) => {
+      const lower = modelName.toLowerCase();
       const match = modelName.match(/gemini-(\d+\.\d+|\d+)/i);
       let version = match ? parseFloat(match[1]) : 0;
-      if (version === 0 && modelName.includes("gemini")) {
+      if (version === 0 && lower.includes("gemini")) {
         version = 1.0;
       }
       let tier = 0;
-      if (modelName.toLowerCase().includes("argon")) {
+      if (lower.includes("carbon")) {
+        tier = 4;
+        if (version < 4.0) version = 4.0;
+      } else if (lower.includes("argon")) {
         tier = 3;
-        if (version === 0 || version === 1.0) version = 4.0;
-      } else if (modelName.toLowerCase().includes("pro")) {
+        if (version < 4.0) version = 4.0;
+      } else if (lower.includes("neon")) {
         tier = 2;
-      } else if (modelName.toLowerCase().includes("flash")) {
+        if (version < 4.0) version = 4.0;
+      } else if (lower.includes("hydrogen")) {
+        tier = 1;
+        if (version < 4.0) version = 4.0;
+      } else if (lower.includes("pro")) {
+        tier = 2;
+      } else if (lower.includes("flash")) {
         tier = 1;
       }
       return { version, tier };
     };
 
-    // Filter, validate and clean up models
+    // Filter, validate and clean up models (Gemini 4+ frontier roster only)
     const filtered = rawModels
       .filter((m: any) => {
         const id = m.name || m.id || "";
         const idLower = id.toLowerCase();
         const displayLower = (m.displayName || "").toLowerCase();
         
-        // Exclude embedded/nano/vision/audio special names and deprecated legacy models
+        // Enforce Gemini 4+ generation only (excludes deprecated 2.5 / 3.x models)
         if (!idLower.includes("gemini")) return false;
+        const vMatch = idLower.match(/gemini-(\d+)/);
+        const majorVersion = vMatch ? parseInt(vMatch[1], 10) : 0;
+        if (majorVersion < 4) return false;
+
+        // Exclude embedded/nano/vision/audio special modalities
         if (idLower.includes("nano") || displayLower.includes("nano")) return false;
         if (idLower.includes("embedding") || displayLower.includes("embedding")) return false;
         if (idLower.includes("vision") || displayLower.includes("vision")) return false;
@@ -1365,7 +1407,6 @@ app.get("/api/session/models", async (req: Request, res: Response) => {
         if (idLower.includes("audio") || displayLower.includes("audio")) return false;
         if (idLower.includes("search") || displayLower.includes("search")) return false;
         if (idLower.includes("classic") || displayLower.includes("classic")) return false;
-        if (idLower.includes("1.0") || displayLower.includes("1.0")) return false;
         if (idLower.includes("8b") || displayLower.includes("8b")) return false;
         if (idLower.includes("learnlm") || displayLower.includes("learnlm")) return false;
         if (idLower.includes("banana") || displayLower.includes("banana")) return false;
@@ -1373,6 +1414,7 @@ app.get("/api/session/models", async (req: Request, res: Response) => {
         if (idLower.includes("custom") || displayLower.includes("custom")) return false;
         if (idLower.includes("live") || displayLower.includes("live")) return false;
         if (idLower.includes("tts") || displayLower.includes("tts")) return false;
+        if (idLower.includes("omni") || displayLower.includes("omni")) return false;
 
         // Must support content generation
         let canGen = false;
@@ -1400,7 +1442,7 @@ app.get("/api/session/models", async (req: Request, res: Response) => {
         };
       });
 
-    // Sort newer key versions first, pro before flash
+    // Sort newer key versions first, then tier (carbon > argon > neon > hydrogen)
     filtered.sort((a: any, b: any) => {
       const wA = getModelWeight(a.name);
       const wB = getModelWeight(b.name);
@@ -1408,7 +1450,7 @@ app.get("/api/session/models", async (req: Request, res: Response) => {
       if (wB.version !== wA.version) {
         return wB.version - wA.version; // newer versions first
       }
-      return wB.tier - wA.tier; // pro before flash
+      return wB.tier - wA.tier;
     });
 
     // Avoid duplicates of standard aliases or double names
@@ -1447,6 +1489,17 @@ app.post("/api/session/init", (req: Request, res: Response) => {
   if (!ticker || !period || !price) {
     return res.status(400).json({ error: "Missing ticker, reporting period or market price." });
   }
+  if (!model || typeof model !== "string" || !model.trim()) {
+    const cleanReqTicker = String(ticker).toUpperCase();
+    dispatchNotification(notificationConfig, {
+      event: "model_selection_required",
+      title: `Action Required: Model Selection (${cleanReqTicker})`,
+      message: `Session initialization for ${cleanReqTicker} blocked: No explicit model was specified.\n\nPlease select an explicit Gemini 4 model (e.g., models/gemini-4-carbon, models/gemini-4-argon, models/gemini-4-neon, models/gemini-4-hydrogen).`
+    }).catch(err => console.warn("[Telegram Alert Error]", err));
+    return res.status(400).json({
+      error: "Explicit model selection is required. Hardcoded model fallbacks are disabled."
+    });
+  }
 
   const clientKey = getApiHeaderKey(req);
   if (clientKey) {
@@ -1484,7 +1537,7 @@ app.post("/api/session/init", (req: Request, res: Response) => {
     ticker: newTicker,
     period: String(period),
     price: String(price),
-    model: model || "models/gemini-3.8-flash",
+    model: String(model).trim(),
     executionMode: Number(executionMode) as ExecutionMode,
     sessionMode: parsedSessionMode,
     priorDossierPath: priorDossierPath || undefined,
@@ -1721,7 +1774,7 @@ app.post("/api/upload", async (req: Request, res: Response) => {
     // Call the Gemini countTokens API to get the exact token count, with a fallback
     let computedTokens = Math.max(12, Math.ceil(finalBuffer.length / 4.2));
     try {
-      const modelToUse = state.config?.model || "gemini-3.8-flash";
+      const modelToUse = state.config?.model || "models/gemini-4-hydrogen";
       const tokenCountResponse = await ai.models.countTokens({
         model: modelToUse,
         contents: [
@@ -2096,18 +2149,27 @@ async function executeBatchCompany(
   docs: string[],
   onStep: (stepIdx: number, stepTitle: string) => void
 ): Promise<{ success: boolean; compiledMarkdown: string; error?: string }> {
+  const preferredModel = item.model || state.config?.model;
+  if (!preferredModel) {
+    throw new Error(`Execution blocked on ${item.ticker}: Explicit model selection required. No model specified.`);
+  }
+  const preferredCrosscheckModel = state.config?.crosscheckModel || "default";
+  const preferredServiceTier = state.config?.serviceTier || (process.env.SERVICE_TIER as any) || "flex";
+
   await resetBatchSessionState();
 
   state.config = {
     ticker: item.ticker,
     period: item.period,
     price: item.price,
-    model: "gemini-3.8-flash",
+    model: preferredModel,
+    serviceTier: preferredServiceTier,
+    pipelineMode: "single",
     executionMode: ExecutionMode.FullAuto,
     portfolio: item.portfolio || { holdsPosition: false },
     notes: "",
     enableCrosscheck: true,
-    crosscheckModel: "default"
+    crosscheckModel: preferredCrosscheckModel
   };
   state.steps = generateSessionSteps(true);
 
@@ -2142,7 +2204,10 @@ async function executeBatchCompany(
   }
 
   const completedSteps = state.steps.filter(s => s.status === 'completed' && s.response);
-  const modelName = state.config?.model || "gemini-3.8-flash";
+  const modelName = state.config?.model;
+  if (!modelName) {
+    throw new Error(`Execution aborted on ${item.ticker}: Missing configured model in session state.`);
+  }
   let body = "";
   let batchRadarInjected = false;
   const batchRadar = state.competitorRadar;
@@ -2575,8 +2640,51 @@ app.post("/api/batch/start", (req: Request, res: Response) => {
     return res.json({ success: true, message: "Batch is already running.", batchState: batchManager.state });
   }
 
+  const { model } = req.body || {};
+  const explicitModel = typeof model === "string" && model.trim() ? model.trim() : undefined;
+  const effectiveModel = explicitModel || state.config?.model;
+  const allItemsHaveModel = batchManager.state.items.length > 0 && batchManager.state.items.every(i => Boolean(i.model && i.model.trim()));
+  if (!effectiveModel && !allItemsHaveModel) {
+    const stagedTickers = batchManager.state.items.map(i => i.ticker).join(", ") || "Batch Queue";
+    dispatchNotification(notificationConfig, {
+      event: 'model_selection_required',
+      title: 'Action Required: Model Selection',
+      message: `Batch is staged for ${stagedTickers}, but no model was specified.\n\nPlease reply in Antigravity chat with the Gemini 4 model to run (e.g. models/gemini-4-carbon, models/gemini-4-argon, models/gemini-4-neon, models/gemini-4-hydrogen).`
+    }).catch(err => console.warn("[Telegram Alert Error]", err));
+
+    return res.status(400).json({
+      error: "Explicit model selection required. Please select or specify a model to run batch execution.",
+      batchState: batchManager.state
+    });
+  }
+
   if (batchManager.state.items.length === 0) {
     return res.status(400).json({ error: "Batch queue is empty." });
+  }
+
+  if (effectiveModel) {
+    batchManager.state.items.forEach(item => {
+      if (!item.model) {
+        item.model = effectiveModel;
+      }
+    });
+  }
+
+  const resolvedBatchModel = effectiveModel || batchManager.state.items[0].model!;
+  if (!state.config) {
+    state.config = {
+      ticker: "",
+      period: "",
+      price: "",
+      model: resolvedBatchModel,
+      serviceTier: (process.env.SERVICE_TIER as any) || "flex",
+      pipelineMode: "single",
+      executionMode: ExecutionMode.FullAuto,
+      portfolio: { holdsPosition: false },
+      enableCrosscheck: true
+    };
+  } else {
+    state.config.model = resolvedBatchModel;
   }
 
   batchManager.recheckAll();
@@ -2588,7 +2696,7 @@ app.post("/api/batch/start", (req: Request, res: Response) => {
     });
   }
 
-  res.json({ success: true, message: "Batch execution started in background.", batchState: batchManager.state });
+  res.json({ success: true, message: `Batch execution started in background using model ${resolvedBatchModel}.`, batchState: batchManager.state });
 
   // Launch in background
   batchManager.runBatch(executeBatchCompany, {
@@ -2974,6 +3082,14 @@ app.post("/api/session/step/run", (req: Request, res: Response) => {
   if (!state.config) {
     return res.status(400).json({ error: "Session is not configured yet." });
   }
+  if (!state.config.model || !String(state.config.model).trim()) {
+    dispatchNotification(notificationConfig, {
+      event: "model_selection_required",
+      title: `Action Required: Model Selection (${state.config.ticker || "Session"})`,
+      message: `Execution blocked for ${state.config.ticker || "session"}: No explicit model was selected.\n\nPlease select an explicit Gemini 4 model (e.g., models/gemini-4-carbon, models/gemini-4-argon, models/gemini-4-neon, models/gemini-4-hydrogen).`
+    }).catch(err => console.warn("[Telegram Alert Error]", err));
+    return res.status(400).json({ error: "Execution blocked: Explicit model selection required. No model specified." });
+  }
 
   const { overrideIntegrityCheck, overrideMissingFiles, overrideSubstanceFiles } = req.body || {};
   if (!overrideIntegrityCheck) {
@@ -3073,6 +3189,18 @@ app.post("/api/session/crosscheck", async (req: Request, res: Response) => {
     state.config.crosscheckModel = crosscheckModel;
   }
 
+  const targetCrosscheckModel = (state.config.crosscheckModel && state.config.crosscheckModel !== 'default')
+    ? state.config.crosscheckModel
+    : state.config.model;
+  if (!targetCrosscheckModel || !String(targetCrosscheckModel).trim()) {
+    dispatchNotification(notificationConfig, {
+      event: "model_selection_required",
+      title: `Action Required: Model Selection (${state.config.ticker || "Crosscheck"})`,
+      message: `Forensic crosscheck blocked for ${state.config.ticker || "session"}: No explicit model was selected.`
+    }).catch(err => console.warn("[Telegram Alert Error]", err));
+    return res.status(400).json({ error: "Execution blocked: Explicit model selection required for forensic crosscheck." });
+  }
+
   // Ensure crosscheck step exists in state.steps
   let crosscheckStep = state.steps.find(s => s.isCrosscheck);
   if (!crosscheckStep) {
@@ -3082,6 +3210,7 @@ app.post("/api/session/crosscheck", async (req: Request, res: Response) => {
       status: 'idle',
       prompt: CROSSCHECK_PROMPT.text,
       temperature: CROSSCHECK_PROMPT.defaultTemp,
+      thinkingLevel: resolveEffectiveThinkingLevel(targetCrosscheckModel, CROSSCHECK_PROMPT.defaultThinkingLevel || 'xhigh'),
       isCrosscheck: true
     };
     state.steps.push(crosscheckStep);
@@ -3090,6 +3219,10 @@ app.post("/api/session/crosscheck", async (req: Request, res: Response) => {
     // Reset status to idle for re-running
     crosscheckStep.status = 'idle';
     crosscheckStep.response = undefined;
+    crosscheckStep.thinkingLevel = resolveEffectiveThinkingLevel(
+      targetCrosscheckModel,
+      crosscheckStep.thinkingLevel || CROSSCHECK_PROMPT.defaultThinkingLevel || 'xhigh'
+    );
     // Remove previous crosscheck messages from history to keep it fresh
     state.history = state.history.filter(m => m.type !== 'crosscheck');
   }
@@ -3242,7 +3375,15 @@ app.post("/api/session/interrogate", async (req: Request, res: Response) => {
     const customKey = getApiHeaderKey(req) || state.customApiKey;
     const ai = getGeminiClient(customKey);
     console.log(`[Custom Interrogation] Processing query: "${text}"`);
-    const modelToUse = state.config?.model || "gemini-3.8-flash";
+    const modelToUse = state.config?.model;
+    if (!modelToUse || !String(modelToUse).trim()) {
+      dispatchNotification(notificationConfig, {
+        event: "model_selection_required",
+        title: `Action Required: Model Selection (${state.config?.ticker || "Interrogation"})`,
+        message: `Custom interrogation blocked for ${state.config?.ticker || "session"}: No explicit model was selected.`
+      }).catch(err => console.warn("[Telegram Alert Error]", err));
+      return res.status(400).json({ error: "Execution blocked: Explicit model selection required before interrogation." });
+    }
     state.status = 'running';
 
     let reply = "";
@@ -3332,7 +3473,7 @@ app.post("/api/session/interrogate", async (req: Request, res: Response) => {
         contents: contents,
         config: {
           thinkingConfig: {
-            thinkingLevel: "high"
+            thinkingLevel: resolveEffectiveThinkingLevel(modelToUse, "high")
           },
           systemInstruction: VALUE_INVESTING_SYSTEM_INSTRUCTION,
           serviceTier: state.config?.serviceTier || "flex"
@@ -3807,7 +3948,10 @@ async function updateCompiledReportFile(): Promise<string> {
 
 // Check live Flex Tier capacity with a 1-token canary probe
 app.get("/api/flex/status", async (req: Request, res: Response) => {
-  const model = (req.query.model as string) || state.config?.model || "models/gemini-4-argon";
+  const model = (req.query.model as string)?.trim() || state.config?.model || "";
+  if (!model) {
+    return res.status(400).json({ success: false, error: "Explicit model selection required to probe Flex tier status." });
+  }
   const force = req.query.force === "true";
   const clientKey = getApiHeaderKey(req) || state.customApiKey;
 
@@ -3826,12 +3970,21 @@ app.get("/api/flex/waiter-status", (req: Request, res: Response) => {
 
 // Engage the Automated Flex Gatekeeper (waits for Flex capacity, then auto-launches)
 app.post("/api/flex/wait-and-launch", (req: Request, res: Response) => {
-  const { target = "single", checkIntervalSeconds = 45, maxWaitHours = 4 } = req.body || {};
-  const model = state.config?.model || "models/gemini-4-argon";
+  const { target = "single", checkIntervalSeconds = 45, maxWaitHours = 4, model: reqModel } = req.body || {};
+  const explicitModel = typeof reqModel === "string" ? reqModel.trim() : "";
+  const model = explicitModel || state.config?.model || (target === "batch" ? batchManager.state.items.find(i => i.model)?.model : "") || "";
   const clientKey = getApiHeaderKey(req) || state.customApiKey;
 
   if (target === "single" && !state.config) {
     return res.status(400).json({ error: "Session is not configured yet. Initialize session first." });
+  }
+  if (!model) {
+    dispatchNotification(notificationConfig, {
+      event: "model_selection_required",
+      title: `Action Required: Model Selection (Flex Gatekeeper)`,
+      message: `Flex Gatekeeper blocked: No explicit model was specified.`
+    }).catch(err => console.warn("[Telegram Alert Error]", err));
+    return res.status(400).json({ error: "Explicit model selection required to engage Flex Gatekeeper." });
   }
 
   // If already waiting, return existing watcher state immediately (<5ms response)
@@ -4043,7 +4196,7 @@ async function saveAndUploadFile(name: string, content: Buffer | string, mimeTyp
     activeGeminiName = activeFile.name;
 
     try {
-      const modelToUse = state.config?.model || "models/gemini-3.8-flash";
+      const modelToUse = state.config?.model || "models/gemini-4-hydrogen";
       const tokenCountResponse = await ai.models.countTokens({
         model: modelToUse,
         contents: [
@@ -5205,12 +5358,12 @@ Example:
 Do not include any markdown backticks or other text, just valid JSON.`;
 
   const response = await generateContentWithRetry(ai, {
-    model: "gemini-3.8-flash",
+    model: "models/gemini-4-hydrogen",
     contents: prompt,
     config: {
       tools: [{ googleSearch: {} }],
       thinkingConfig: {
-        thinkingLevel: "low"
+        thinkingLevel: "high"
       }
     }
   });
@@ -5403,7 +5556,7 @@ ${rawText}
 ---`;
 
     const response = await generateContentWithRetry(ai, {
-      model: "gemini-3.8-flash",
+      model: "models/gemini-4-hydrogen",
       contents: prompt,
       config: {
         systemInstruction: "You are a precise financial document cleaner. Your job is to trim disclaimers, operator prompts/dial-in logistics, and safe harbor text from earnings transcripts, while preserving all actual executive remarks and analyst Q&As with absolute technical fidelity and no loss of numeric details.",

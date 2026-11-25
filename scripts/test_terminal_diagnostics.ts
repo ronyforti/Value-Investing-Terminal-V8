@@ -88,10 +88,10 @@ async function runDiagnostics() {
   try {
     const modelsRes = await fetch(`${BASE_URL}/api/session/models`, { signal: AbortSignal.timeout(4000) });
     const modelsData = await modelsRes.json() as any;
-    const hasArgon = modelsData.models?.some((m: any) => m.name.includes("gemini-4-argon") || m.name.includes("argon"));
-    record("Server", "Frontier model catalog with Gemini 4 Argon (GET /api/session/models)", modelsRes.ok && hasArgon, `Count: ${modelsData.models?.length}`);
+    const hasGemini4 = modelsData.models?.some((m: any) => m.name.includes("gemini-4-"));
+    record("Server", "Gemini 4 frontier model catalog (GET /api/session/models)", modelsRes.ok && hasGemini4, `Count: ${modelsData.models?.length}`);
   } catch (err: any) {
-    record("Server", "Frontier model catalog with Gemini 4 Argon (GET /api/session/models)", false, err.message);
+    record("Server", "Gemini 4 frontier model catalog (GET /api/session/models)", false, err.message);
   }
 
   try {
