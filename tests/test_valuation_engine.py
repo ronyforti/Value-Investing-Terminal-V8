@@ -365,6 +365,46 @@ class TestValuationEngineV8(unittest.TestCase):
         okr_map_fail = {o['id']: o for o in res_fail['okr_scorecard']}
         self.assertFalse(okr_map_fail['KR-3']['passed'])
 
+    def test_segment_section_isolation_and_debt_key_integrity(self):
+        """Verifies segment sub-rows (e.g. Streaming revenues) do not overwrite revenue and 'debt' keys do not match 'ebt'."""
+        seg_csv = os.path.join(self.temp_dir.name, "SEG_DEBT_TEST.csv")
+        rows = [
+            ["Line Item", "Q3 2026", "Q3 2025", "Q3 2024", "Q3 2023"],
+            ["revenue", "50000.0", "44000.0", "38000.0", "33000.0"],
+            ["ebitda", "36000.0", "29000.0", "25000.0", "21000.0"],
+            ["operatingIncome", "15500.0", "12600.0", "9600.0", "6000.0"],
+            ["incomeBeforeTax", "17700.0", "12100.0", "9000.0", "5100.0"],
+            ["incomeTaxExpense", "2900.0", "1700.0", "1200.0", "600.0"],
+            ["netIncome", "14800.0", "10400.0", "7800.0", "4500.0"],
+            ["operatingCashFlow", "12300.0", "9600.0", "7500.0", "6000.0"],
+            ["capitalExpenditure", "-930.0", "-610.0", "-360.0", "-380.0"],
+            ["depreciationAndAmortization", "17900.0", "16100.0", "15200.0", "14700.0"],
+            ["stockBasedCompensation", "540.0", "300.0", "290.0", "410.0"],
+            ["cashAndShortTermInvestments", "8200.0", "9300.0", "9200.0", "7900.0"],
+            ["longTermDebt", "12650.0", "14460.0", "14160.0", "13900.0"],
+            ["totalDebt", "15130.0", "14460.0", "18500.0", "16760.0"],
+            ["netDebt", "6930.0", "5160.0", "9300.0", "8860.0"],
+            ["totalStockholdersEquity", "29280.0", "25950.0", "22720.0", "22100.0"],
+            ["weightedAverageShsOutDil", "4200000000", "4340000000", "4380000000", "4500000000"],
+            ["Revenue Product Segments (TTM):"],
+            ["Fiscal Quarter", "Q3 2026", "Q3 2025", "Q3 2024", "Q3 2023"],
+            ["Streaming revenues", "", "", "37500.0", "32600.0"]
+        ]
+        with open(seg_csv, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(rows)
+
+        parsed = ValuationEngineV8.parse_csv(seg_csv)
+        self.assertEqual(parsed['series']['revenue'][0], 50000.0)
+        self.assertEqual(parsed['series']['totaldebt'][0], 15130.0)
+        self.assertEqual(parsed['series']['longtermdebt'][0], 12650.0)
+        self.assertEqual(parsed['series']['incomebeforetax'][0], 17700.0)
+        res = ValuationEngineV8.compute(parsed, ticker="SEG_TEST", price=60.0)
+        self.assertGreater(res['epv_per_share'], 20.0)
+        self.assertGreater(res['dcf_expected'], 40.0)
+        self.assertLess(res['bolsa_multiple'], 5.0)
+        v_map = {v['vector']: v for v in res['forensic_4vectors']}
+        self.assertIn("NET DEBT", v_map['4. Balance Sheet Integrity & Two-Pillar Solvency']['metric'])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -58,10 +58,20 @@ class ValuationEngineV8:
 
         # Map row line items to normalized lower-case keys
         series_map: Dict[str, List[float]] = {}
+        in_segment_section = False
         for row in raw_rows[header_idx + 1:]:
             if not row or not row[0].strip():
                 continue
             key = row[0].strip()
+            key_lower = key.lower()
+            if ":" in key:
+                if "segment" in key_lower or "breakdown" in key_lower or "geographic" in key_lower or "product" in key_lower:
+                    in_segment_section = True
+                else:
+                    in_segment_section = False
+                continue
+            if in_segment_section:
+                continue
             norm_key = cls._normalize_row_key(key)
             if not norm_key:
                 continue
@@ -115,25 +125,23 @@ class ValuationEngineV8:
             return "deferredrevenue"
 
         # Direct canonical mappings
-        if s in ("revenue", "totalrevenue", "sales", "totalsales", "revenues") or (
-            ("revenue" in s or "sales" in s) and not any(k in s for k in ("cost", "deferred", "unearned", "growth", "margin", "%", "share", "per", "operating"))
-        ):
+        if s in ("revenue", "totalrevenue", "sales", "totalsales", "revenues", "netrevenue", "netsales", "totalrevenues", "totalnetrevenue", "totalnetrevenues"):
             return "revenue"
-        if ("operatingincome" in s or "ebit" in s or "operatingprofit" in s) and not any(k in s for k in ("margin", "%", "ratio")):
+        if ("operatingincome" in s or s == "ebit" or "operatingprofit" in s) and not any(k in s for k in ("margin", "%", "ratio", "ebitda")):
             return "operatingincome"
-        if ("incomebeforetax" in s or "ebt" in s or "pretaxincome" in s) and not any(k in s for k in ("margin", "%")):
+        if ("incomebeforetax" in s or s == "ebt" or "pretaxincome" in s) and not any(k in s for k in ("margin", "%")):
             return "incomebeforetax"
         if "incometaxexpense" in s or "taxexpense" in s or "incometaxes" in s:
             return "incometaxexpense"
-        if ("netincome" in s or "netearnings" in s) and not any(k in s for k in ("margin", "%", "ratio", "pershare")):
+        if ("netincome" in s or "netearnings" in s) and not any(k in s for k in ("margin", "%", "ratio", "pershare", "deductions", "otheradjustments", "discontinued", "fromcontinuing")):
             return "netincome"
-        if "depreciationandamortization" in s or "dna" in s:
+        if "depreciationandamortization" in s or s == "dna":
             return "depreciationandamortization"
         if "operatingcashflow" in s or "cashfromoperations" in s or "netcashprovidedbyoperating" in s:
             return "operatingcashflow"
-        if "capitalexpenditure" in s or "capex" in s or "investmentinpropertyplantequipment" in s:
+        if "capitalexpenditure" in s or "capex" in s or "investmentinpropertyplantequipment" in s or "investmentsinpropertyplantandequipment" in s:
             return "capitalexpenditure"
-        if "stockbasedcompensation" in s or "sbc" in s or "sharebasedcomp" in s:
+        if "stockbasedcompensation" in s or s == "sbc" or "sharebasedcomp" in s:
             return "stockbasedcompensation"
         if "changeinworkingcapital" in s or "workingcapitalchange" in s:
             return "changeinworkingcapital"
@@ -147,21 +155,21 @@ class ValuationEngineV8:
             return "researchanddevelopment"
         if "cashandshortterminvestments" in s or "cashandcashequivalents" in s:
             return "cashandshortterminvestments"
-        if "totaldebt" in s and not any(k in s for k in ("ratio", "ebitda", "%")):
+        if "totaldebt" in s and not any(k in s for k in ("ratio", "ebitda", "%", "issuance")):
             return "totaldebt"
         if "shorttermdebt" in s or "currentportionoflongtermdebt" in s:
             return "shorttermdebt"
-        if "longtermdebt" in s and "short" not in s:
+        if "longtermdebt" in s and "short" not in s and "issuance" not in s:
             return "longtermdebt"
-        if "totalstockholdersequity" in s or "shareholdersequity" in s or "totalequity" in s:
+        if ("totalstockholdersequity" in s or "shareholdersequity" in s or s == "totalequity") and "liabilities" not in s:
             return "totalstockholdersequity"
         if "retainedearnings" in s or "accumulateddeficit" in s:
             return "retainedearnings"
-        if "totalassets" in s:
+        if s == "totalassets":
             return "totalassets"
-        if "totalcurrentassets" in s:
+        if s == "totalcurrentassets":
             return "totalcurrentassets"
-        if "totalcurrentliabilities" in s:
+        if s == "totalcurrentliabilities":
             return "totalcurrentliabilities"
         if "netreceivables" in s or "accountsreceivable" in s:
             return "netreceivables"
