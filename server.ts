@@ -46,12 +46,29 @@ import { supportsXHighThinking, resolveEffectiveThinkingLevel, isFrontierModel }
 export { supportsXHighThinking, resolveEffectiveThinkingLevel, isFrontierModel };
 
 // Global Process Crash Shields to prevent transient socket drops / stream hangups from crashing Node
+const isEpipeError = (err: any) =>
+  err?.code === 'EPIPE' || err?.errno === -32 || String(err?.message || '').includes('EPIPE');
+
+process.stdout?.on?.('error', (err) => {
+  if (isEpipeError(err)) return;
+});
+
+process.stderr?.on?.('error', (err) => {
+  if (isEpipeError(err)) return;
+});
+
 process.on('unhandledRejection', (reason) => {
-  console.warn('[Process Shield] Caught unhandled rejection (prevented crash):', reason);
+  if (isEpipeError(reason)) return;
+  try {
+    console.warn('[Process Shield] Caught unhandled rejection (prevented crash):', reason);
+  } catch {}
 });
 
 process.on('uncaughtException', (err) => {
-  console.error('[Process Shield] Caught uncaught exception (prevented crash):', err);
+  if (isEpipeError(err)) return;
+  try {
+    console.error('[Process Shield] Caught uncaught exception (prevented crash):', err);
+  } catch {}
 });
 
 function generateSessionSteps(enableCrosscheck: boolean = true, sessionMode?: SessionMode): StepOutput[] {
