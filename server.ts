@@ -330,7 +330,7 @@ function getGeminiClient(customApiKey?: string): GoogleGenAI {
       headers: {
         'User-Agent': 'aistudio-build'
       },
-      timeout: 600000 // 10-minute timeout for deep financial reasoning
+      timeout: 1200000 // 20-minute timeout (exceeds Google's 15m+ Gemini 4 and 10m+ Flex recommendations)
     }
   });
 }
@@ -1247,15 +1247,20 @@ async function sendCacheKeepAlivePing() {
 
 function isTransientError(err: any): boolean {
   if (!err) return false;
+  const errName = String(err?.name || '').toLowerCase();
   const msg = (err?.message || String(err)).toLowerCase();
   const causeMsg = (err?.cause?.message || String(err?.cause || '')).toLowerCase();
   const causeCode = String(err?.cause?.code || '').toLowerCase();
   const code = String(err?.code || err?.status || err?.statusCode || '').toLowerCase();
   
-  const combined = `${msg} ${causeMsg} ${causeCode} ${code}`;
+  const combined = `${errName} ${msg} ${causeMsg} ${causeCode} ${code}`;
 
-  // HTTP/2 stream timeout, und_err_info, fetch failed, severed SSE stream, JSON truncation
+  // HTTP/2 stream timeout, AbortError / TimeoutError (e.g. client HTTP timeout during Flex/xhigh reasoning), und_err_info, fetch failed, severed SSE stream, JSON truncation
   if (
+    combined.includes('aborterror') ||
+    combined.includes('timeouterror') ||
+    combined.includes('this operation was aborted') ||
+    combined.includes('operation was aborted') ||
     combined.includes('und_err_info') ||
     combined.includes('stream timeout') ||
     combined.includes('http/2') ||
@@ -1386,18 +1391,25 @@ async function generateContentWithRetry(ai: any, params: any, maxRetries = 6, in
       }
     } catch (err: any) {
       attempt++;
+      const errName = String(err?.name || '').toLowerCase();
       const errMsg = (err?.message || String(err)).toLowerCase();
       const causeMsg = (err?.cause?.message || String(err?.cause || '')).toLowerCase();
       const causeCode = String(err?.cause?.code || '').toLowerCase();
-      const errCombined = `${errMsg} ${causeMsg} ${causeCode}`;
+      const errCombined = `${errName} ${errMsg} ${causeMsg} ${causeCode}`;
       const isTransient = isTransientError(err);
       const effectiveMaxRetries = isTransient ? maxRetries : 2;
       console.warn(`[Gemini API Warning] Attempt ${attempt} failed (transient: ${isTransient}): ${err?.message || err}`);
 
       const isFrontier = isFrontierModel(String(currentParams.model || ''));
       const isTimeoutOrUnavailable = 
+        errCombined.includes("aborterror") ||
+        errCombined.includes("timeouterror") ||
+        errCombined.includes("this operation was aborted") ||
+        errCombined.includes("operation was aborted") ||
         errCombined.includes("und_err_info") || 
         errCombined.includes("stream timeout") || 
+        errCombined.includes("etimedout") ||
+        errCombined.includes("deadline exceeded") ||
         errCombined.includes("503") || 
         errCombined.includes("unavailable") || 
         errCombined.includes("fetch failed") || 

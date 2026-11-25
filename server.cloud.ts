@@ -297,7 +297,7 @@ function getGeminiClient(customApiKey?: string): GoogleGenAI {
       headers: {
         'User-Agent': 'aistudio-build'
       },
-      timeout: 600000 // 10-minute timeout for deep financial reasoning
+      timeout: 1200000 // 20-minute timeout (exceeds Google's 15m+ Gemini 4 and 10m+ Flex recommendations)
     }
   });
 }
@@ -781,37 +781,45 @@ function clearRetryTimer() {
 
 function isTransientError(err: any): boolean {
   if (!err) return false;
+  const errName = String(err?.name || '').toLowerCase();
   const msg = (err?.message || String(err)).toLowerCase();
-  const code = String(err?.code || err?.status || err?.statusCode || '');
+  const causeMsg = (err?.cause?.message || String(err?.cause || '')).toLowerCase();
+  const causeCode = String(err?.cause?.code || '').toLowerCase();
+  const code = String(err?.code || err?.status || err?.statusCode || '').toLowerCase();
+  const combined = `${errName} ${msg} ${causeMsg} ${causeCode} ${code}`;
   
   // 503 UNAVAILABLE / High demand
-  if (code === '503' || msg.includes('503') || msg.includes('unavailable') || msg.includes('high demand') || msg.includes('temporarily unavailable') || msg.includes('spikes in demand')) {
+  if (code === '503' || combined.includes('503') || combined.includes('unavailable') || combined.includes('high demand') || combined.includes('temporarily unavailable') || combined.includes('spikes in demand')) {
     return true;
   }
   // 429 RESOURCE_EXHAUSTED / Rate limit
-  if (code === '429' || msg.includes('429') || msg.includes('resource_exhausted') || msg.includes('rate limit') || msg.includes('quota') || msg.includes('too many requests')) {
+  if (code === '429' || combined.includes('429') || combined.includes('resource_exhausted') || combined.includes('rate limit') || combined.includes('quota') || combined.includes('too many requests')) {
     return true;
   }
   // 500, 502, 504 server errors
-  if (code === '500' || code === '502' || code === '504' || msg.includes('internal error') || msg.includes('bad gateway') || msg.includes('gateway timeout') || msg.includes('deadline exceeded')) {
+  if (code === '500' || code === '502' || code === '504' || combined.includes('internal error') || combined.includes('bad gateway') || combined.includes('gateway timeout') || combined.includes('deadline exceeded')) {
     return true;
   }
-  // Transient network / socket errors, severed SSE streams, JSON truncation
+  // Transient network / socket errors, AbortError / TimeoutError, severed SSE streams, JSON truncation
   if (
-    msg.includes('econnreset') ||
-    msg.includes('etimedout') ||
-    msg.includes('socket hang up') ||
-    msg.includes('fetch failed') ||
-    msg.includes('econnrefused') ||
-    msg.includes('enotfound') ||
-    msg.includes('incomplete json') ||
-    msg.includes('premature close') ||
-    msg.includes('unexpected end') ||
-    msg.includes('response body is empty') ||
-    msg.includes('broken pipe') ||
-    msg.includes('rst_stream') ||
-    msg.includes('stream timeout') ||
-    msg.includes('und_err_info')
+    combined.includes('aborterror') ||
+    combined.includes('timeouterror') ||
+    combined.includes('this operation was aborted') ||
+    combined.includes('operation was aborted') ||
+    combined.includes('econnreset') ||
+    combined.includes('etimedout') ||
+    combined.includes('socket hang up') ||
+    combined.includes('fetch failed') ||
+    combined.includes('econnrefused') ||
+    combined.includes('enotfound') ||
+    combined.includes('incomplete json') ||
+    combined.includes('premature close') ||
+    combined.includes('unexpected end') ||
+    combined.includes('response body is empty') ||
+    combined.includes('broken pipe') ||
+    combined.includes('rst_stream') ||
+    combined.includes('stream timeout') ||
+    combined.includes('und_err_info')
   ) {
     return true;
   }
@@ -852,13 +860,15 @@ async function generateContentWithRetry(ai: any, params: any, maxRetries = 6, in
       };
     } catch (err: any) {
       attempt++;
+      const errName = String(err?.name || '').toLowerCase();
       const errMsg = (err?.message || String(err)).toLowerCase();
+      const errCombined = `${errName} ${errMsg}`;
       const isTransient = isTransientError(err);
       const effectiveMaxRetries = isTransient ? maxRetries : 2;
       console.warn(`[Gemini API Warning] Attempt ${attempt} failed (transient: ${isTransient}): ${err?.message || err}`);
 
       // Spike-Proof Tool Defense: If a tool-enabled call fails on Attempt 1 with 503/timeout/socket error, disable tools on Attempt 2
-      if (currentParams.config?.tools && (isTransient || errMsg.includes("503") || errMsg.includes("timeout") || errMsg.includes("socket") || errMsg.includes("unavailable"))) {
+      if (currentParams.config?.tools && (isTransient || errCombined.includes("503") || errCombined.includes("timeout") || errCombined.includes("socket") || errCombined.includes("unavailable") || errCombined.includes("abort"))) {
         console.warn(`[Gemini API Tool Spike Defense] Disabling search tool on attempt ${attempt + 1} after transient failure to prevent repeated paid search queries...`);
         currentParams = {
           ...currentParams,
@@ -871,7 +881,7 @@ async function generateContentWithRetry(ai: any, params: any, maxRetries = 6, in
       }
 
       // Adaptive Retry for Frontier Models: only step xhigh -> high on Attempt 1; NEVER drop below high.
-      if (isFrontierModel(String(currentParams.model || '')) && (isTransient || errMsg.includes("503") || errMsg.includes("timeout"))) {
+      if (isFrontierModel(String(currentParams.model || '')) && (isTransient || errCombined.includes("503") || errCombined.includes("timeout") || errCombined.includes("abort"))) {
         const activeThinking = resolveEffectiveThinkingLevel(
           currentParams.model,
           currentParams.config?.thinkingConfig?.thinkingLevel || "high"

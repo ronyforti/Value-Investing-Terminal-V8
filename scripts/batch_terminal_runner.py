@@ -46,7 +46,7 @@ class AutomatedBatchTerminalRunner:
         self.prompts_path = prompts_path or os.path.join(self.repo_root, "prompts.json")
         self.system_instruction_path = system_instruction_path or os.path.join(self.repo_root, "system_instructions.txt")
         self.model_name = str(model_name).strip()
-        self.client = genai.Client(api_key=api_key, http_options={'timeout': 600000})
+        self.client = genai.Client(api_key=api_key, http_options={'timeout': 1200000})
         self.prompts = self.load_prompts()
         self.system_instruction = self.load_system_instruction()
         os.makedirs(self.vault_dossier_dir, exist_ok=True)

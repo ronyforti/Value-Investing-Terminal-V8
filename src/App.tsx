@@ -3248,7 +3248,7 @@ export default function App() {
                     </span>
                   </div>
                   <p className="text-[9px] text-slate-400 mt-1 pl-6 leading-relaxed">
-                    Applies Google's 50% discount on inputs, outputs, and cached tokens. Full 10-minute HTTP queue timeout configured.
+                    Applies Google's 50% discount on inputs, outputs, and cached tokens. Full 20-minute HTTP queue timeout configured.
                   </p>
                   {serviceTier === 'flex' && !flexWatcher?.isWaiting && session?.status !== 'running' && (
                     <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
